@@ -1110,6 +1110,189 @@ ContentPage {
         }
 
         ContentSection {
+            id: settingsParticles
+            icon: "spark"
+            shape: MaterialShape.Shape.Burst
+            title: Translation.tr("Ambient Particles")
+
+            readonly property var entry: Config.options.background.widgets.particles
+
+            GroupedList {
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "check"
+                    text: Translation.tr("Enable")
+                    checked: settingsParticles.entry.enable
+                    onCheckedChanged: {
+                        settingsParticles.entry.enable = checked;
+                    }
+                }
+
+                ConfigSelectionArray {
+                    text: Translation.tr("Preset")
+                    icon: "style"
+                    currentValue: settingsParticles.entry.preset
+                    onSelected: newValue => {
+                        settingsParticles.entry.preset = newValue;
+                    }
+                    options: [
+                        {
+                            displayName: Translation.tr("Sakura"),
+                            icon: "local_florist",
+                            value: "sakura"
+                        },
+                        {
+                            displayName: Translation.tr("Snow"),
+                            icon: "ac_unit",
+                            value: "snow"
+                        },
+                        {
+                            displayName: Translation.tr("Fireflies"),
+                            icon: "wb_incandescent",
+                            value: "fireflies"
+                        },
+                        {
+                            displayName: Translation.tr("Starfield"),
+                            icon: "auto_awesome",
+                            value: "starfield"
+                        }
+                    ]
+                }
+
+                ConfigSelectionArray {
+                    text: Translation.tr("Layer placement")
+                    icon: "layers"
+                    currentValue: settingsParticles.entry.layerMode
+                    onSelected: newValue => {
+                        settingsParticles.entry.layerMode = newValue;
+                    }
+                    options: [
+                        {
+                            displayName: Translation.tr("Below widgets"),
+                            icon: "vertical_align_bottom",
+                            value: "below"
+                        },
+                        {
+                            displayName: Translation.tr("Above widgets"),
+                            icon: "vertical_align_top",
+                            value: "above"
+                        }
+                    ]
+                }
+
+                ConfigSlider {
+                    text: Translation.tr("Particle alpha (%)")
+                    buttonIcon: "opacity"
+                    usePercentTooltip: false
+                    value: Math.round(settingsParticles.entry.particleAlpha * 100)
+                    from: 10
+                    to: 100
+                    stopIndicatorValues: [80]
+                    onValueChanged: {
+                        settingsParticles.entry.particleAlpha = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
+                    text: Translation.tr("Background dim (%)")
+                    buttonIcon: "contrast"
+                    usePercentTooltip: false
+                    value: Math.round(settingsParticles.entry.backgroundDimAlpha * 100)
+                    from: 0
+                    to: 90
+                    stopIndicatorValues: [0, 30]
+                    onValueChanged: {
+                        settingsParticles.entry.backgroundDimAlpha = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
+                    text: Translation.tr("Speed (%)")
+                    buttonIcon: "speed"
+                    usePercentTooltip: false
+                    value: Math.round(settingsParticles.entry.speed * 100)
+                    from: 20
+                    to: 250
+                    stopIndicatorValues: [100]
+                    onValueChanged: {
+                        settingsParticles.entry.speed = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
+                    text: Translation.tr("Density (%)")
+                    buttonIcon: "grain"
+                    usePercentTooltip: false
+                    value: Math.round(settingsParticles.entry.density * 100)
+                    from: 40
+                    to: 200
+                    stopIndicatorValues: [100]
+                    onValueChanged: {
+                        settingsParticles.entry.density = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
+                    text: Translation.tr("Particle size (%)")
+                    buttonIcon: "photo_size_select_small"
+                    usePercentTooltip: false
+                    value: Math.round(settingsParticles.entry.particleSize * 100)
+                    from: 50
+                    to: 200
+                    stopIndicatorValues: [100]
+                    onValueChanged: {
+                        settingsParticles.entry.particleSize = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSelectionArray {
+                    text: Translation.tr("Mouse interaction")
+                    icon: "mouse"
+                    currentValue: settingsParticles.entry.mouseInteraction
+                    onSelected: newValue => {
+                        settingsParticles.entry.mouseInteraction = newValue;
+                    }
+                    options: [
+                        {
+                            displayName: Translation.tr("Repel"),
+                            icon: "call_missed_outgoing",
+                            value: "repel"
+                        },
+                        {
+                            displayName: Translation.tr("Attract"),
+                            icon: "call_received",
+                            value: "attract"
+                        },
+                        {
+                            displayName: Translation.tr("Glow"),
+                            icon: "flare",
+                            value: "glow"
+                        },
+                        {
+                            displayName: Translation.tr("None"),
+                            icon: "block",
+                            value: "none"
+                        }
+                    ]
+                }
+
+                ConfigSlider {
+                    text: Translation.tr("Mouse radius (px)")
+                    buttonIcon: "radio_button_unchecked"
+                    usePercentTooltip: false
+                    enabled: settingsParticles.entry.mouseInteraction !== "none"
+                    value: settingsParticles.entry.mouseRadius
+                    from: 60
+                    to: 400
+                    stopIndicatorValues: [180]
+                    onValueChanged: {
+                        settingsParticles.entry.mouseRadius = Math.round(value);
+                    }
+                }
+            }
+        }
+
+        ContentSection {
             id: settingsCustomText
             icon: "text_fields"
             shape: MaterialShape.Shape.Cookie4Sided
