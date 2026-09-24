@@ -25,6 +25,9 @@ Item {
     y: 0
     z: (configEntry?.layerMode ?? "below") === "above" ? 1000 : -500
 
+    property bool isOverlayWindow: false
+    visible: isOverlayWindow ? true : ((configEntry?.layerMode ?? "below") !== "window")
+
     readonly property string preset: configEntry?.preset ?? "sakura"
     readonly property real speedValue: configEntry?.speed ?? 1.0
     readonly property real densityValue: configEntry?.density ?? 1.0
@@ -74,30 +77,6 @@ Item {
     VisualizerEngine {
         id: levelEngine
         active: root.audioReactiveValue
-    }
-
-    Loader {
-        anchors.fill: parent
-        z: -700
-        active: root.backgroundBlurValue > 0 && root.wallpaperItem !== null
-        sourceComponent: FastBlur {
-            anchors.fill: parent
-            source: root.wallpaperItem
-            radius: root.backgroundBlurValue
-        }
-    }
-
-    Rectangle {
-        id: bgDimLayer
-        anchors.fill: parent
-        z: -600
-        color: root.backgroundDimColorValue
-        opacity: root.backgroundDimAlphaValue
-        visible: opacity > 0
-
-        Behavior on opacity {
-            NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
-        }
     }
 
     HoverHandler {

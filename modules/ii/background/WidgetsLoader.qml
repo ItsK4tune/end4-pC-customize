@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import QtQuick
+import Qt5Compat.GraphicalEffects
 import qs
 import qs.modules.common
 import qs.modules.common.widgets
@@ -99,6 +100,35 @@ Item {
                 id: mediaResetTimer
                 interval: 500
                 onTriggered: loaderDelegate.enableLoading = true
+            }
+        }
+    }
+
+    Loader {
+        anchors.fill: parent
+        z: -1000
+        active: (Config.options.background.widgets.particles?.enable ?? false)
+            && ((Config.options.background.widgets.particles?.backgroundBlur ?? 0) > 0
+                || (Config.options.background.widgets.particles?.backgroundDimAlpha ?? 0) > 0)
+            && root.wallpaperItem !== null
+        sourceComponent: Item {
+            anchors.fill: parent
+
+            FastBlur {
+                anchors.fill: parent
+                source: root.wallpaperItem
+                radius: Config.options.background.widgets.particles?.backgroundBlur ?? 0
+                visible: radius > 0
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                color: Config.options.background.widgets.particles?.backgroundDimColor ?? "#000000"
+                opacity: Config.options.background.widgets.particles?.backgroundDimAlpha ?? 0.0
+                visible: opacity > 0
+                Behavior on opacity {
+                    NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
+                }
             }
         }
     }
