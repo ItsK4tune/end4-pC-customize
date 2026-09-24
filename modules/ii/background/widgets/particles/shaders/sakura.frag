@@ -15,64 +15,74 @@ void main() {
     vec3 color = vec3(0.0);
     float alpha = 0.0;
 
-    float t = time * speed * 0.6;
-    float cellSize = 80.0 / max(density, 0.2);
-    vec2 gridCoord = fragCoord / cellSize;
-    vec2 currentCell = floor(gridCoord);
+    vec2 flowCoord = fragCoord;
+    float distMouse = length(fragCoord - mousePos);
+    float mouseInfluence = 0.0;
+
+    if (distMouse < mouseRadius && mouseRadius > 0.0) {
+        float normDist = 1.0 - distMouse / mouseRadius;
+        mouseInfluence = normDist;
+        vec2 dir = normalize(fragCoord - mousePos);
+        if (mouseMode == 1.0) {
+            flowCoord += dir * normDist * mouseStrength * 50.0;
+        } else if (mouseMode == 2.0) {
+            flowCoord -= dir * normDist * mouseStrength * 35.0;
+        } else if (mouseMode == 4.0) {
+            vec2 tangent = vec2(-dir.y, dir.x);
+            flowCoord += tangent * normDist * mouseStrength * 45.0;
+        }
+    }
 
     vec3 baseColor1 = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(1.0, 0.74, 0.83);
     vec3 baseColor2 = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.96, 0.48, 0.62);
 
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
-            vec2 cell = currentCell + vec2(float(x), float(y));
-            vec2 rnd = hash22(cell);
-            float rndRot = hash11(rnd.x * 43.12);
-            float rndSize = 0.7 + 0.6 * hash11(rnd.y * 17.54);
+    for (int layer = 1; layer <= 2; layer++) {
+        float l = float(layer);
+        float layerSpeed = 45.0 + 35.0 * l;
+        float sway = sin(time * 0.8 + l * 2.0) * (20.0 + 15.0 * l);
+        vec2 layerCoord = flowCoord + vec2(sway - time * 18.0 * l, -time * layerSpeed);
 
-            float localSpeed = 0.6 + 0.8 * rnd.y;
-            float fallY = mod(rnd.y * 1000.0 + t * localSpeed * 70.0, resolution.y + 160.0) - 80.0;
-            float swayX = sin(t * 1.2 + rnd.x * 6.28) * 45.0 + (t * 20.0 * rnd.x);
-            float fallX = mod(rnd.x * resolution.x + swayX, resolution.x + 160.0) - 80.0;
+        float cellSize = 95.0;
+        vec2 grid = layerCoord / cellSize;
+        vec2 currentCell = floor(grid);
 
-            vec2 particlePos = vec2(fallX, fallY);
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                vec2 cell = currentCell + vec2(float(x), float(y));
+                float spawn = hash11(dot(cell, vec2(17.3, 31.7)) + l * 43.1);
 
-            vec2 toParticle = particlePos - mousePos;
-            float distToMouse = length(toParticle);
-            float mouseInfluence = 0.0;
+                if (spawn > density * 0.5) continue;
 
-            if (distToMouse < mouseRadius && mouseRadius > 0.0) {
-                float normDist = 1.0 - (distToMouse / mouseRadius);
-                mouseInfluence = normDist;
-                if (mouseMode == 1.0) {
-                    particlePos += (toParticle / max(distToMouse, 1.0)) * normDist * mouseStrength * 60.0;
-                } else if (mouseMode == 2.0) {
-                    particlePos -= (toParticle / max(distToMouse, 1.0)) * normDist * mouseStrength * 40.0;
+                vec2 rnd = hash22(cell + vec2(l * 11.3, l * 29.7));
+                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.35) * cellSize;
+                vec2 p = layerCoord - pInCell;
+
+                float rot = time * (0.8 + 0.4 * spawn) + spawn * 6.28;
+                p = rotate(p, rot);
+
+                float flip = 0.35 + 0.65 * abs(cos(time * 1.4 + spawn * 6.28));
+                p.x /= flip;
+
+                float pSize = (7.0 + 4.0 * l + 2.0 * spawn) * particleSize * (1.0 + bass * 0.3);
+                float d = petalSDF(p, pSize);
+
+                float blurWidth = 1.2 + particleBlur * 7.0;
+                if (d < blurWidth) {
+                    float edge = 1.0 - smoothstep(0.0, blurWidth, d);
+                    float centerGrad = clamp(1.0 - length(p) / pSize, 0.0, 1.0);
+                    vec3 petalCol = mix(baseColor2, baseColor1, centerGrad);
+
+                    if (mouseMode == 3.0 && mouseInfluence > 0.0) {
+                        petalCol += vec3(0.3, 0.25, 0.1) * mouseInfluence * mouseStrength;
+                    }
+                    if (bass > 0.05) {
+                        petalCol += baseColor1 * bass * 0.3;
+                    }
+
+                    float petalAlpha = edge * (0.65 + 0.35 * rnd.y) * particleAlpha;
+                    color = mix(color, petalCol, petalAlpha * (1.0 - alpha));
+                    alpha = alpha + petalAlpha * (1.0 - alpha);
                 }
-            }
-
-            vec2 p = fragCoord - particlePos;
-            float rotAngle = t * (0.8 + rndRot) + rndRot * 6.28;
-            p = rotate(p, rotAngle);
-
-            float flip = 0.35 + 0.65 * abs(cos(t * 1.5 + rnd.x * 6.28));
-            p.x /= flip;
-
-            float pSize = (8.0 + 4.0 * rndSize) * particleSize;
-            float d = petalSDF(p, pSize);
-
-            if (d < 1.5) {
-                float edge = 1.0 - smoothstep(0.0, 1.5, d);
-                float centerGrad = clamp(1.0 - length(p) / pSize, 0.0, 1.0);
-                vec3 petalCol = mix(baseColor2, baseColor1, centerGrad);
-
-                if (mouseMode == 3.0 && mouseInfluence > 0.0) {
-                    petalCol += vec3(0.3, 0.25, 0.1) * mouseInfluence * mouseStrength;
-                }
-
-                float petalAlpha = edge * (0.65 + 0.35 * rnd.y) * particleAlpha;
-                color = mix(color, petalCol, petalAlpha * (1.0 - alpha));
-                alpha = alpha + petalAlpha * (1.0 - alpha);
             }
         }
     }

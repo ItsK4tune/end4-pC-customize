@@ -9,9 +9,11 @@ layout(std140, binding = 0) uniform buf {
     float density;
     float particleSize;
     float particleAlpha;
+    float particleBlur;
     float mouseRadius;
     float mouseStrength;
     float mouseMode;
+    float bass;
     vec2 resolution;
     vec2 mousePos;
     vec4 primaryColor;
