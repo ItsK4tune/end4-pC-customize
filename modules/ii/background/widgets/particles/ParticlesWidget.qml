@@ -2,13 +2,19 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 import qs
 import qs.modules.common
-import qs.modules.ii.background.widgets
 import qs.modules.ii.background.widgets.visualizer
 
-AbstractBackgroundWidget {
+Item {
     id: root
 
-    configEntryName: "particles"
+    required property int screenWidth
+    required property int screenHeight
+    required property int scaledScreenWidth
+    required property int scaledScreenHeight
+    required property real wallpaperScale
+    property Item wallpaperItem: null
+
+    readonly property var configEntry: Config.options.background.widgets.particles
 
     implicitWidth: screenWidth
     implicitHeight: screenHeight
@@ -17,21 +23,9 @@ AbstractBackgroundWidget {
 
     x: 0
     y: 0
-    targetZ: (configEntry?.layerMode ?? "below") === "above" ? 1000 : -500
-    z: targetZ
+    z: (configEntry?.layerMode ?? "below") === "above" ? 1000 : -500
 
-    draggable: false
-    hoverEnabled: false
-    acceptedButtons: Qt.NoButton
-
-    onPressed: (mouse) => {}
-    onClicked: (mouse) => {}
-
-    function restoreXYBinding() {
-        root.x = 0;
-        root.y = 0;
-        root.z = Qt.binding(() => root.targetZ);
-    }
+    visible: (configEntry?.layerMode ?? "below") !== "window"
 
     readonly property string preset: configEntry?.preset ?? "sakura"
     readonly property real speedValue: configEntry?.speed ?? 1.0
