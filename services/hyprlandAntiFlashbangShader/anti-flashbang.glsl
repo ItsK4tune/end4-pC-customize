@@ -231,7 +231,7 @@ void main() {
     // 2. Calculate average screen brightness
     vec3 totalRGB = vec3(0.0);
     
-    // We use a nested loop to create a 10x10 grid (100 samples)
+    // We use 100 pre-defined approximately equidistant and random distributed points
     // This is dense enough to catch small icons/text but light enough to run fast.
     for (int i = 0; i < 100; i++)
         totalRGB += texture(tex, vec2(xArr[i], yArr[i])).rgb;
