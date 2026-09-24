@@ -13,16 +13,21 @@ void main() {
     float mouseInfluence = 0.0;
 
     if (distMouse < mouseRadius && mouseRadius > 0.0) {
-        float normDist = 1.0 - distMouse / mouseRadius;
-        mouseInfluence = normDist;
-        vec2 dir = normalize(fragCoord - mousePos);
-        if (mouseMode == 1.0) {
-            flowCoord += dir * normDist * mouseStrength * 40.0;
-        } else if (mouseMode == 2.0) {
-            flowCoord -= dir * normDist * mouseStrength * 30.0;
-        } else if (mouseMode == 4.0) {
-            vec2 tangent = vec2(-dir.y, dir.x);
-            flowCoord += tangent * normDist * mouseStrength * 40.0;
+        float normDist = distMouse / mouseRadius;
+        float softFalloff = smoothstep(0.0, 0.25, normDist) * (1.0 - smoothstep(0.25, 1.0, normDist));
+        vec2 dir = (fragCoord - mousePos) / (distMouse + 8.0);
+        int mode = int(mouseMode + 0.5);
+
+        if (mode == 1) {
+            flowCoord += dir * softFalloff * mouseStrength * 60.0;
+        } else if (mode == 2) {
+            flowCoord -= dir * softFalloff * mouseStrength * 45.0;
+        } else if (mode == 4) {
+            vec2 delta = fragCoord - mousePos;
+            float angle = (1.0 - normDist) * (1.0 - normDist) * mouseStrength * 2.0;
+            flowCoord = mousePos + rotate(delta, angle);
+        } else if (mode == 3) {
+            mouseInfluence = pow(1.0 - normDist, 2.0) * mouseStrength;
         }
     }
 
@@ -30,14 +35,14 @@ void main() {
 
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);
-        float fallSpeed = 550.0 + 350.0 * l;
-        float windX = time * (120.0 + 60.0 * l);
+        float fallSpeed = 500.0 + 300.0 * l;
+        float windX = time * (100.0 + 50.0 * l);
         vec2 layerCoord = flowCoord + vec2(windX, -time * fallSpeed);
 
         vec2 skewedCoord = vec2(layerCoord.x - layerCoord.y * 0.18, layerCoord.y);
 
-        float cellW = 35.0;
-        float cellH = 140.0;
+        float cellW = 50.0;
+        float cellH = 180.0;
         vec2 grid = vec2(skewedCoord.x / cellW, skewedCoord.y / cellH);
         vec2 currentCell = floor(grid);
 
@@ -49,7 +54,7 @@ void main() {
                 if (spawn > density * 0.6) continue;
 
                 vec2 rnd = hash22(cell + vec2(l * 15.3, l * 41.7));
-                vec2 pInCell = vec2((cell.x + 0.5 + (rnd.x - 0.5) * 0.4) * cellW, (cell.y + 0.5 + (rnd.y - 0.5) * 0.4) * cellH);
+                vec2 pInCell = vec2((cell.x + 0.5 + (rnd.x - 0.5) * 0.2) * cellW, (cell.y + 0.5 + (rnd.y - 0.5) * 0.2) * cellH);
                 vec2 p = skewedCoord - pInCell;
 
                 float streakLen = (18.0 + 12.0 * l + 10.0 * rnd.y) * particleSize;
@@ -64,9 +69,9 @@ void main() {
                     float streakAlpha = ax * ay * (0.35 + 0.25 * l) * particleAlpha;
 
                     vec3 currentRainCol = rainCol;
-                    if (mouseMode == 3.0 && mouseInfluence > 0.0) {
-                        currentRainCol += vec3(0.3, 0.4, 0.6) * mouseInfluence * mouseStrength;
-                        streakAlpha = min(1.0, streakAlpha * (1.0 + mouseInfluence * 1.5));
+                    if (mouseInfluence > 0.0) {
+                        currentRainCol += vec3(0.4, 0.5, 0.7) * mouseInfluence;
+                        streakAlpha = min(1.0, streakAlpha * (1.0 + mouseInfluence * 2.5));
                     }
                     if (bass > 0.05) {
                         streakAlpha = min(1.0, streakAlpha * (1.0 + bass * 0.3));

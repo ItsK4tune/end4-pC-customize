@@ -21,16 +21,21 @@ void main() {
     float mouseInfluence = 0.0;
 
     if (distMouse < mouseRadius && mouseRadius > 0.0) {
-        float normDist = 1.0 - distMouse / mouseRadius;
-        mouseInfluence = normDist;
-        vec2 dir = normalize(fragCoord - mousePos);
-        if (mouseMode == 1.0) {
-            flowCoord += dir * normDist * mouseStrength * 50.0;
-        } else if (mouseMode == 2.0) {
-            flowCoord -= dir * normDist * mouseStrength * 35.0;
-        } else if (mouseMode == 4.0) {
-            vec2 tangent = vec2(-dir.y, dir.x);
-            flowCoord += tangent * normDist * mouseStrength * 45.0;
+        float normDist = distMouse / mouseRadius;
+        float softFalloff = smoothstep(0.0, 0.25, normDist) * (1.0 - smoothstep(0.25, 1.0, normDist));
+        vec2 dir = (fragCoord - mousePos) / (distMouse + 8.0);
+        int mode = int(mouseMode + 0.5);
+
+        if (mode == 1) {
+            flowCoord += dir * softFalloff * mouseStrength * 80.0;
+        } else if (mode == 2) {
+            flowCoord -= dir * softFalloff * mouseStrength * 60.0;
+        } else if (mode == 4) {
+            vec2 delta = fragCoord - mousePos;
+            float angle = (1.0 - normDist) * (1.0 - normDist) * mouseStrength * 2.5;
+            flowCoord = mousePos + rotate(delta, angle);
+        } else if (mode == 3) {
+            mouseInfluence = pow(1.0 - normDist, 2.0) * mouseStrength;
         }
     }
 
@@ -39,11 +44,11 @@ void main() {
 
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);
-        float layerSpeed = 40.0 + 30.0 * l;
-        float sway = sin(time * 0.7 + l * 2.3) * (28.0 + 15.0 * l);
-        vec2 layerCoord = flowCoord + vec2(sway - time * 12.0 * l, -time * layerSpeed);
+        float layerSpeed = 35.0 + 25.0 * l;
+        float sway = sin(time * 0.6 + l * 2.3) * (25.0 + 12.0 * l);
+        vec2 layerCoord = flowCoord + vec2(sway - time * 10.0 * l, -time * layerSpeed);
 
-        float cellSize = 100.0;
+        float cellSize = 160.0;
         vec2 grid = layerCoord / cellSize;
         vec2 currentCell = floor(grid);
 
@@ -52,10 +57,10 @@ void main() {
                 vec2 cell = currentCell + vec2(float(x), float(y));
                 float spawn = hash11(dot(cell, vec2(15.7, 39.1)) + l * 47.9);
 
-                if (spawn > density * 0.5) continue;
+                if (spawn > density * 0.55) continue;
 
                 vec2 rnd = hash22(cell + vec2(l * 19.3, l * 31.7));
-                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.35) * cellSize;
+                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.16) * cellSize;
                 vec2 p = layerCoord - pInCell;
 
                 float rot = time * (0.6 + 0.5 * spawn) + spawn * 6.28;
@@ -64,17 +69,20 @@ void main() {
                 float flip = 0.35 + 0.65 * abs(cos(time * 1.2 + spawn * 6.28));
                 p.x /= flip;
 
-                float pSize = (8.0 + 4.5 * l + 2.0 * spawn) * particleSize * (1.0 + bass * 0.3);
+                float pSize = (8.0 + 4.0 * l + 2.0 * spawn) * particleSize * (1.0 + bass * 0.3);
                 float d = leafSDF(p, pSize);
 
-                float blurWidth = 1.3 + particleBlur * 7.0;
+                float blurWidth = 1.3 + particleBlur * 6.0;
                 if (d < blurWidth) {
                     float edge = 1.0 - smoothstep(0.0, blurWidth, d);
                     float centerGrad = clamp(1.0 - length(p) / pSize, 0.0, 1.0);
                     vec3 leafCol = mix(baseColor1, baseColor2, centerGrad + 0.3 * sin(spawn * 6.28));
 
-                    if (mouseMode == 3.0 && mouseInfluence > 0.0) {
-                        leafCol += vec3(0.3, 0.25, 0.1) * mouseInfluence * mouseStrength;
+                    if (mouseInfluence > 0.0) {
+                        leafCol += vec3(0.4, 0.3, 0.15) * mouseInfluence;
+                        float halo = exp(-length(p) / (pSize * 1.6)) * mouseInfluence * 0.75;
+                        color += (leafCol + vec3(0.2)) * halo * particleAlpha;
+                        alpha = min(1.0, alpha + halo * 0.6);
                     }
                     if (bass > 0.05) {
                         leafCol += baseColor2 * bass * 0.3;

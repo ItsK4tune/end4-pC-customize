@@ -13,16 +13,21 @@ void main() {
     float mouseInfluence = 0.0;
 
     if (distMouse < mouseRadius && mouseRadius > 0.0) {
-        float normDist = 1.0 - distMouse / mouseRadius;
-        mouseInfluence = normDist;
-        vec2 dir = normalize(fragCoord - mousePos);
-        if (mouseMode == 1.0) {
-            flowCoord += dir * normDist * mouseStrength * 45.0;
-        } else if (mouseMode == 2.0) {
-            flowCoord -= dir * normDist * mouseStrength * 30.0;
-        } else if (mouseMode == 4.0) {
-            vec2 tangent = vec2(-dir.y, dir.x);
-            flowCoord += tangent * normDist * mouseStrength * 40.0;
+        float normDist = distMouse / mouseRadius;
+        float softFalloff = smoothstep(0.0, 0.25, normDist) * (1.0 - smoothstep(0.25, 1.0, normDist));
+        vec2 dir = (fragCoord - mousePos) / (distMouse + 8.0);
+        int mode = int(mouseMode + 0.5);
+
+        if (mode == 1) {
+            flowCoord += dir * softFalloff * mouseStrength * 70.0;
+        } else if (mode == 2) {
+            flowCoord -= dir * softFalloff * mouseStrength * 50.0;
+        } else if (mode == 4) {
+            vec2 delta = fragCoord - mousePos;
+            float angle = (1.0 - normDist) * (1.0 - normDist) * mouseStrength * 2.2;
+            flowCoord = mousePos + rotate(delta, angle);
+        } else if (mode == 3) {
+            mouseInfluence = pow(1.0 - normDist, 2.0) * mouseStrength;
         }
     }
 
@@ -30,11 +35,11 @@ void main() {
 
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);
-        float fallSpeed = 30.0 + 25.0 * l;
-        float sway = sin(time * (0.7 + 0.2 * l) + l * 1.5) * (12.0 * l);
+        float fallSpeed = 30.0 + 22.0 * l;
+        float sway = sin(time * (0.6 + 0.2 * l) + l * 1.5) * (10.0 * l);
         vec2 layerCoord = flowCoord + vec2(sway, -time * fallSpeed);
 
-        float cellSize = 80.0 / (0.7 + 0.3 * l);
+        float cellSize = 120.0 / (0.7 + 0.3 * l);
         vec2 grid = layerCoord / cellSize;
         vec2 currentCell = floor(grid);
 
@@ -43,23 +48,25 @@ void main() {
                 vec2 cell = currentCell + vec2(float(x), float(y));
                 float spawn = hash11(dot(cell, vec2(23.7, 41.3)) + l * 37.1);
 
-                if (spawn > density * 0.55) continue;
+                if (spawn > density * 0.6) continue;
 
                 vec2 rnd = hash22(cell + vec2(l * 17.1, l * 31.9));
-                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.4) * cellSize;
+                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.16) * cellSize;
                 vec2 p = layerCoord - pInCell;
                 float dist = length(p);
 
                 float radius = (1.2 + 0.9 * l + 0.6 * rnd.x) * particleSize * (1.0 + bass * 0.2);
-                float blurWidth = radius * (1.5 + particleBlur * 3.5);
+                float blurWidth = radius * (1.5 + particleBlur * 3.0);
 
-                if (dist < blurWidth) {
-                    float flakeAlpha = smoothstep(blurWidth, 0.0, dist) * (0.3 + 0.22 * l) * particleAlpha;
+                if (dist < blurWidth * 2.0) {
+                    float flakeAlpha = smoothstep(blurWidth, 0.0, dist) * (0.35 + 0.22 * l) * particleAlpha;
                     vec3 currentFlakeCol = snowColor;
 
-                    if (mouseMode == 3.0 && mouseInfluence > 0.0) {
-                        currentFlakeCol += vec3(0.2, 0.3, 0.5) * mouseInfluence * mouseStrength;
-                        flakeAlpha = min(1.0, flakeAlpha * (1.0 + mouseInfluence * 1.5));
+                    if (mouseInfluence > 0.0) {
+                        currentFlakeCol += vec3(0.3, 0.4, 0.6) * mouseInfluence;
+                        float halo = exp(-dist / (radius * 3.0)) * mouseInfluence * 0.6;
+                        color += currentFlakeCol * halo * particleAlpha;
+                        alpha = min(1.0, alpha + halo * 0.5);
                     }
                     if (bass > 0.05) {
                         flakeAlpha = min(1.0, flakeAlpha * (1.0 + bass * 0.4));

@@ -13,16 +13,21 @@ void main() {
     float mouseInfluence = 0.0;
 
     if (distMouse < mouseRadius && mouseRadius > 0.0) {
-        float normDist = 1.0 - distMouse / mouseRadius;
-        mouseInfluence = normDist;
-        vec2 dir = normalize(fragCoord - mousePos);
-        if (mouseMode == 1.0) {
-            flowCoord += dir * normDist * mouseStrength * 50.0;
-        } else if (mouseMode == 2.0) {
-            flowCoord -= dir * normDist * mouseStrength * 35.0;
-        } else if (mouseMode == 4.0) {
-            vec2 tangent = vec2(-dir.y, dir.x);
-            flowCoord += tangent * normDist * mouseStrength * 45.0;
+        float normDist = distMouse / mouseRadius;
+        float softFalloff = smoothstep(0.0, 0.25, normDist) * (1.0 - smoothstep(0.25, 1.0, normDist));
+        vec2 dir = (fragCoord - mousePos) / (distMouse + 8.0);
+        int mode = int(mouseMode + 0.5);
+
+        if (mode == 1) {
+            flowCoord += dir * softFalloff * mouseStrength * 80.0;
+        } else if (mode == 2) {
+            flowCoord -= dir * softFalloff * mouseStrength * 60.0;
+        } else if (mode == 4) {
+            vec2 delta = fragCoord - mousePos;
+            float angle = (1.0 - normDist) * (1.0 - normDist) * mouseStrength * 2.5;
+            flowCoord = mousePos + rotate(delta, angle);
+        } else if (mode == 3) {
+            mouseInfluence = pow(1.0 - normDist, 2.0) * mouseStrength;
         }
     }
 
@@ -31,11 +36,11 @@ void main() {
 
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);
-        float riseSpeed = 35.0 + 25.0 * l;
-        float sway = sin(time * (0.8 + 0.3 * l) + l * 2.1) * (18.0 * l);
+        float riseSpeed = 30.0 + 20.0 * l;
+        float sway = sin(time * (0.7 + 0.3 * l) + l * 2.1) * (15.0 * l);
         vec2 layerCoord = flowCoord + vec2(sway, time * riseSpeed);
 
-        float cellSize = 110.0;
+        float cellSize = 160.0;
         vec2 grid = layerCoord / cellSize;
         vec2 currentCell = floor(grid);
 
@@ -44,20 +49,20 @@ void main() {
                 vec2 cell = currentCell + vec2(float(x), float(y));
                 float spawn = hash11(dot(cell, vec2(19.1, 53.7)) + l * 17.3);
 
-                if (spawn > density * 0.5) continue;
+                if (spawn > density * 0.55) continue;
 
                 vec2 rnd = hash22(cell + vec2(l * 21.1, l * 37.9));
-                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.35) * cellSize;
+                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.16) * cellSize;
                 vec2 p = layerCoord - pInCell;
                 float dist = length(p);
 
-                float radius = (12.0 + 10.0 * rnd.x + 4.0 * l) * particleSize * (1.0 + bass * 0.25);
+                float radius = (12.0 + 9.0 * rnd.x + 3.0 * l) * particleSize * (1.0 + bass * 0.25);
                 float maxDist = radius * (1.2 + particleBlur * 1.5);
 
                 if (dist < maxDist) {
-                    float normDist = dist / radius;
-                    float ring = smoothstep(0.7, 0.95, normDist) * (1.0 - smoothstep(0.98, 1.05 + particleBlur * 0.8, normDist));
-                    float innerGlow = smoothstep(0.95, 0.0, normDist) * 0.12;
+                    float normD = dist / radius;
+                    float ring = smoothstep(0.7, 0.95, normD) * (1.0 - smoothstep(0.98, 1.05 + particleBlur * 0.8, normD));
+                    float innerGlow = smoothstep(0.95, 0.0, normD) * 0.14;
 
                     vec2 highlightPos = vec2(-radius * 0.35, -radius * 0.35);
                     float highlight = smoothstep(radius * 0.3, 0.0, length(p - highlightPos)) * 0.65;
@@ -65,9 +70,11 @@ void main() {
                     float bubbleAlpha = (ring * 0.75 + innerGlow + highlight) * (0.4 + 0.3 * l) * particleAlpha;
                     vec3 bCol = mix(baseBubbleCol, rainbowTint, 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + time));
 
-                    if (mouseMode == 3.0 && mouseInfluence > 0.0) {
-                        bCol += vec3(0.3, 0.3, 0.5) * mouseInfluence * mouseStrength;
-                        bubbleAlpha = min(1.0, bubbleAlpha * (1.0 + mouseInfluence * 1.5));
+                    if (mouseInfluence > 0.0) {
+                        bCol += vec3(0.4, 0.4, 0.6) * mouseInfluence;
+                        float halo = exp(-dist / (radius * 1.8)) * mouseInfluence * 0.8;
+                        color += (bCol + vec3(0.3)) * halo * particleAlpha;
+                        alpha = min(1.0, alpha + halo * 0.6);
                     }
                     if (bass > 0.05) {
                         bubbleAlpha = min(1.0, bubbleAlpha * (1.0 + bass * 0.35));
