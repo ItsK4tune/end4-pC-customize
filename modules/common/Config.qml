@@ -387,6 +387,11 @@ Singleton {
                         property string mouseInteraction: "repel"
                         property real mouseRadius: 180
                         property real mouseStrength: 1.0
+                        property string colorMode: "preset"
+                        property string customColor: "#ffb7c5"
+                        property real particleBlur: 0.0
+                        property real backgroundBlur: 0
+                        property bool audioReactive: false
                     }
 
                     property JsonObject customImage: JsonObject {

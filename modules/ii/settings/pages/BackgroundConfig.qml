@@ -1155,6 +1155,21 @@ ContentPage {
                             displayName: Translation.tr("Starfield"),
                             icon: "auto_awesome",
                             value: "starfield"
+                        },
+                        {
+                            displayName: Translation.tr("Bubbles"),
+                            icon: "bubbles",
+                            value: "bubbles"
+                        },
+                        {
+                            displayName: Translation.tr("Rain"),
+                            icon: "rainy",
+                            value: "rain"
+                        },
+                        {
+                            displayName: Translation.tr("Leaves"),
+                            icon: "eco",
+                            value: "leaves"
                         }
                     ]
                 }
@@ -1180,6 +1195,75 @@ ContentPage {
                     ]
                 }
 
+                ConfigSelectionArray {
+                    text: Translation.tr("Color mode")
+                    icon: "palette"
+                    currentValue: settingsParticles.entry.colorMode
+                    onSelected: newValue => {
+                        settingsParticles.entry.colorMode = newValue;
+                    }
+                    options: [
+                        {
+                            displayName: Translation.tr("Preset colors"),
+                            icon: "palette",
+                            value: "preset"
+                        },
+                        {
+                            displayName: Translation.tr("Wallpaper theme"),
+                            icon: "wallpaper",
+                            value: "theme"
+                        },
+                        {
+                            displayName: Translation.tr("Custom"),
+                            icon: "colorize",
+                            value: "custom"
+                        }
+                    ]
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: settingsParticles.entry.colorMode === "custom"
+                    spacing: 8
+                    MaterialSymbol {
+                        text: "colorize"
+                        iconSize: Appearance.font.pixelSize.normal + 5
+                        color: Appearance.colors.colOnLayer0
+                    }
+                    StyledText {
+                        text: Translation.tr("Custom color")
+                        color: Appearance.colors.colOnLayer0
+                    }
+                    Item { Layout.fillWidth: true }
+                    Rectangle {
+                        width: 24
+                        height: 24
+                        radius: 12
+                        color: settingsParticles.entry.customColor
+                        border.color: Appearance.colors.colOutlineVariant
+                        border.width: 1
+                    }
+                    MaterialTextField {
+                        implicitWidth: 120
+                        text: settingsParticles.entry.customColor
+                        onTextEdited: {
+                            if (/^#[0-9A-Fa-f]{6}$/.test(text)) {
+                                settingsParticles.entry.customColor = text;
+                            }
+                        }
+                    }
+                }
+
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "music_note"
+                    text: Translation.tr("Audio reactive")
+                    checked: settingsParticles.entry.audioReactive
+                    onCheckedChanged: {
+                        settingsParticles.entry.audioReactive = checked;
+                    }
+                }
+
                 ConfigSlider {
                     text: Translation.tr("Particle alpha (%)")
                     buttonIcon: "opacity"
@@ -1194,6 +1278,19 @@ ContentPage {
                 }
 
                 ConfigSlider {
+                    text: Translation.tr("Particle blur (%)")
+                    buttonIcon: "blur_on"
+                    usePercentTooltip: false
+                    value: Math.round(settingsParticles.entry.particleBlur * 100)
+                    from: 0
+                    to: 100
+                    stopIndicatorValues: [0]
+                    onValueChanged: {
+                        settingsParticles.entry.particleBlur = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
                     text: Translation.tr("Background dim (%)")
                     buttonIcon: "contrast"
                     usePercentTooltip: false
@@ -1203,6 +1300,19 @@ ContentPage {
                     stopIndicatorValues: [0, 30]
                     onValueChanged: {
                         settingsParticles.entry.backgroundDimAlpha = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
+                    text: Translation.tr("Background blur")
+                    buttonIcon: "blur_circular"
+                    usePercentTooltip: false
+                    value: settingsParticles.entry.backgroundBlur
+                    from: 0
+                    to: 64
+                    stopIndicatorValues: [0, 32]
+                    onValueChanged: {
+                        settingsParticles.entry.backgroundBlur = Math.round(value);
                     }
                 }
 
@@ -1267,6 +1377,11 @@ ContentPage {
                             displayName: Translation.tr("Glow"),
                             icon: "flare",
                             value: "glow"
+                        },
+                        {
+                            displayName: Translation.tr("Swirl"),
+                            icon: "rotate_right",
+                            value: "swirl"
                         },
                         {
                             displayName: Translation.tr("None"),
