@@ -1198,11 +1198,6 @@ ContentPage {
                             displayName: Translation.tr("Above widgets"),
                             icon: "vertical_align_top",
                             value: "above"
-                        },
-                        {
-                            displayName: Translation.tr("Above windows"),
-                            icon: "fullscreen",
-                            value: "window"
                         }
                     ]
                 }

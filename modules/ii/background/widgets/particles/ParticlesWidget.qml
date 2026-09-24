@@ -25,9 +25,6 @@ Item {
     y: 0
     z: (configEntry?.layerMode ?? "below") === "above" ? 1000 : -500
 
-    property bool isOverlayWindow: false
-    visible: isOverlayWindow ? true : ((configEntry?.layerMode ?? "below") !== "window")
-
     readonly property string preset: configEntry?.preset ?? "sakura"
     readonly property real speedValue: configEntry?.speed ?? 1.0
     readonly property real densityValue: configEntry?.density ?? 1.0
