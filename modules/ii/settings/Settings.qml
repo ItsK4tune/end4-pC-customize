@@ -1,6 +1,6 @@
 //@ pragma Env QS_NO_RELOAD_POPUP=1
 //@ pragma Env QT_QUICK_CONTROLS_STYLE=Basic
-//@ pragma Env QT_QUICK_FLICKABLE_WHEEL_DECELERATION=10000
+//@ pragma Env QT_QUICK_FLICKABLE_WHEEL_DECELERATION=2500
 import Quickshell.Io
 import QtQuick
 import QtQuick.Controls
@@ -19,6 +19,25 @@ Scope {
 
     readonly property real sizeScale: Config.options.settings.style === "minimal" ? 0.75 : 1.0
     property bool isMinimal: Config.options.settings.style === "minimal"
+    property bool reallyOpen: false
+
+    Connections {
+        target: GlobalStates
+        function onSettingsOpenChanged() {
+            if (GlobalStates.settingsOpen) {
+                closeAnimTimer.stop();
+                root.reallyOpen = true;
+            } else {
+                closeAnimTimer.restart();
+            }
+        }
+    }
+
+    Timer {
+        id: closeAnimTimer
+        interval: 200
+        onTriggered: root.reallyOpen = false
+    }
 
     Component.onCompleted: {
         GlobalStates.settingsOpen = false;
@@ -26,7 +45,7 @@ Scope {
 
     PanelWindow {
         id: panelWindow
-        visible: GlobalStates.settingsOpen
+        visible: root.reallyOpen
 
         function hide() {
             GlobalStates.settingsOpen = false;

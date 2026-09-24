@@ -79,13 +79,6 @@ Item {
 
     Component.onCompleted: {
         Config.readWriteDelay = 0
-        Qt.callLater(() => {
-            for (let i = 0; i < root.pages.length; i++) {
-                let loader = pagesRepeater.itemAt(i)
-                if (loader) loader.active = true
-            }
-            if (profileLoader) profileLoader.active = true
-        })
     }
 
     ColumnLayout {

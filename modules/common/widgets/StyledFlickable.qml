@@ -36,6 +36,7 @@ Flickable {
     }
 
     Behavior on contentY {
+        enabled: !root.moving && !root.flicking && !root.dragging
         NumberAnimation {
             id: scrollAnim
             duration: Appearance.animation.scroll.duration

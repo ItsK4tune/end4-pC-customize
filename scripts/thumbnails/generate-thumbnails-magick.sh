@@ -62,9 +62,12 @@ generate_thumbnail() {
     local out="$CACHE_DIR/$hash.png"
     mkdir -p "$CACHE_DIR"
     if [ -f "$out" ]; then
+        echo "FILE $abs_path"
         return
     fi
-    magick "$abs_path" -resize "${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}" "$out"
+    if magick "$abs_path" -resize "${THUMBNAIL_SIZE}x${THUMBNAIL_SIZE}" "$out"; then
+        echo "FILE $abs_path"
+    fi
 }
 
 # Parse arguments

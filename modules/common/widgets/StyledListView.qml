@@ -52,9 +52,9 @@ ListView {
     }
 
     Behavior on contentY {
+        enabled: !root.moving && !root.flicking && !root.dragging
         NumberAnimation {
             id: scrollAnim
-            alwaysRunToEnd: true
             duration: Appearance.animation.scroll.duration
             easing.type: Appearance.animation.scroll.type
             easing.bezierCurve: Appearance.animation.scroll.bezierCurve

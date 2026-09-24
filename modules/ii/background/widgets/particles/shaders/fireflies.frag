@@ -38,7 +38,7 @@ void main() {
     vec3 warmYellow = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.95, 0.95, 0.35);
     vec3 limeGlow = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.65, 1.0, 0.25);
 
-    vec2 windDrift = vec2(sin(windAngle), -cos(windAngle)) * time * 12.0;
+    vec2 windDrift = vec2(sin(windAngle), -cos(windAngle)) * time * 35.0;
 
     for (int y = -2; y <= 2; y++) {
         for (int x = -2; x <= 2; x++) {
@@ -75,11 +75,11 @@ void main() {
                 vec3 flyCol = mix(warmYellow, limeGlow, rnd.x);
 
                 if (mouseInfluence > 0.0) {
-                    flyCol += vec3(0.35, 0.35, 0.15) * mouseInfluence;
+                    flyCol += warmYellow * 0.4 * mouseInfluence;
                     flyAlpha = min(1.0, flyAlpha * (1.0 + mouseInfluence * 2.5));
                 }
                 if (treble > 0.05) {
-                    flyCol += vec3(0.2, 0.3, 0.1) * treble;
+                    flyCol += limeGlow * 0.4 * treble;
                 }
 
                 color += flyCol * flyAlpha;
@@ -88,12 +88,16 @@ void main() {
         }
     }
 
-    if (clickProgress < 1.0) {
-        float clickDist = length(fragCoord - clickPos);
-        float waveRadius = clickProgress * 300.0;
-        float wave = smoothstep(22.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - clickProgress);
-        color += (warmYellow + vec3(0.3)) * wave * 0.8 * particleAlpha;
-        alpha = min(1.0, alpha + wave * 0.7);
+    for (int i = 0; i < 4; i++) {
+        float prog = (i == 0) ? clickProgress.x : ((i == 1) ? clickProgress.y : ((i == 2) ? clickProgress.z : clickProgress.w));
+        if (prog < 1.0) {
+            vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
+            float clickDist = length(fragCoord - cPos);
+            float waveRadius = prog * 300.0;
+            float wave = smoothstep(22.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - prog);
+            color += (warmYellow + vec3(0.3)) * wave * 0.8 * particleAlpha;
+            alpha = min(1.0, alpha + wave * 0.7);
+        }
     }
 
     fragColor = vec4(color, alpha) * qt_Opacity;

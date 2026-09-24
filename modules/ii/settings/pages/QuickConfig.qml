@@ -93,7 +93,7 @@ ContentPage {
             FastBlur {
                 anchors.fill: parent
                 source: blurSource
-                radius: 128
+                radius: 16
             }
             Rectangle {
                 anchors.fill: parent
@@ -164,7 +164,7 @@ ContentPage {
             FastBlur {
                 anchors.fill: parent
                 source: popupBlurSource
-                radius: 64
+                radius: 16
             }
             Rectangle {
                 anchors.fill: parent
@@ -381,12 +381,12 @@ ContentPage {
                 StyledImage {
                     id: wallpaperImg
                     anchors.fill: parent
-                    sourceSize.height: 1080
+                    sourceSize.height: Math.round(mBox.height * 1.5)
                     fillMode: Image.PreserveAspectCrop
                     source: /\.(mp4|webm|mkv|avi|mov)$/i.test(Config.options.background.wallpaperPath)
                         ? Config.options.background.thumbnailPath
                         : Config.options.background.wallpaperPath
-                    cache: false
+                    cache: true
                     layer.enabled: true
                     layer.effect: OpacityMask {
                         maskSource: Rectangle {

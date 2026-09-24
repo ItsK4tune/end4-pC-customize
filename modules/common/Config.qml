@@ -400,6 +400,7 @@ Singleton {
                         property bool autoSyncWallpaper: false
                         property string fpsCap: "auto"
                         property bool pauseFullscreen: true
+                        property string pauseMode: "fullscreen"
                     }
 
                     property JsonObject customImage: JsonObject {

@@ -78,25 +78,23 @@ Item {
 
                         Connections {
                             function onThumbnailGenerated(directory) {
-                                if (thumbnailImage.status !== Image.Error)
+                                if (thumbnailImage.status !== Image.Error && !thumbnailImage.fallbackToSource)
                                     return ;
 
                                 if (FileUtils.parentDirectory(thumbnailImage.sourcePath) !== FileUtils.trimFileProtocol(directory))
                                     return ;
 
-                                thumbnailImage.source = "";
-                                thumbnailImage.source = thumbnailImage.thumbnailPath;
+                                thumbnailImage.reload();
                             }
 
                             function onThumbnailGeneratedFile(filePath) {
-                                if (thumbnailImage.status !== Image.Error)
+                                if (thumbnailImage.status !== Image.Error && !thumbnailImage.fallbackToSource)
                                     return ;
 
                                 if (Qt.resolvedUrl(thumbnailImage.sourcePath) !== Qt.resolvedUrl(filePath))
                                     return ;
 
-                                thumbnailImage.source = "";
-                                thumbnailImage.source = thumbnailImage.thumbnailPath;
+                                thumbnailImage.reload();
                             }
 
                             target: Wallpapers

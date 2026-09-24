@@ -123,8 +123,10 @@ Scope {
                 transformOrigin: Item.Center
 
                 Component.onCompleted: {
-                    scale = 1.0
-                    opacity = 1.0
+                    Qt.callLater(() => {
+                        scale = 1.0
+                        opacity = 1.0
+                    })
                 }
 
                 Behavior on scale {

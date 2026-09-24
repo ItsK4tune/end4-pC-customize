@@ -1248,8 +1248,13 @@ ContentPage {
                     }
                 }
 
+            }
+
+            GroupedList {
+                visible: settingsParticles.entry.audioReactive
+                Layout.topMargin: 0
+
                 ConfigSlider {
-                    visible: settingsParticles.entry.audioReactive
                     text: Translation.tr("Bass sensitivity (%)")
                     buttonIcon: "graphic_eq"
                     usePercentTooltip: false
@@ -1263,7 +1268,6 @@ ContentPage {
                 }
 
                 ConfigSlider {
-                    visible: settingsParticles.entry.audioReactive
                     text: Translation.tr("Mid sensitivity (%)")
                     buttonIcon: "equalizer"
                     usePercentTooltip: false
@@ -1277,7 +1281,6 @@ ContentPage {
                 }
 
                 ConfigSlider {
-                    visible: settingsParticles.entry.audioReactive
                     text: Translation.tr("Treble sensitivity (%)")
                     buttonIcon: "volume_up"
                     usePercentTooltip: false
@@ -1289,6 +1292,9 @@ ContentPage {
                         settingsParticles.entry.trebleGain = Math.round(value) / 100;
                     }
                 }
+            }
+
+            GroupedList {
 
                 ConfigSlider {
                     text: Translation.tr("Particle alpha (%)")
@@ -1485,14 +1491,30 @@ ContentPage {
                     ]
                 }
 
-                ConfigSwitch {
-                    Layout.fillWidth: true
-                    buttonIcon: "pause_circle"
-                    text: Translation.tr("Pause on fullscreen window")
-                    checked: settingsParticles.entry.pauseFullscreen ?? true
-                    onCheckedChanged: {
-                        settingsParticles.entry.pauseFullscreen = checked;
+                ConfigSelectionArray {
+                    text: Translation.tr("Pause animation")
+                    icon: "pause_circle"
+                    currentValue: settingsParticles.entry.pauseMode ?? (settingsParticles.entry.pauseFullscreen ? "fullscreen" : "none")
+                    onSelected: newValue => {
+                        settingsParticles.entry.pauseMode = newValue;
                     }
+                    options: [
+                        {
+                            displayName: Translation.tr("Never"),
+                            icon: "play_arrow",
+                            value: "none"
+                        },
+                        {
+                            displayName: Translation.tr("Fullscreen"),
+                            icon: "fullscreen",
+                            value: "fullscreen"
+                        },
+                        {
+                            displayName: Translation.tr("Has windows"),
+                            icon: "window",
+                            value: "hasWindows"
+                        }
+                    ]
                 }
             }
         }

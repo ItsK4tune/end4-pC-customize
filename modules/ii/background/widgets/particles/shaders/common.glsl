@@ -17,10 +17,13 @@ layout(std140, binding = 0) uniform buf {
     float mid;
     float treble;
     float windAngle;
-    float clickProgress;
     vec2 resolution;
     vec2 mousePos;
-    vec2 clickPos;
+    vec4 clickProgress;
+    vec2 clickPos0;
+    vec2 clickPos1;
+    vec2 clickPos2;
+    vec2 clickPos3;
     vec4 primaryColor;
     vec4 secondaryColor;
 };

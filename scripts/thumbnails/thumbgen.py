@@ -15,8 +15,11 @@ import gi
 from loguru import logger
 from tqdm import tqdm
 
-gi.require_version("GnomeDesktop", "4.0")
-from gi.repository import Gio, GnomeDesktop  # isort:skip
+try:
+    gi.require_version("GnomeDesktop", "4.0")
+    from gi.repository import Gio, GnomeDesktop  # isort:skip
+except (ValueError, ImportError, AttributeError):
+    sys.exit(1)
 
 thumbnail_size_map = {
     "normal": GnomeDesktop.DesktopThumbnailSize.NORMAL,

@@ -4,10 +4,12 @@ import qs
 import qs.services
 import qs.modules.common
 import qs.modules.ii.background.widgets.visualizer
+import Quickshell.Hyprland
 
 Item {
     id: root
 
+    property var screen: null
     required property int screenWidth
     required property int screenHeight
     required property int scaledScreenWidth
@@ -73,10 +75,22 @@ Item {
     readonly property bool clickBurstValue: configEntry?.clickBurst ?? true
     readonly property bool autoSyncWallpaperValue: configEntry?.autoSyncWallpaper ?? false
     readonly property string fpsCapValue: configEntry?.fpsCap ?? "auto"
-    readonly property bool pauseFullscreenValue: configEntry?.pauseFullscreen ?? true
+    readonly property string pauseModeValue: configEntry?.pauseMode ?? ((configEntry?.pauseFullscreen ?? true) ? "fullscreen" : "none")
 
     readonly property bool isFullscreenActive: WM.windowList.some(w => w.fullscreen)
-    readonly property bool isAnimationPaused: root.pauseFullscreenValue && root.isFullscreenActive
+    readonly property bool hasWindowsOnWorkspace: {
+        const monitorName = root.screen?.name;
+        if (monitorName) {
+            const ws = Hyprland.workspaces.values.find(w => w.active && w.monitor && w.monitor.name === monitorName);
+            return ws ? (ws.toplevels.values.length > 0) : false;
+        }
+        return Hyprland.workspaces.values.some(w => w.active && w.toplevels.values.length > 0);
+    }
+    readonly property bool isAnimationPaused: {
+        if (root.pauseModeValue === "hasWindows") return root.hasWindowsOnWorkspace || root.isFullscreenActive;
+        if (root.pauseModeValue === "fullscreen") return root.isFullscreenActive;
+        return false;
+    }
 
     property real fpsCapInterval: root.fpsCapValue === "30" ? (1.0 / 30.0) : (root.fpsCapValue === "60" ? (1.0 / 60.0) : 0.0)
     property real frameAccumulator: 0.0
@@ -122,11 +136,34 @@ Item {
         active: root.audioReactiveValue
     }
 
-    property real clickTime: -9999.0
-    property vector2d clickPos: Qt.vector2d(-9999.0, -9999.0)
+    property var clickTimes: [-9999.0, -9999.0, -9999.0, -9999.0]
+    property var clickPositionsX: [-9999.0, -9999.0, -9999.0, -9999.0]
+    property var clickPositionsY: [-9999.0, -9999.0, -9999.0, -9999.0]
+    property int clickRingIndex: 0
 
-    readonly property real clickElapsed: root.accumulatedTime - root.clickTime
-    readonly property real clickProgress: (root.clickElapsed >= 0.0 && root.clickElapsed <= 1.0) ? (root.clickElapsed / 1.0) : 1.0
+    function triggerClickBurst(x, y) {
+        if (!root.clickBurstValue) return;
+        const idx = root.clickRingIndex;
+        let times = root.clickTimes.slice();
+        let posX = root.clickPositionsX.slice();
+        let posY = root.clickPositionsY.slice();
+        posX[idx] = x;
+        posY[idx] = y;
+        times[idx] = root.accumulatedTime;
+        root.clickPositionsX = posX;
+        root.clickPositionsY = posY;
+        root.clickTimes = times;
+        root.clickRingIndex = (idx + 1) % 4;
+    }
+
+    readonly property vector4d clickProgresses: {
+        const t = root.accumulatedTime;
+        const p0 = (t - root.clickTimes[0] >= 0.0 && t - root.clickTimes[0] <= 1.0) ? (t - root.clickTimes[0]) : 1.0;
+        const p1 = (t - root.clickTimes[1] >= 0.0 && t - root.clickTimes[1] <= 1.0) ? (t - root.clickTimes[1]) : 1.0;
+        const p2 = (t - root.clickTimes[2] >= 0.0 && t - root.clickTimes[2] <= 1.0) ? (t - root.clickTimes[2]) : 1.0;
+        const p3 = (t - root.clickTimes[3] >= 0.0 && t - root.clickTimes[3] <= 1.0) ? (t - root.clickTimes[3]) : 1.0;
+        return Qt.vector4d(p0, p1, p2, p3);
+    }
 
     property real midLevel: 0.0
     property real trebleLevel: 0.0
@@ -160,13 +197,13 @@ Item {
         cursorShape: Qt.ArrowCursor
     }
 
-    TapHandler {
-        acceptedDevices: PointerDevice.Mouse | PointerDevice.TouchPad | PointerDevice.Stylus
+    MouseArea {
+        anchors.fill: parent
         acceptedButtons: Qt.LeftButton
-        onTapped: (point) => {
-            if (!root.clickBurstValue) return;
-            root.clickPos = Qt.vector2d(point.position.x, point.position.y);
-            root.clickTime = root.accumulatedTime;
+        hoverEnabled: false
+        onPressed: (mouse) => {
+            root.triggerClickBurst(mouse.x, mouse.y);
+            mouse.accepted = false;
         }
     }
 
@@ -197,8 +234,11 @@ Item {
         mid: root.effectiveMid
         treble: root.effectiveTreble
         windAngle: (root.windAngleValue * Math.PI) / 180.0
-        clickProgress: root.clickProgress
-        clickPos: root.clickPos
+        clickProgress: root.clickProgresses
+        clickPos0: Qt.vector2d(root.clickPositionsX[0], root.clickPositionsY[0])
+        clickPos1: Qt.vector2d(root.clickPositionsX[1], root.clickPositionsY[1])
+        clickPos2: Qt.vector2d(root.clickPositionsX[2], root.clickPositionsY[2])
+        clickPos3: Qt.vector2d(root.clickPositionsX[3], root.clickPositionsY[3])
         mousePos: Qt.vector2d(root.smoothMouseX, root.smoothMouseY)
         primaryColor: root.effectivePrimaryColor
         secondaryColor: root.effectiveSecondaryColor

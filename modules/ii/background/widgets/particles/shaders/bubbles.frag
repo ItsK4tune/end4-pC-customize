@@ -34,13 +34,11 @@ void main() {
     vec3 baseBubbleCol = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.5, 0.8, 1.0);
     vec3 rainbowTint = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.9, 0.6, 0.95);
 
-    vec2 riseDir = vec2(-sin(windAngle), cos(windAngle));
-
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);
         float riseSpeed = (30.0 + 20.0 * l) * (1.0 + bass * 0.3 + mid * 0.2);
         float sway = sin(time * (0.7 + 0.3 * l + mid * 0.3) + l * 2.1) * (15.0 * l + mid * 8.0);
-        vec2 layerCoord = flowCoord + vec2(sway, 0.0) + riseDir * (time * riseSpeed);
+        vec2 layerCoord = flowCoord + vec2(sway - time * riseSpeed * tan(windAngle), time * riseSpeed);
 
         float cellSize = 180.0;
         vec2 grid = layerCoord / cellSize;
@@ -74,16 +72,16 @@ void main() {
                     vec3 bCol = mix(baseBubbleCol, rainbowTint, 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + time * (1.0 + treble * 2.0)));
 
                     if (mouseInfluence > 0.0) {
-                        bCol += vec3(0.4, 0.4, 0.6) * mouseInfluence;
+                        bCol += rainbowTint * 0.4 * mouseInfluence;
                         float halo = exp(-dist / (radius * 1.8)) * mouseInfluence * 0.8 * cellEnvelope;
-                        color += (bCol + vec3(0.2)) * halo * particleAlpha;
+                        color += (bCol + rainbowTint * 0.2) * halo * particleAlpha;
                         alpha = min(1.0, alpha + halo * 0.6);
                     }
                     if (bass > 0.05) {
                         bubbleAlpha = min(1.0, bubbleAlpha * (1.0 + bass * 0.35));
                     }
                     if (treble > 0.05) {
-                        bCol += vec3(0.2, 0.2, 0.3) * treble;
+                        bCol += baseBubbleCol * 0.35 * treble;
                     }
 
                     color = mix(color, bCol, bubbleAlpha * (1.0 - alpha));
@@ -93,12 +91,16 @@ void main() {
         }
     }
 
-    if (clickProgress < 1.0) {
-        float clickDist = length(fragCoord - clickPos);
-        float waveRadius = clickProgress * 300.0;
-        float wave = smoothstep(20.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - clickProgress);
-        color += (rainbowTint + vec3(0.3)) * wave * 0.75 * particleAlpha;
-        alpha = min(1.0, alpha + wave * 0.65);
+    for (int i = 0; i < 4; i++) {
+        float prog = (i == 0) ? clickProgress.x : ((i == 1) ? clickProgress.y : ((i == 2) ? clickProgress.z : clickProgress.w));
+        if (prog < 1.0) {
+            vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
+            float clickDist = length(fragCoord - cPos);
+            float waveRadius = prog * 300.0;
+            float wave = smoothstep(20.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - prog);
+            color += (rainbowTint + vec3(0.3)) * wave * 0.75 * particleAlpha;
+            alpha = min(1.0, alpha + wave * 0.65);
+        }
     }
 
     fragColor = vec4(color * alpha, alpha) * qt_Opacity;

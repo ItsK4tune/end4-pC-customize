@@ -17,10 +17,13 @@ ShaderEffect {
     property real mid: 0.0
     property real treble: 0.0
     property real windAngle: 0.0
-    property real clickProgress: 1.0
     readonly property vector2d resolution: Qt.vector2d(width, height)
     property vector2d mousePos: Qt.vector2d(-9999.0, -9999.0)
-    property vector2d clickPos: Qt.vector2d(-9999.0, -9999.0)
+    property vector4d clickProgress: Qt.vector4d(1.0, 1.0, 1.0, 1.0)
+    property vector2d clickPos0: Qt.vector2d(-9999.0, -9999.0)
+    property vector2d clickPos1: Qt.vector2d(-9999.0, -9999.0)
+    property vector2d clickPos2: Qt.vector2d(-9999.0, -9999.0)
+    property vector2d clickPos3: Qt.vector2d(-9999.0, -9999.0)
     property color primaryColor: Qt.rgba(0, 0, 0, 0)
     property color secondaryColor: Qt.rgba(0, 0, 0, 0)
 

@@ -43,8 +43,21 @@ MouseArea {
         const cellW = item?.cellWidth ?? (wallpaperGridBackground.width / root.columns);
         const cellH = item?.cellHeight ?? (cellW / root.previewCellAspectRatio);
         const thumbnailSizeName = Images.thumbnailSizeNameForDimensions(cellW - totalImageMargin, cellH - totalImageMargin);
-        Wallpapers.setDirectory(`${Directories.pictures}/Wallpapers`);
+        if (!Wallpapers.directory || String(Wallpapers.directory).length === 0) {
+            Wallpapers.setDirectory(`${Directories.pictures}/Wallpapers`);
+        }
         Qt.callLater(() => Wallpapers.generateThumbnail(thumbnailSizeName));
+    }
+
+    Component.onCompleted: {
+        Qt.callLater(() => root.updateThumbnails());
+    }
+
+    Connections {
+        target: Wallpapers
+        function onDirectoryChanged() {
+            Qt.callLater(() => root.updateThumbnails());
+        }
     }
 
     function handleFilePasting(event) {
