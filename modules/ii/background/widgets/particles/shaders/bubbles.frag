@@ -31,7 +31,7 @@ void main() {
         }
     }
 
-    vec3 baseBubbleCol = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.6, 0.85, 1.0);
+    vec3 baseBubbleCol = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.5, 0.8, 1.0);
     vec3 rainbowTint = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.9, 0.6, 0.95);
 
     for (int layer = 1; layer <= 2; layer++) {
@@ -40,19 +40,19 @@ void main() {
         float sway = sin(time * (0.7 + 0.3 * l) + l * 2.1) * (15.0 * l);
         vec2 layerCoord = flowCoord + vec2(sway, time * riseSpeed);
 
-        float cellSize = 160.0;
+        float cellSize = 180.0;
         vec2 grid = layerCoord / cellSize;
         vec2 currentCell = floor(grid);
 
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
+        for (int y = -2; y <= 2; y++) {
+            for (int x = -2; x <= 2; x++) {
                 vec2 cell = currentCell + vec2(float(x), float(y));
                 float spawn = hash11(dot(cell, vec2(19.1, 53.7)) + l * 17.3);
 
-                if (spawn > density * 0.55) continue;
+                if (spawn > min(density * 0.55, 1.0)) continue;
 
                 vec2 rnd = hash22(cell + vec2(l * 21.1, l * 37.9));
-                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.16) * cellSize;
+                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.25) * cellSize;
                 vec2 p = layerCoord - pInCell;
                 float dist = length(p);
 
@@ -67,13 +67,14 @@ void main() {
                     vec2 highlightPos = vec2(-radius * 0.35, -radius * 0.35);
                     float highlight = smoothstep(radius * 0.3, 0.0, length(p - highlightPos)) * 0.65;
 
-                    float bubbleAlpha = (ring * 0.75 + innerGlow + highlight) * (0.4 + 0.3 * l) * particleAlpha;
+                    float cellEnvelope = smoothstep(cellSize * 1.8, cellSize * 1.2, dist);
+                    float bubbleAlpha = (ring * 0.75 + innerGlow + highlight) * (0.4 + 0.3 * l) * particleAlpha * cellEnvelope;
                     vec3 bCol = mix(baseBubbleCol, rainbowTint, 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + time));
 
                     if (mouseInfluence > 0.0) {
                         bCol += vec3(0.4, 0.4, 0.6) * mouseInfluence;
-                        float halo = exp(-dist / (radius * 1.8)) * mouseInfluence * 0.8;
-                        color += (bCol + vec3(0.3)) * halo * particleAlpha;
+                        float halo = exp(-dist / (radius * 1.8)) * mouseInfluence * 0.8 * cellEnvelope;
+                        color += (bCol + vec3(0.2)) * halo * particleAlpha;
                         alpha = min(1.0, alpha + halo * 0.6);
                     }
                     if (bass > 0.05) {

@@ -38,20 +38,20 @@ void main() {
     vec3 warmYellow = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.95, 0.95, 0.35);
     vec3 limeGlow = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.65, 1.0, 0.25);
 
-    for (int y = -1; y <= 1; y++) {
-        for (int x = -1; x <= 1; x++) {
+    for (int y = -2; y <= 2; y++) {
+        for (int x = -2; x <= 2; x++) {
             vec2 cell = currentCell + vec2(float(x), float(y));
             float spawn = hash11(dot(cell, vec2(37.1, 71.9)));
 
-            if (spawn > density * 0.55) continue;
+            if (spawn > min(density * 0.55, 1.0)) continue;
 
             vec2 rnd = hash22(cell);
             float rndPhase = hash11(rnd.x * 67.89);
 
             vec2 basePos = (cell + vec2(0.5)) * cellSize;
             vec2 drift = vec2(
-                sin(time * (0.5 + 0.3 * rnd.x) + rndPhase * 6.28) * (cellSize * 0.14),
-                cos(time * (0.4 + 0.4 * rnd.y) + rnd.x * 6.28) * (cellSize * 0.14)
+                sin(time * (0.5 + 0.3 * rnd.x) + rndPhase * 6.28) * (cellSize * 0.18),
+                cos(time * (0.4 + 0.4 * rnd.y) + rnd.x * 6.28) * (cellSize * 0.18)
             );
             vec2 particlePos = basePos + drift;
 
@@ -62,11 +62,12 @@ void main() {
             pulse = mix(0.18, 1.0, pulse) * (1.0 + bass * 0.6);
 
             float pSize = (10.0 + 6.0 * rnd.x) * particleSize * (1.0 + bass * 0.25);
-            float maxGlowDist = pSize * (2.2 + particleBlur * 2.2);
+            float maxGlowDist = pSize * (2.4 + particleBlur * 2.2);
 
             if (dist < maxGlowDist) {
+                float distFade = smoothstep(maxGlowDist, maxGlowDist * 0.6, dist);
                 float core = smoothstep(pSize * 0.25, 0.0, dist);
-                float glow = exp(-dist / (pSize * 0.5 * (1.0 + particleBlur * 1.3)));
+                float glow = exp(-dist / (pSize * 0.5 * (1.0 + particleBlur * 1.3))) * distFade;
                 float flyAlpha = (core * 0.85 + glow * 0.65) * pulse * particleAlpha;
 
                 vec3 flyCol = mix(warmYellow, limeGlow, rnd.x);

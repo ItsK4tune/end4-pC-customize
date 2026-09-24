@@ -47,34 +47,35 @@ void main() {
         float sway = sin(time * 0.7 + l * 2.0) * (20.0 + 12.0 * l);
         vec2 layerCoord = flowCoord + vec2(sway - time * 14.0 * l, -time * layerSpeed);
 
-        float cellSize = 150.0;
+        float cellSize = 160.0;
         vec2 grid = layerCoord / cellSize;
         vec2 currentCell = floor(grid);
 
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
+        for (int y = -2; y <= 2; y++) {
+            for (int x = -2; x <= 2; x++) {
                 vec2 cell = currentCell + vec2(float(x), float(y));
                 float spawn = hash11(dot(cell, vec2(17.3, 31.7)) + l * 43.1);
 
-                if (spawn > density * 0.6) continue;
+                if (spawn > min(density * 0.6, 1.0)) continue;
 
                 vec2 rnd = hash22(cell + vec2(l * 11.3, l * 29.7));
-                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.16) * cellSize;
+                vec2 pInCell = (cell + vec2(0.5) + (rnd - 0.5) * 0.2) * cellSize;
                 vec2 p = layerCoord - pInCell;
+                float unscaledDist = length(p);
 
                 float rot = time * (0.8 + 0.4 * spawn) + spawn * 6.28;
                 p = rotate(p, rot);
 
                 float flip = 0.35 + 0.65 * abs(cos(time * 1.4 + spawn * 6.28));
-                p.x /= flip;
+                vec2 scaledP = vec2(p.x / flip, p.y);
 
                 float pSize = (7.0 + 4.0 * l + 2.0 * spawn) * particleSize * (1.0 + bass * 0.3);
-                float d = petalSDF(p, pSize);
+                float d = petalSDF(scaledP, pSize);
 
                 float blurWidth = 1.2 + particleBlur * 6.0;
                 if (d < blurWidth) {
                     float edge = 1.0 - smoothstep(0.0, blurWidth, d);
-                    float centerGrad = clamp(1.0 - length(p) / pSize, 0.0, 1.0);
+                    float centerGrad = clamp(1.0 - unscaledDist / pSize, 0.0, 1.0);
                     vec3 petalCol = mix(baseColor2, baseColor1, centerGrad);
 
                     if (mouseInfluence > 0.0) {
@@ -84,10 +85,11 @@ void main() {
                         petalCol += baseColor1 * bass * 0.3;
                     }
 
-                    float petalAlpha = edge * (0.7 + 0.3 * rnd.y) * particleAlpha;
+                    float cellEnvelope = smoothstep(cellSize * 1.8, cellSize * 1.2, unscaledDist);
+                    float petalAlpha = edge * (0.7 + 0.3 * rnd.y) * particleAlpha * cellEnvelope;
 
                     if (mouseInfluence > 0.0) {
-                        float halo = exp(-length(p) / (pSize * 1.6)) * mouseInfluence * 0.75;
+                        float halo = exp(-unscaledDist / (pSize * 1.6)) * mouseInfluence * 0.75 * cellEnvelope;
                         color += (petalCol + vec3(0.2)) * halo * particleAlpha;
                         alpha = min(1.0, alpha + halo * 0.6);
                     }
