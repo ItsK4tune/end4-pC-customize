@@ -1181,6 +1181,16 @@ ContentPage {
                     ]
                 }
 
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "sync"
+                    text: Translation.tr("Auto sync with wallpaper")
+                    checked: settingsParticles.entry.autoSyncWallpaper
+                    onCheckedChanged: {
+                        settingsParticles.entry.autoSyncWallpaper = checked;
+                    }
+                }
+
                 ConfigSelectionArray {
                     text: Translation.tr("Layer placement")
                     icon: "layers"
@@ -1235,6 +1245,48 @@ ContentPage {
                     checked: settingsParticles.entry.audioReactive
                     onCheckedChanged: {
                         settingsParticles.entry.audioReactive = checked;
+                    }
+                }
+
+                ConfigSlider {
+                    visible: settingsParticles.entry.audioReactive
+                    text: Translation.tr("Bass sensitivity (%)")
+                    buttonIcon: "graphic_eq"
+                    usePercentTooltip: false
+                    value: Math.round((settingsParticles.entry.bassGain ?? 1.0) * 100)
+                    from: 0
+                    to: 300
+                    stopIndicatorValues: [100]
+                    onValueChanged: {
+                        settingsParticles.entry.bassGain = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
+                    visible: settingsParticles.entry.audioReactive
+                    text: Translation.tr("Mid sensitivity (%)")
+                    buttonIcon: "equalizer"
+                    usePercentTooltip: false
+                    value: Math.round((settingsParticles.entry.midGain ?? 1.0) * 100)
+                    from: 0
+                    to: 300
+                    stopIndicatorValues: [100]
+                    onValueChanged: {
+                        settingsParticles.entry.midGain = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
+                    visible: settingsParticles.entry.audioReactive
+                    text: Translation.tr("Treble sensitivity (%)")
+                    buttonIcon: "volume_up"
+                    usePercentTooltip: false
+                    value: Math.round((settingsParticles.entry.trebleGain ?? 1.0) * 100)
+                    from: 0
+                    to: 300
+                    stopIndicatorValues: [100]
+                    onValueChanged: {
+                        settingsParticles.entry.trebleGain = Math.round(value) / 100;
                     }
                 }
 
@@ -1300,6 +1352,19 @@ ContentPage {
                     stopIndicatorValues: [100]
                     onValueChanged: {
                         settingsParticles.entry.speed = Math.round(value) / 100;
+                    }
+                }
+
+                ConfigSlider {
+                    text: Translation.tr("Wind angle (°)")
+                    buttonIcon: "air"
+                    usePercentTooltip: false
+                    value: settingsParticles.entry.windAngle
+                    from: -45
+                    to: 45
+                    stopIndicatorValues: [0]
+                    onValueChanged: {
+                        settingsParticles.entry.windAngle = Math.round(value);
                     }
                 }
 
@@ -1381,6 +1446,52 @@ ContentPage {
                     stopIndicatorValues: [180]
                     onValueChanged: {
                         settingsParticles.entry.mouseRadius = Math.round(value);
+                    }
+                }
+
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "ads_click"
+                    text: Translation.tr("Desktop click burst")
+                    checked: settingsParticles.entry.clickBurst
+                    onCheckedChanged: {
+                        settingsParticles.entry.clickBurst = checked;
+                    }
+                }
+
+                ConfigSelectionArray {
+                    text: Translation.tr("FPS limit")
+                    icon: "speed"
+                    currentValue: settingsParticles.entry.fpsCap ?? "auto"
+                    onSelected: newValue => {
+                        settingsParticles.entry.fpsCap = newValue;
+                    }
+                    options: [
+                        {
+                            displayName: Translation.tr("Auto"),
+                            icon: "sync",
+                            value: "auto"
+                        },
+                        {
+                            displayName: "60 FPS",
+                            icon: "filter_6",
+                            value: "60"
+                        },
+                        {
+                            displayName: "30 FPS",
+                            icon: "filter_3",
+                            value: "30"
+                        }
+                    ]
+                }
+
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "pause_circle"
+                    text: Translation.tr("Pause on fullscreen window")
+                    checked: settingsParticles.entry.pauseFullscreen ?? true
+                    onCheckedChanged: {
+                        settingsParticles.entry.pauseFullscreen = checked;
                     }
                 }
             }

@@ -392,6 +392,14 @@ Singleton {
                         property real particleBlur: 0.0
                         property real backgroundBlur: 0
                         property bool audioReactive: false
+                        property real bassGain: 1.0
+                        property real midGain: 1.0
+                        property real trebleGain: 1.0
+                        property real windAngle: 0
+                        property bool clickBurst: true
+                        property bool autoSyncWallpaper: false
+                        property string fpsCap: "auto"
+                        property bool pauseFullscreen: true
                     }
 
                     property JsonObject customImage: JsonObject {

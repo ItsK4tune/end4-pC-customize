@@ -45,11 +45,13 @@ void main() {
     vec3 autumnCrimson = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.85, 0.22, 0.10);
     vec3 autumnAmber = vec3(0.92, 0.42, 0.08);
 
+    vec2 fallDir = vec2(sin(windAngle), cos(windAngle));
+
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);
-        float layerSpeed = 35.0 + 25.0 * l;
-        float sway = sin(time * 0.6 + l * 2.3) * (25.0 + 12.0 * l);
-        vec2 layerCoord = flowCoord + vec2(sway - time * 10.0 * l, -time * layerSpeed);
+        float layerSpeed = (35.0 + 25.0 * l) * (1.0 + bass * 0.25);
+        float sway = sin(time * (0.6 + mid * 0.5) + l * 2.3) * (25.0 + 12.0 * l + mid * 12.0);
+        vec2 layerCoord = flowCoord + vec2(sway, 0.0) + fallDir * (-time * layerSpeed);
 
         float cellSize = 170.0;
         vec2 grid = layerCoord / cellSize;
@@ -67,14 +69,14 @@ void main() {
                 vec2 p = layerCoord - pInCell;
                 float unscaledDist = length(p);
 
-                float rot = time * (0.6 + 0.5 * spawn) + spawn * 6.28;
+                float rot = time * (0.6 + 0.5 * spawn + mid * 0.5) + spawn * 6.28 + windAngle * 0.5;
                 p = rotate(p, rot);
 
                 float flipX = 0.35 + 0.65 * abs(cos(time * 1.2 + spawn * 6.28));
                 float flipY = 0.65 + 0.35 * abs(sin(time * 0.9 + spawn * 3.14));
                 vec2 scaledP = vec2(p.x / flipX, p.y / flipY);
 
-                float pSize = (8.0 + 5.0 * l + 3.0 * spawn) * particleSize * (1.0 + bass * 0.3);
+                float pSize = (8.0 + 5.0 * l + 3.0 * spawn) * particleSize * (1.0 + bass * 0.35);
                 float d = leafSDF(scaledP, pSize);
 
                 float blurWidth = 1.3 + particleBlur * 6.0;
@@ -89,7 +91,10 @@ void main() {
                         leafBase += vec3(0.4, 0.3, 0.15) * mouseInfluence;
                     }
                     if (bass > 0.05) {
-                        leafBase += autumnGold * bass * 0.3;
+                        leafBase += autumnGold * bass * 0.35;
+                    }
+                    if (treble > 0.05) {
+                        leafBase += vec3(0.35, 0.25, 0.1) * treble * edge;
                     }
 
                     float cellEnvelope = smoothstep(cellSize * 1.8, cellSize * 1.2, unscaledDist);
@@ -106,6 +111,14 @@ void main() {
                 }
             }
         }
+    }
+
+    if (clickProgress < 1.0) {
+        float clickDist = length(fragCoord - clickPos);
+        float waveRadius = clickProgress * 300.0;
+        float wave = smoothstep(22.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - clickProgress);
+        color += (autumnGold + vec3(0.25)) * wave * 0.75 * particleAlpha;
+        alpha = min(1.0, alpha + wave * 0.65);
     }
 
     fragColor = vec4(color * alpha, alpha) * qt_Opacity;

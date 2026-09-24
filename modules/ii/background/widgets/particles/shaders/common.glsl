@@ -14,8 +14,13 @@ layout(std140, binding = 0) uniform buf {
     float mouseStrength;
     float mouseMode;
     float bass;
+    float mid;
+    float treble;
+    float windAngle;
+    float clickProgress;
     vec2 resolution;
     vec2 mousePos;
+    vec2 clickPos;
     vec4 primaryColor;
     vec4 secondaryColor;
 };

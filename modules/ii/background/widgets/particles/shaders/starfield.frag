@@ -34,11 +34,13 @@ void main() {
     vec3 starBaseCol = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.85, 0.92, 1.0);
     vec3 starGlowCol = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.55, 0.75, 1.0);
 
+    vec2 travelDir = vec2(sin(windAngle), cos(windAngle));
+
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);
-        float fallSpeed = 6.0 + 8.0 * l;
+        float fallSpeed = (6.0 + 8.0 * l) * (1.0 + bass * 0.4 + mid * 0.3);
         float sway = sin(time * 0.2 + l * 2.0) * (5.0 * l);
-        vec2 layerCoord = flowCoord + vec2(sway, -time * fallSpeed);
+        vec2 layerCoord = flowCoord + vec2(sway, 0.0) + travelDir * (-time * fallSpeed);
 
         float cellSize = 150.0;
         vec2 grid = layerCoord / cellSize;
@@ -58,9 +60,9 @@ void main() {
 
                 float rndPhase = hash11(rnd.x * 53.31);
                 float twinkle = pow(0.5 + 0.5 * sin(time * (1.5 + 2.0 * rnd.x) + rndPhase * 6.28), 3.0);
-                twinkle = mix(0.25, 1.0, twinkle) * (1.0 + bass * 0.6);
+                twinkle = mix(0.25, 1.0, twinkle) * (1.0 + bass * 0.6 + treble * 0.5);
 
-                float starSize = (1.2 + 0.7 * l + 0.6 * rnd.y) * particleSize;
+                float starSize = (1.2 + 0.7 * l + 0.6 * rnd.y) * particleSize * (1.0 + bass * 0.2);
                 float maxGlow = starSize * (3.5 + particleBlur * 4.0);
 
                 if (dist < maxGlow) {
@@ -80,12 +82,23 @@ void main() {
                         currentCol += vec3(0.3, 0.4, 0.7) * mouseInfluence;
                         starAlpha = min(1.0, starAlpha * (1.0 + mouseInfluence * 2.5));
                     }
+                    if (treble > 0.05) {
+                        currentCol += vec3(0.2, 0.3, 0.5) * treble;
+                    }
 
                     color += currentCol * starAlpha;
                     alpha = min(1.0, alpha + starAlpha * 0.75);
                 }
             }
         }
+    }
+
+    if (clickProgress < 1.0) {
+        float clickDist = length(fragCoord - clickPos);
+        float waveRadius = clickProgress * 320.0;
+        float wave = smoothstep(22.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - clickProgress);
+        color += (starBaseCol + vec3(0.4)) * wave * 0.8 * particleAlpha;
+        alpha = min(1.0, alpha + wave * 0.7);
     }
 
     fragColor = vec4(color, alpha) * qt_Opacity;

@@ -34,11 +34,11 @@ void main() {
     vec3 rainTint = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.72, 0.85, 1.0);
     vec3 highlightTint = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.92, 0.96, 1.0);
 
-    float windSlant = 0.15;
+    float windSlant = 0.15 + tan(windAngle);
 
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);
-        float fallSpeed = 650.0 + 350.0 * l;
+        float fallSpeed = (650.0 + 350.0 * l) * (1.0 + bass * 0.25);
         float layerWind = windSlant * (0.85 + 0.15 * l);
         vec2 layerCoord = flowCoord + vec2(-time * fallSpeed * layerWind, -time * fallSpeed);
 
@@ -60,7 +60,7 @@ void main() {
                 vec2 pInCell = vec2((cell.x + 0.5 + (rnd.x - 0.5) * 0.25) * cellW, (cell.y + 0.5 + (rnd.y - 0.5) * 0.25) * cellH);
                 vec2 p = skewedCoord - pInCell;
 
-                float streakLen = (28.0 + 22.0 * l + 18.0 * rnd.y) * particleSize * (1.0 + bass * 0.25);
+                float streakLen = (28.0 + 22.0 * l + 18.0 * rnd.y) * particleSize * (1.0 + bass * 0.35 + mid * 0.2);
                 float streakWidth = (0.75 + 0.35 * l) * (1.0 + particleBlur * 1.8);
 
                 float dx = abs(p.x);
@@ -84,6 +84,9 @@ void main() {
                     }
                     if (bass > 0.05) {
                         streakAlpha = min(1.0, streakAlpha * (1.0 + bass * 0.35));
+                    }
+                    if (treble > 0.05) {
+                        currentRainCol += highlightTint * treble * 0.45;
                     }
 
                     color = mix(color, currentRainCol, streakAlpha * (1.0 - alpha));
@@ -123,6 +126,14 @@ void main() {
                 alpha = alpha + splashAlpha * (1.0 - alpha);
             }
         }
+    }
+
+    if (clickProgress < 1.0) {
+        float clickDist = length(fragCoord - clickPos);
+        float waveRadius = clickProgress * 320.0;
+        float wave = smoothstep(20.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - clickProgress);
+        color += (highlightTint + vec3(0.2)) * wave * 0.75 * particleAlpha;
+        alpha = min(1.0, alpha + wave * 0.65);
     }
 
     fragColor = vec4(color * alpha, alpha) * qt_Opacity;
