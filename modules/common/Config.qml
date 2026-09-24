@@ -370,6 +370,25 @@ Singleton {
                         property int ringSize: 380
                     }
 
+                    property JsonObject particles: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 0
+                        property real y: 0
+                        property real z: -500
+                        property string layerMode: "below"
+                        property string preset: "sakura"
+                        property real particleAlpha: 0.8
+                        property real backgroundDimAlpha: 0.0
+                        property string backgroundDimColor: "#000000"
+                        property real speed: 1.0
+                        property real density: 1.0
+                        property real particleSize: 1.0
+                        property string mouseInteraction: "repel"
+                        property real mouseRadius: 180
+                        property real mouseStrength: 1.0
+                    }
+
                     property JsonObject customImage: JsonObject {
                         property bool enable: false
                         property string placementStrategy: "free"
