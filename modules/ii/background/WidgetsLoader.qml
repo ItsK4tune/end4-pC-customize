@@ -20,6 +20,7 @@ import qs.modules.ii.background.widgets.notes
 import qs.modules.ii.background.widgets.todo
 import qs.modules.ii.background.widgets.timers
 import qs.modules.ii.background.widgets.customtext
+import qs.modules.ii.background.widgets.particles
 
 Item {
     id: root
@@ -33,6 +34,7 @@ Item {
 
     Repeater {
         model: [
+            { key: "particles" },
             { key: "visualizer" },
             { key: "customImage" },
             { key: "sticker" },
@@ -64,6 +66,7 @@ Item {
 
             sourceComponent: {
                 switch (loaderDelegate.modelData.key) {
+                    case "particles":   return particlesComp
                     case "visualizer":  return visualizerComp
                     case "customImage": return customImageComp
                     case "sticker":     return stickerComp
@@ -97,6 +100,18 @@ Item {
                 interval: 500
                 onTriggered: loaderDelegate.enableLoading = true
             }
+        }
+    }
+
+    Component {
+        id: particlesComp
+        ParticlesWidget {
+            screenWidth: root.screen.width
+            screenHeight: root.screen.height
+            scaledScreenWidth: root.screen.width
+            scaledScreenHeight: root.screen.height
+            wallpaperScale: 1
+            wallpaperItem: root.wallpaperItem
         }
     }
 
