@@ -19,14 +19,6 @@ Scope {
         id: panelWindow
         property string searchingText: ""
         readonly property HyprlandMonitor monitor: Hyprland.monitorFor(panelWindow.screen)
-        readonly property bool barCenterOnly: Config.options.bar.layouts.leftLayout.length === 0
-            && Config.options.bar.layouts.rightLayout.length === 0
-            && !Config.options.bar.vertical
-
-        readonly property bool barOverlapActive: panelWindow.barCenterOnly
-            && Config.options.bar.centerOnlyReserveFrame
-            && !Config.options.bar.bottom
-            && !Config.options.bar.autoHide.enable
         property bool monitorIsFocused: (Hyprland.focusedMonitor?.id == monitor?.id)
         visible: GlobalStates.overviewOpen
 
@@ -79,34 +71,15 @@ Scope {
         Column {
             id: columnLayout
             visible: GlobalStates.overviewOpen
-            opacity: GlobalStates.overviewOpen ? 1 : 0
-            scale: GlobalStates.overviewOpen ? 1 : 0.85
-            transformOrigin: Item.Top
             anchors {
                 horizontalCenter: parent.horizontalCenter
                 top: parent.top
-                topMargin: panelWindow.barOverlapActive
-                    ? Appearance.sizes.barHeight - Config.options.bar.frameThickness
-                    : 0
             }
             spacing: -8
-
-            Behavior on opacity {
-                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-            }
-            Behavior on scale {
-                NumberAnimation { duration: 400; easing.type: Easing.BezierSpline; easing.bezierCurve: Appearance.animationCurves.expressiveDefaultSpatial }
-            }
 
             Keys.onPressed: event => {
                 if (event.key === Qt.Key_Escape) {
                     GlobalStates.overviewOpen = false;
-                } else if (event.key === Qt.Key_Left) {
-                    if (!panelWindow.searchingText)
-                        Hyprland.dispatch("workspace r-1");
-                } else if (event.key === Qt.Key_Right) {
-                    if (!panelWindow.searchingText)
-                        Hyprland.dispatch("workspace r+1");
                 }
             }
 
@@ -120,24 +93,11 @@ Scope {
 
             Loader {
                 id: overviewLoader
+                anchors.horizontalCenter: parent.horizontalCenter
                 active: GlobalStates.overviewOpen && (Config?.options.overview.enable ?? true)
-                sourceComponent: (Config?.options.overview.style ?? "default") === "niri" ? niriComponent : defaultComponent
-
-                Component {
-                    id: defaultComponent
-                    OverviewWidget {
-                        screen: panelWindow.screen
-                        visible: (panelWindow.searchingText == "")
-                    }
-                }
-
-                Component {
-                    id: niriComponent
-                    NiriOverview {
-                        screen: panelWindow.screen
-                        panelWindow: panelWindow
-                        visible: (panelWindow.searchingText == "")
-                    }
+                sourceComponent: OverviewWidget {
+                    screen: panelWindow.screen
+                    visible: (panelWindow.searchingText == "")
                 }
             }
         }
@@ -160,16 +120,6 @@ Scope {
         }
         overviewScope.dontAutoCancelSearch = true;
         panelWindow.setSearchingText(Config.options.search.prefix.emojis);
-        GlobalStates.overviewOpen = true;
-    }
-
-    function toggleSymbols() {
-        if (GlobalStates.overviewOpen && overviewScope.dontAutoCancelSearch) {
-            GlobalStates.overviewOpen = false;
-            return;
-        }
-        overviewScope.dontAutoCancelSearch = true;
-        panelWindow.setSearchingText(Config.options.search.prefix.symbols);
         GlobalStates.overviewOpen = true;
     }
 
@@ -196,7 +146,7 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "searchToggle"
         description: "Toggles search on press"
 
@@ -204,7 +154,7 @@ Scope {
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewWorkspacesClose"
         description: "Closes overview on press"
 
@@ -212,7 +162,7 @@ Scope {
             GlobalStates.overviewOpen = false;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewWorkspacesToggle"
         description: "Toggles overview on press"
 
@@ -220,7 +170,7 @@ Scope {
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "searchToggleRelease"
         description: "Toggles search on release"
 
@@ -236,7 +186,7 @@ Scope {
             GlobalStates.overviewOpen = !GlobalStates.overviewOpen;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "searchToggleReleaseInterrupt"
         description: "Interrupts possibility of search being toggled on release. " + "This is necessary because GlobalShortcut.onReleased in quickshell triggers whether or not you press something else while holding the key. " + "To make sure this works consistently, use binditn = MODKEYS, catchall in an automatically triggered submap that includes everything."
 
@@ -244,7 +194,7 @@ Scope {
             GlobalStates.superReleaseMightTrigger = false;
         }
     }
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewClipboardToggle"
         description: "Toggle clipboard query on overview widget"
 
@@ -253,21 +203,12 @@ Scope {
         }
     }
 
-    CompositorGlobalShortcut {
+    GlobalShortcut {
         name: "overviewEmojiToggle"
         description: "Toggle emoji query on overview widget"
 
         onPressed: {
             overviewScope.toggleEmojis();
-        }
-    }
-
-    CompositorGlobalShortcut {
-        name: "overviewSymbolsToggle"
-        description: "Toggle material symbols search on overview widget"
-
-        onPressed: {
-            overviewScope.toggleSymbols();
         }
     }
 }

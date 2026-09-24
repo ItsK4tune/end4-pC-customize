@@ -342,14 +342,21 @@ Singleton {
                 return result;
             })(HyprlandKeybinds.keybinds);
 
+            const seen = new Set();
             return flatBinds.filter(bind => {
                 if (!bind.comment) return false;
+                const modsStr = (bind.mods ?? []).join(" + ");
+                const keyStr  = modsStr.length > 0 ? (bind.key ? `${modsStr} + ${bind.key}` : modsStr) : bind.key;
+                if (!keyStr || keyStr.trim() === "") return false;
+                const uid = keyStr + ":" + bind.comment;
+                if (seen.has(uid)) return false;
+                seen.add(uid);
                 if (searchString.length === 0) return true;
                 return bind.comment.toLowerCase().includes(searchString.toLowerCase())
-                    || bind.key.toLowerCase().includes(searchString.toLowerCase());
+                    || keyStr.toLowerCase().includes(searchString.toLowerCase());
             }).map(bind => {
-                const modsStr = bind.mods.join(" + ");
-                const keyStr  = modsStr.length > 0 ? `${modsStr} + ${bind.key}` : bind.key;
+                const modsStr = (bind.mods ?? []).join(" + ");
+                const keyStr  = modsStr.length > 0 ? (bind.key ? `${modsStr} + ${bind.key}` : modsStr) : bind.key;
                 return resultComp.createObject(null, {
                     name: bind.comment,
                     iconName: "keyboard",
@@ -358,8 +365,24 @@ Singleton {
                     type: Translation.tr("Keybind"),
                     comment: keyStr,
                     execute: () => {
-                        Quickshell.clipboardText = keyStr;
-                    }
+                        GlobalStates.overviewOpen = false;
+                        if (bind.dispatcher && bind.dispatcher !== "comment" && bind.dispatcher !== "function") {
+                            const cmd = bind.params ? `${bind.dispatcher}(${bind.params})` : `${bind.dispatcher}()`;
+                            Hyprland.dispatch(cmd);
+                        } else {
+                            Quickshell.clipboardText = keyStr;
+                            Quickshell.execDetached(["notify-send", "Keybind", "Copied: " + keyStr + " (" + bind.comment + ")", "-a", "Shell", "-i", "input-keyboard"]);
+                        }
+                    },
+                    actions: [resultComp.createObject(null, {
+                        name: Translation.tr("Copy shortcut"),
+                        iconName: "content_copy",
+                        iconType: LauncherSearchResult.IconType.Material,
+                        execute: () => {
+                            Quickshell.clipboardText = keyStr;
+                            Quickshell.execDetached(["notify-send", "Keybind", "Copied shortcut: " + keyStr, "-a", "Shell", "-i", "input-keyboard"]);
+                        }
+                    })]
                 });
             }).filter(Boolean);
         } else if (root.query.startsWith(Config.options.search.prefix.symbols)) {

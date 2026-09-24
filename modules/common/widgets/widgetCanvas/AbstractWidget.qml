@@ -37,6 +37,15 @@ MouseArea {
     onClicked: (mouse) => {
         if (mouse.button === Qt.RightButton) {
             Config.options.background.widgetsLocked = !Config.options.background.widgetsLocked
+            Quickshell.execDetached([
+                "notify-send",
+                Translation.tr("Desktop Widgets"),
+                Config.options.background.widgetsLocked
+                    ? Translation.tr("Widget positions locked")
+                    : Translation.tr("Widget positions unlocked (Draggable)"),
+                "-a", "Shell",
+                "-i", Config.options.background.widgetsLocked ? "object-locked" : "object-unlocked"
+            ])
         } else if (mouse.modifiers & Qt.ControlModifier) {
             root.selected = !root.selected
         } else {

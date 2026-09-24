@@ -56,9 +56,18 @@ Singleton {
     Process {
         id: lyricsProc
         running: false
+        onRunningChanged: {
+            if (!running && root.status === "loading") {
+                root.status = "not_found";
+            }
+        }
+        stderr: SplitParser {
+            onRead: data => console.warn("lyricsProc stderr:", data)
+        }
         stdout: SplitParser {
             onRead: data => {
                 const trimmed = data.trim()
+                if (!trimmed) return
                 if (trimmed === "not_found") { root.status = "not_found"; return }
                 if (trimmed === "no_info")   { root.status = "no_info";   return }
 
@@ -83,30 +92,60 @@ Singleton {
         }
     }
 
-    function restartLyrics() {
+    property string lastTrackKey: ""
+
+    function restartLyrics(force = false) {
+        const title    = root.activePlayer?.trackTitle  ?? ""
+        const artist   = root.activePlayer?.trackArtist ?? ""
+        const duration = root.activePlayer?.length       ?? 0
+        const durSec   = (duration && !isNaN(duration) && duration > 0) ? String(Math.floor(duration)) : "0"
+        const trackKey = title + ":::" + artist
+
+        if (!force && trackKey === root.lastTrackKey && (root.status === "ok" || root.status === "not_found")) {
+            return
+        }
+
+        root.lastTrackKey = trackKey
         lyricsProc.running = false
         root.lyricsLines = []
         root.activeIndex = -1
         root.slots = ["", "", "", "", "", "", ""]
         root.status = "loading"
 
-        const title    = root.activePlayer?.trackTitle  ?? ""
-        const artist   = root.activePlayer?.trackArtist ?? ""
-        const duration = root.activePlayer?.length       ?? 0
+        if (!title) { root.status = "no_info"; return }
 
-        if (!title || !artist) { root.status = "no_info"; return }
-
+        const scriptFile = FileUtils.trimFileProtocol(`${Directories.scriptPath}/lyrics/lyrics.py`)
         lyricsProc.command = [
             "python3",
-            `${Directories.scriptPath}/lyrics/lyrics.py`,
-            title, artist, String(Math.floor(duration))
+            scriptFile,
+            title, artist, durSec
         ]
         lyricsProc.running = true
     }
 
+    property string trackTitle: root.activePlayer?.trackTitle ?? ""
+    property string trackArtist: root.activePlayer?.trackArtist ?? ""
+
+    onTrackTitleChanged: root.restartLyrics(false)
+    onTrackArtistChanged: root.restartLyrics(false)
+
     Connections {
-        target: root.activePlayer
-        function onTrackTitleChanged() { root.restartLyrics() }
+        target: MprisController
+        function onTrackChanged() { root.restartLyrics(false) }
+        function onActivePlayerChanged() { root.restartLyrics(false) }
+    }
+
+    IpcHandler {
+        target: "lyrics"
+        function restart() {
+            root.restartLyrics(true)
+        }
+        property string status: root.status
+        property int linesCount: root.lyricsLines.length
+        property real playerPos: root.activePlayer?.position ?? 0
+        property real playerLen: root.activePlayer?.length ?? 0
+        property string currentSlots: JSON.stringify(root.slots)
+        property int currentIdx: root.activeIndex
     }
 
     Component.onCompleted: root.restartLyrics()

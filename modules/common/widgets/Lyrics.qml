@@ -30,25 +30,38 @@ Item {
 
             ColumnLayout {
                 anchors.centerIn: parent
-                spacing: 12
+                spacing: 8
 
                 Item {
                     Layout.alignment: Qt.AlignHCenter
-                    implicitWidth: 48
-                    implicitHeight: 48
+                    implicitWidth: 40
+                    implicitHeight: 40
 
                     MaterialLoadingIndicator {
                         anchors.fill: parent
                         loading: LyricsService.status === "loading"
                         colBg: root.indicatorColor
                         colShape: root.indicatorShapeColor
-                        implicitSize: 48
+                        implicitSize: 40
                     }
 
                     MouseArea {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: LyricsService.restartLyrics()
+                    }
+                }
+
+                StyledText {
+                    Layout.alignment: Qt.AlignHCenter
+                    color: root.dimColor
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    horizontalAlignment: Text.AlignHCenter
+                    text: {
+                        if (LyricsService.status === "loading") return Translation.tr("Searching lyrics...");
+                        if (LyricsService.status === "no_info") return Translation.tr("No track playing");
+                        if (LyricsService.status === "not_found") return Translation.tr("No lyrics found");
+                        return "";
                     }
                 }
             }

@@ -41,7 +41,7 @@ def read_content(path: str) -> str:
 
 def parse_key_string(key_str: str):
     """Parse 'SUPER + SHIFT + Q' into (['SUPER', 'SHIFT'], 'Q')"""
-    known_mods = {"SUPER", "SHIFT", "CTRL", "ALT", "META", "SUPER_L", "SUPER_R"}
+    known_mods = {"SUPER", "SHIFT", "CTRL", "ALT", "META"}
     parts = [p.strip() for p in key_str.split("+")]
     mods, key = [], ""
     for p in parts:
@@ -49,14 +49,41 @@ def parse_key_string(key_str: str):
             mods.append(p)
         else:
             key = p
+    if not key and mods:
+        key = mods.pop()
+    # Format mouse buttons cleanly
+    if key.startswith("mouse:"):
+        mouse_map = {
+            "mouse:272": "Left Click",
+            "mouse:273": "Right Click",
+            "mouse:274": "Middle Click",
+            "mouse:275": "Side Button",
+        }
+        key = mouse_map.get(key, key)
     return mods, key
 
 def autogenerate_comment(dispatcher: str, params: str = "") -> str:
     d = dispatcher.lower()
     if "exec_cmd" in d or "exec" in d:
+        p = params.strip(' "\'')
         if any(x in params for x in ["qsIsAlive", "qsIpcCall", "qsScripts", "hyprScripts", "grimhyprctl", "mediaNextCommand", ".."]):
             return ""
-        return "Execute: {}".format(params[:60] + "..." if len(params) > 60 else params)
+        if p == "terminal":
+            return "App: Terminal"
+        if "wpctl set-volume" in p:
+            if "2%+" in p: return "Audio: Volume up"
+            if "2%-" in p: return "Audio: Volume down"
+            return "Audio: Adjust volume"
+        if "wpctl set-mute" in p:
+            if "DEFAULT_AUDIO_SINK" in p or "DEFAULT_SINK" in p:
+                return "Audio: Toggle mute"
+            if "DEFAULT_SOURCE" in p:
+                return "Audio: Toggle microphone"
+        if "playerctl" in p:
+            if "play-pause" in p: return "Media: Play / Pause"
+            if "previous" in p: return "Media: Previous track"
+            if "next" in p: return "Media: Next track"
+        return ""
 
 def is_hidden(line: str) -> bool:
     for marker in HIDE_MARKERS:
@@ -158,6 +185,18 @@ def get_binds_recursive(current_content: Section, scope: int) -> Section:
                 # It's a descriptive placeholder like "bind = SUPER + ←/→ -- Focus in direction"
                 # Extract key hint from before " -- "
                 key_hint = rest.split(" -- ")[0].strip()
+                # Clean up "bind = ", "binde = " prefix and trailing commas
+                key_hint = re.sub(r'^bind[a-z]*\s*=\s*', '', key_hint)
+                key_hint = key_hint.rstrip(',').strip()
+                # Clean up specific representations
+                key_hint = key_hint.replace("Hash", "1..9")
+                key_hint = key_hint.replace("Page_↑/↓", "Page_Up/Down")
+                key_hint = key_hint.replace("Scroll ↑/↓", "Scroll Up/Down")
+                key_hint = re.sub(r'\b(SUPER|SHIFT|CTRL|ALT)\s*,\s*', r'\1 + ', key_hint)
+                key_hint = key_hint.replace("SUPER+SUPER_L", "SUPER + SUPER_L")
+                key_hint = key_hint.replace("SUPER+ALT", "SUPER + ALT")
+                key_hint = key_hint.replace("SUPER+SHIFT", "SUPER + SHIFT")
+                key_hint = key_hint.replace("CTRL+SUPER", "CTRL + SUPER")
                 # Build a synthetic KeyBinding for display
                 kb = KeyBinding([], key_hint, "comment", "", comment_part)
                 current_content["keybinds"].append(kb)
