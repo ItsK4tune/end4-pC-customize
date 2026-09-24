@@ -125,9 +125,10 @@ create_restore_script() {
 # Time: $(date)
 
 pkill -f -9 mpvpaper
+pkill -x hyprpaper || true
 
 for monitor in \$(hyprctl monitors -j | jq -r '.[] | .name'); do
-    mpvpaper -o "$VIDEO_OPTS" "\$monitor" "$video_path" &
+    setsid mpvpaper -o "$VIDEO_OPTS" "\$monitor" "$video_path" > /dev/null 2>&1 &
     sleep 0.1
 done
 EOF
@@ -201,6 +202,7 @@ switch() {
         fi
 
         if is_video "$imgpath"; then
+            pkill -x hyprpaper || true
             mkdir -p "$THUMBNAIL_DIR"
 
             missing_deps=()
@@ -234,7 +236,7 @@ switch() {
                 local video_path="$imgpath"
                 monitors=$(hyprctl monitors -j | jq -r '.[] | .name')
                 for monitor in $monitors; do
-                    mpvpaper -o "$VIDEO_OPTS" "$monitor" "$video_path" &
+                    setsid mpvpaper -o "$VIDEO_OPTS" "$monitor" "$video_path" > /dev/null 2>&1 &
                     sleep 0.1
                 done
             fi

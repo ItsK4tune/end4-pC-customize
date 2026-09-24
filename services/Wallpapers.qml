@@ -228,6 +228,13 @@ Singleton {
     }
 
     Connections {
+        target: Config.options?.background ?? null
+        function onWallpaperPathChanged() {
+            root.confirmedPath = "";
+        }
+    }
+
+    Connections {
         target: Config
         function onReadyChanged() {
             if (Config.ready) {
