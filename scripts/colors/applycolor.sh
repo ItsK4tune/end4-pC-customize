@@ -33,16 +33,18 @@ apply_kitty() {
     echo "Template file not found for Kitty theme. Skipping that."
     return
   fi
-  # Copy template
+  # Copy template to a temporary file first to prevent partial/corrupted config on interrupt
   mkdir -p "$STATE_DIR"/user/generated/terminal
-  cp "$SCRIPT_DIR/terminal/kitty-theme.conf" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
+  local tmp_file="$STATE_DIR/user/generated/terminal/kitty-theme.conf.tmp"
+  cp "$SCRIPT_DIR/terminal/kitty-theme.conf" "$tmp_file"
   # Apply colors
   for i in "${!colorlist[@]}"; do
-    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
+    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$tmp_file"
   done
+  mv -f "$tmp_file" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
 
   # Reload
-  kill -SIGUSR1 $(pidof kitty)
+  pkill -SIGUSR1 -x kitty 2>/dev/null || true
 }
 
 apply_anyterm() {
@@ -51,15 +53,17 @@ apply_anyterm() {
     echo "Template file not found for Terminal. Skipping that."
     return
   fi
-  # Copy template
+  # Copy template to a temporary file first
   mkdir -p "$STATE_DIR"/user/generated/terminal
-  cp "$SCRIPT_DIR/terminal/sequences.txt" "$STATE_DIR"/user/generated/terminal/sequences.txt
+  local tmp_file="$STATE_DIR/user/generated/terminal/sequences.txt.tmp"
+  cp "$SCRIPT_DIR/terminal/sequences.txt" "$tmp_file"
   # Apply colors
   for i in "${!colorlist[@]}"; do
-    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$STATE_DIR"/user/generated/terminal/sequences.txt
+    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$tmp_file"
   done
 
-  sed -i "s/\$alpha/$term_alpha/g" "$STATE_DIR/user/generated/terminal/sequences.txt"
+  sed -i "s/\$alpha/$term_alpha/g" "$tmp_file"
+  mv -f "$tmp_file" "$STATE_DIR/user/generated/terminal/sequences.txt"
 
   for file in /dev/pts/*; do
     if [[ $file =~ ^/dev/pts/[0-9]+$ ]]; then
