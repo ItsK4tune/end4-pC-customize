@@ -70,7 +70,8 @@ RowLayout {
                 leftmost: index === 0
                 rightmost: index === root.options.length - 1
                 buttonIcon: modelData.icon || ""
-                buttonText: modelData.displayName
+                buttonText: modelData.displayName ?? ""
+                tooltipText: modelData.tooltip ?? (modelData.displayName ? "" : (modelData.name ?? ""))
                 toggled: root.currentValue == modelData.value
                 onClicked: {
                     root.selected(modelData.value);

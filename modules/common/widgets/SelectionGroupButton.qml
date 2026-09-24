@@ -11,8 +11,15 @@ GroupButton {
     id: root
     bounce: false
     property string buttonIcon
+    property string tooltipText: ""
     property bool leftmost: false
     property bool rightmost: false
+    hoverEnabled: true
+
+    StyledToolTip {
+        extraVisibleCondition: root.tooltipText.length > 0
+        text: root.tooltipText
+    }
 
     property bool isDragging: false
     property color colText: root.toggled ? Appearance.colors.colOnPrimary : Appearance.colors.colOnSecondaryContainer

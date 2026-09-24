@@ -1137,37 +1137,44 @@ ContentPage {
                     }
                     options: [
                         {
-                            displayName: Translation.tr("Sakura"),
+                            displayName: "",
+                            tooltip: Translation.tr("Sakura"),
                             icon: "local_florist",
                             value: "sakura"
                         },
                         {
-                            displayName: Translation.tr("Snow"),
+                            displayName: "",
+                            tooltip: Translation.tr("Snow"),
                             icon: "ac_unit",
                             value: "snow"
                         },
                         {
-                            displayName: Translation.tr("Fireflies"),
+                            displayName: "",
+                            tooltip: Translation.tr("Fireflies"),
                             icon: "wb_incandescent",
                             value: "fireflies"
                         },
                         {
-                            displayName: Translation.tr("Starfield"),
+                            displayName: "",
+                            tooltip: Translation.tr("Starfield"),
                             icon: "auto_awesome",
                             value: "starfield"
                         },
                         {
-                            displayName: Translation.tr("Bubbles"),
-                            icon: "bubbles",
+                            displayName: "",
+                            tooltip: Translation.tr("Bubbles"),
+                            icon: "bubble_chart",
                             value: "bubbles"
                         },
                         {
-                            displayName: Translation.tr("Rain"),
+                            displayName: "",
+                            tooltip: Translation.tr("Rain"),
                             icon: "rainy",
                             value: "rain"
                         },
                         {
-                            displayName: Translation.tr("Leaves"),
+                            displayName: "",
+                            tooltip: Translation.tr("Leaves"),
                             icon: "eco",
                             value: "leaves"
                         }
@@ -1191,6 +1198,11 @@ ContentPage {
                             displayName: Translation.tr("Above widgets"),
                             icon: "vertical_align_top",
                             value: "above"
+                        },
+                        {
+                            displayName: Translation.tr("Above windows"),
+                            icon: "fullscreen",
+                            value: "window"
                         }
                     ]
                 }
@@ -1212,46 +1224,8 @@ ContentPage {
                             displayName: Translation.tr("Wallpaper theme"),
                             icon: "wallpaper",
                             value: "theme"
-                        },
-                        {
-                            displayName: Translation.tr("Custom"),
-                            icon: "colorize",
-                            value: "custom"
                         }
                     ]
-                }
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    visible: settingsParticles.entry.colorMode === "custom"
-                    spacing: 8
-                    MaterialSymbol {
-                        text: "colorize"
-                        iconSize: Appearance.font.pixelSize.normal + 5
-                        color: Appearance.colors.colOnLayer0
-                    }
-                    StyledText {
-                        text: Translation.tr("Custom color")
-                        color: Appearance.colors.colOnLayer0
-                    }
-                    Item { Layout.fillWidth: true }
-                    Rectangle {
-                        width: 24
-                        height: 24
-                        radius: 12
-                        color: settingsParticles.entry.customColor
-                        border.color: Appearance.colors.colOutlineVariant
-                        border.width: 1
-                    }
-                    MaterialTextField {
-                        implicitWidth: 120
-                        text: settingsParticles.entry.customColor
-                        onTextEdited: {
-                            if (/^#[0-9A-Fa-f]{6}$/.test(text)) {
-                                settingsParticles.entry.customColor = text;
-                            }
-                        }
-                    }
                 }
 
                 ConfigSwitch {
@@ -1364,27 +1338,32 @@ ContentPage {
                     }
                     options: [
                         {
-                            displayName: Translation.tr("Repel"),
+                            displayName: "",
+                            tooltip: Translation.tr("Repel"),
                             icon: "call_missed_outgoing",
                             value: "repel"
                         },
                         {
-                            displayName: Translation.tr("Attract"),
+                            displayName: "",
+                            tooltip: Translation.tr("Attract"),
                             icon: "call_received",
                             value: "attract"
                         },
                         {
-                            displayName: Translation.tr("Glow"),
+                            displayName: "",
+                            tooltip: Translation.tr("Glow"),
                             icon: "flare",
                             value: "glow"
                         },
                         {
-                            displayName: Translation.tr("Swirl"),
+                            displayName: "",
+                            tooltip: Translation.tr("Swirl"),
                             icon: "rotate_right",
                             value: "swirl"
                         },
                         {
-                            displayName: Translation.tr("None"),
+                            displayName: "",
+                            tooltip: Translation.tr("None"),
                             icon: "block",
                             value: "none"
                         }
