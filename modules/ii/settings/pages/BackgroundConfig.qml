@@ -1111,7 +1111,7 @@ ContentPage {
 
         ContentSection {
             id: settingsParticles
-            icon: "spark"
+            icon: "grain"
             shape: MaterialShape.Shape.Burst
             title: Translation.tr("Ambient Particles")
 

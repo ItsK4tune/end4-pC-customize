@@ -20,6 +20,10 @@ AbstractBackgroundWidget {
 
     draggable: false
     hoverEnabled: false
+    acceptedButtons: Qt.NoButton
+
+    onPressed: (mouse) => {}
+    onClicked: (mouse) => {}
 
     function restoreXYBinding() {
         root.x = 0;
@@ -43,6 +47,15 @@ AbstractBackgroundWidget {
             case "attract": return 2.0;
             case "glow": return 3.0;
             default: return 0.0;
+        }
+    }
+
+    property real accumulatedTime: 0.0
+
+    FrameAnimation {
+        running: root.visible && root.opacity > 0
+        onTriggered: {
+            root.accumulatedTime += frameTime * root.speedValue;
         }
     }
 
@@ -79,7 +92,8 @@ AbstractBackgroundWidget {
         id: shaderEffect
         anchors.fill: parent
         style: root.preset
-        speed: root.speedValue
+        time: root.accumulatedTime
+        speed: 1.0
         density: root.densityValue
         particleSize: root.particleSizeValue
         particleAlpha: root.particleAlphaValue
