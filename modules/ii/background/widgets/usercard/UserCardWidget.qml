@@ -423,6 +423,8 @@ AbstractBackgroundWidget {
                                 StyledText {
                                     Layout.fillWidth: true
                                     wrapMode: Text.WordWrap
+                                    maximumLineCount: 2
+                                    elide: Text.ElideRight
                                     font.pixelSize: Appearance.font.pixelSize.small
                                     color: Appearance.colors.colOnPrimaryContainer
                                     opacity: 0.85

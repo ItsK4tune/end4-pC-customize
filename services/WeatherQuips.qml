@@ -48,7 +48,7 @@ Singleton {
         const pool = getQuipPool()
         if (!pool || pool.length === 0) {
             return {
-                text: "• " + Translation.tr("Pleasant weather, have a wonderful and productive day"),
+                text: "• " + Translation.tr("Pleasant day, enjoy your work"),
                 icon: "favorite"
             }
         }
@@ -67,19 +67,19 @@ Singleton {
         if (!Weather.enabled) {
             if (hour >= 23 || hour < 5) {
                 return [
-                    { key: "It's late at night, get some rest", icon: "bedtime" },
-                    { key: "Sweet dreams and peaceful rest", icon: "nightlight" }
+                    { key: "Late night, time to rest", icon: "bedtime" },
+                    { key: "Sweet dreams and good night", icon: "nightlight" }
                 ]
             }
             if (hour < 9) {
                 return [
-                    { key: "Good morning! Ready to seize the day", icon: "wb_sunny" },
-                    { key: "Start the day with focus and positive energy", icon: "local_cafe" }
+                    { key: "Good morning! Seize the day", icon: "wb_sunny" },
+                    { key: "Start fresh with good energy", icon: "local_cafe" }
                 ]
             }
             return [
-                { key: "Stay focused and keep building", icon: "code" },
-                { key: "Small progress every day adds up", icon: "school" },
+                { key: "Stay focused, keep building", icon: "code" },
+                { key: "Small daily steps count", icon: "school" },
                 { key: "Enjoy every creative moment", icon: "favorite" }
             ]
         }
@@ -92,26 +92,26 @@ Singleton {
         // 2. Extreme Temperature Check
         if (feelsNum >= 36) {
             return [
-                { key: "Scorching hot outside, stay well hydrated", icon: "local_drink" },
-                { key: "Peak heat today, stay in the cool shade", icon: "thermostat" },
-                { key: "Keep your space cool and drink enough electrolytes", icon: "water_drop" }
+                { key: "Scorching hot, stay hydrated", icon: "local_drink" },
+                { key: "Peak heat, stay in the shade", icon: "thermostat" },
+                { key: "Stay cool and hydrated", icon: "water_drop" }
             ]
         }
 
         if (tempNum <= 15 && tempNum > 0) {
             return [
-                { key: "Chilly breeze outside, keep yourself warm", icon: "ac_unit" },
-                { key: "Cool crisp air, perfect for a cup of warm tea", icon: "coffee" },
-                { key: "Cool weather today, bundle up before going out", icon: "dry_cleaning" }
+                { key: "Chilly outside, keep warm", icon: "ac_unit" },
+                { key: "Crisp air, sip warm tea", icon: "coffee" },
+                { key: "Cool day, bundle up outside", icon: "dry_cleaning" }
             ]
         }
 
         // 3. Thunderstorm / Storm
         if (desc.includes("thunder") || desc.includes("storm") || desc.includes("lightning")) {
             return [
-                { key: "Stormy weather outside, stay safe and cozy indoors", icon: "bolt" },
-                { key: "Heavy rain and wind, roads are slippery so take care", icon: "shield" },
-                { key: "Roaring thunder outside, smooth code without bugs", icon: "code" }
+                { key: "Stormy outside, stay cozy indoors", icon: "bolt" },
+                { key: "Heavy rain, take care on roads", icon: "shield" },
+                { key: "Thunder outside, smooth code inside", icon: "code" }
             ]
         }
 
@@ -119,26 +119,26 @@ Singleton {
         if (desc.includes("rain") || desc.includes("drizzle") || desc.includes("shower")) {
             if (desc.includes("light") || desc.includes("patchy")) {
                 return [
-                    { key: "Raining outside, perfect time for a warm coffee", icon: "coffee" },
-                    { key: "Passing sun shower, keep an umbrella handy", icon: "umbrella" },
-                    { key: "Gentle raindrops outside, a peaceful corner to focus", icon: "water_drop" },
-                    { key: "A light rain cooling down the midday heat", icon: "water" }
+                    { key: "Raining, grab a warm coffee", icon: "coffee" },
+                    { key: "Passing shower, keep an umbrella", icon: "umbrella" },
+                    { key: "Gentle rain, peaceful focus", icon: "water_drop" },
+                    { key: "Light rain cooling the air", icon: "water" }
                 ]
             }
 
             return [
-                { key: "Raining outside, grab a cup of hot coffee", icon: "coffee" },
-                { key: "Rainy day vibes, calm mind and deep focus", icon: "umbrella" },
-                { key: "Sound of raindrops, time to get things done", icon: "code" }
+                { key: "Rainy day, warm coffee time", icon: "coffee" },
+                { key: "Rainy vibes, calm and focused", icon: "umbrella" },
+                { key: "Rainy rhythm, get things done", icon: "code" }
             ]
         }
 
         // 5. Mist / Fog / Haze
         if (desc.includes("mist") || desc.includes("fog") || desc.includes("haze")) {
             return [
-                { key: "Misty atmosphere, the city slows down a beat", icon: "foggy" },
-                { key: "Foggy vibes outside, great time for chill music", icon: "headphones" },
-                { key: "Misty streets outside, drive safe and turn on fog lights", icon: "visibility" }
+                { key: "Misty air, city slows down", icon: "foggy" },
+                { key: "Foggy vibes, chill music time", icon: "headphones" },
+                { key: "Misty roads, drive safe", icon: "visibility" }
             ]
         }
 
@@ -146,30 +146,30 @@ Singleton {
         if (desc.includes("clear") || desc.includes("sun")) {
             if (isNight) {
                 return [
-                    { key: "Clear starlit night, quiet time to unwind", icon: "nightlight" },
-                    { key: "Peaceful night sky, rest well and recharge", icon: "bedtime" },
-                    { key: "Clear sky tonight, wishing you a good sleep", icon: "star" }
+                    { key: "Starlit night, time to unwind", icon: "nightlight" },
+                    { key: "Peaceful night, recharge well", icon: "bedtime" },
+                    { key: "Clear sky, have a good sleep", icon: "star" }
                 ]
             }
 
             if (hour < 10) {
                 return [
-                    { key: "Crisp morning sunshine, ready for an inspiring day", icon: "wb_twilight" },
-                    { key: "Morning glow is up, soak in the positive energy", icon: "flare" }
+                    { key: "Morning sunshine, stay inspired", icon: "wb_twilight" },
+                    { key: "Morning glow, soak in the energy", icon: "flare" }
                 ]
             }
 
             if (hour >= 17) {
                 return [
-                    { key: "Beautiful golden sunset, let go of daily worries", icon: "wb_twilight" },
-                    { key: "Evening glow settling in, enjoy your relaxing night", icon: "nightlight" }
+                    { key: "Golden sunset, let go of worries", icon: "wb_twilight" },
+                    { key: "Evening glow, enjoy your night", icon: "nightlight" }
                 ]
             }
 
             return [
-                { key: "Bright sunny day, perfect time to touch grass", icon: "nature_people" },
-                { key: "Warm sunshine all around, great moment to break through", icon: "wb_sunny" },
-                { key: "A wonderful day to pursue what you love", icon: "flare" }
+                { key: "Sunny day, touch some grass", icon: "nature_people" },
+                { key: "Warm sunshine, time to shine", icon: "wb_sunny" },
+                { key: "Great day to do what you love", icon: "flare" }
             ]
         }
 
@@ -177,30 +177,30 @@ Singleton {
         if (desc.includes("cloud")) {
             if (desc.includes("few") || desc.includes("scattered") || desc.includes("partly")) {
                 return [
-                    { key: "Pleasant scattered clouds, gentle breeze all around", icon: "cloud" },
-                    { key: "Gentle sun through the clouds, relaxed and breezy", icon: "air" },
-                    { key: "Ideal mild weather, plenty of energy for good work", icon: "filter_drama" }
+                    { key: "Scattered clouds, gentle breeze", icon: "cloud" },
+                    { key: "Sun through clouds, easy breezy", icon: "air" },
+                    { key: "Mild weather, great energy", icon: "filter_drama" }
                 ]
             }
 
             return [
-                { key: "Clouds drifting by, peace and lightness in mind", icon: "cloud" },
-                { key: "Serene overcast sky, perfect atmosphere for deep focus", icon: "filter_drama" },
-                { key: "Shady cool clouds, another peaceful day unfolds", icon: "cloud_queue" }
+                { key: "Drifting clouds, peaceful mind", icon: "cloud" },
+                { key: "Overcast sky, deep focus", icon: "filter_drama" },
+                { key: "Shady clouds, another calm day", icon: "cloud_queue" }
             ]
         }
 
         // 8. Snow
         if (desc.includes("snow")) {
             return [
-                { key: "Romantic snowfall, keep warm with a hot drink", icon: "ac_unit" },
-                { key: "Winter wonderland, enjoy the coziness indoors", icon: "severe_cold" }
+                { key: "Romantic snowfall, keep warm", icon: "ac_unit" },
+                { key: "Winter chill, stay cozy indoors", icon: "severe_cold" }
             ]
         }
 
         // Fallback
         return [
-            { key: "Pleasant weather, have a wonderful and productive day", icon: "favorite" }
+            { key: "Pleasant day, enjoy your work", icon: "favorite" }
         ]
     }
 }
