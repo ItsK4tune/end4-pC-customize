@@ -48,18 +48,17 @@ void main() {
     vec3 rainTint = hasPrimary ? primaryColor.rgb : vec3(0.72, 0.85, 1.0);
     vec3 highlightTint = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(1.0), 0.35) : vec3(0.92, 0.96, 1.0));
 
-    float windSlant = tan(windAngle);
+    vec2 centered = flowCoord - resolution * 0.5;
+    vec2 rotSpace = rotate(centered, windAngle);
 
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);
-        float fallSpeed = (650.0 + 350.0 * l) * (1.0 + bass * 0.12);
-        vec2 layerCoord = flowCoord + vec2(-windDrift * fallSpeed, -time * fallSpeed);
+        float fallSpeed = (750.0 + 350.0 * l) * (1.0 + bass * 0.12);
+        vec2 layerCoord = rotSpace + vec2(0.0, -time * fallSpeed);
 
-        vec2 skewedCoord = vec2(layerCoord.x - layerCoord.y * windSlant, layerCoord.y);
-
-        float cellW = 80.0;
-        float cellH = 260.0;
-        vec2 grid = vec2(skewedCoord.x / cellW, skewedCoord.y / cellH);
+        float cellW = 75.0;
+        float cellH = 270.0;
+        vec2 grid = vec2(layerCoord.x / cellW, layerCoord.y / cellH);
         vec2 currentCell = floor(grid);
 
         for (int y = -2; y <= 2; y++) {
@@ -71,14 +70,13 @@ void main() {
 
                 vec2 rnd = hash22(cell + vec2(l * 15.3, l * 41.7));
                 vec2 pInCell = vec2((cell.x + 0.5 + (rnd.x - 0.5) * 0.25) * cellW, (cell.y + 0.5 + (rnd.y - 0.5) * 0.25) * cellH);
-                vec2 p = skewedCoord - pInCell;
-                vec2 rotP = rotate(p, -windAngle);
+                vec2 p = layerCoord - pInCell;
 
-                float streakLen = (28.0 + 22.0 * l + 18.0 * rnd.y) * particleSize * (1.0 + bass * 0.15 + mid * 0.1);
+                float streakLen = (32.0 + 24.0 * l + 20.0 * rnd.y) * particleSize * (1.0 + bass * 0.15 + mid * 0.1);
                 float streakWidth = (0.75 + 0.35 * l) * (1.0 + particleBlur * 1.8);
 
-                float dx = abs(rotP.x);
-                float dy = rotP.y;
+                float dx = abs(p.x);
+                float dy = p.y;
 
                 if (dx < streakWidth * 3.5 && dy > -streakLen && dy < streakLen * 0.15) {
                     float xProfile = exp(-dx * dx / (streakWidth * streakWidth * 0.75));
