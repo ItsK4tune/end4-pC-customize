@@ -117,6 +117,93 @@ AbstractBackgroundWidget {
         }
     }
 
+    function getFrameCornerRadius(name, s) {
+        switch (name) {
+            case "Square":
+                return 0;
+            case "Slanted":
+            case "Triangle":
+            case "Diamond":
+            case "Arrow":
+            case "Pentagon":
+            case "Gem":
+                return 2;
+            case "Circle":
+            case "Oval":
+            case "Pill":
+                return s * 0.5;
+            case "Cookie4Sided":
+                return s * 0.28;
+            case "Cookie6Sided":
+            case "Cookie7Sided":
+            case "Cookie9Sided":
+            case "Cookie12Sided":
+                return s * 0.20;
+            case "Arch":
+            case "SemiCircle":
+                return s * 0.26;
+            case "Clover4Leaf":
+            case "Clover8Leaf":
+            case "Flower":
+            case "Puffy":
+            case "PuffyDiamond":
+            case "Bun":
+            case "SoftBoom":
+            case "SoftBurst":
+                return s * 0.25;
+            case "Ghostish":
+            case "Heart":
+                return s * 0.22;
+            default:
+                return s * 0.22;
+        }
+    }
+
+    function getSlotRadii(div, idx, shapeName, size, m, p) {
+        if (div === "1x1") {
+            return { tl: 0, tr: 0, bl: 0, br: 0 };
+        }
+        let rOuter = Math.max(0, Math.round(root.getFrameCornerRadius(shapeName, size) - m));
+        let rInner = p > 0 ? Math.min(rOuter, Math.max(4, Math.round(p * 0.75))) : 0;
+
+        let tl = rInner, tr = rInner, bl = rInner, br = rInner;
+
+        switch (div) {
+            case "1x2":
+                if (idx === 0) { tl = rOuter; bl = rOuter; }
+                else if (idx === 1) { tr = rOuter; br = rOuter; }
+                break;
+            case "2x1":
+                if (idx === 0) { tl = rOuter; tr = rOuter; }
+                else if (idx === 1) { bl = rOuter; br = rOuter; }
+                break;
+            case "2x2":
+                if (idx === 0) { tl = rOuter; }
+                else if (idx === 1) { tr = rOuter; }
+                else if (idx === 2) { bl = rOuter; }
+                else if (idx === 3) { br = rOuter; }
+                break;
+            case "1x3":
+                if (idx === 0) { tl = rOuter; bl = rOuter; }
+                else if (idx === 2) { tr = rOuter; br = rOuter; }
+                break;
+            case "1L-2R":
+                if (idx === 0) { tl = rOuter; bl = rOuter; }
+                else if (idx === 1) { tr = rOuter; }
+                else if (idx === 2) { br = rOuter; }
+                break;
+            case "1T-2B":
+                if (idx === 0) { tl = rOuter; tr = rOuter; }
+                else if (idx === 1) { bl = rOuter; }
+                else if (idx === 2) { br = rOuter; }
+                break;
+            default:
+                tl = rOuter; tr = rOuter; bl = rOuter; br = rOuter;
+                break;
+        }
+        return { tl: tl, tr: tr, bl: bl, br: br };
+    }
+
     function getSlotLayouts(div, totalW, totalH, p, m) {
         if (totalW <= 0 || totalH <= 0) return [];
         let validPadding = Math.max(0, p ?? 0);
@@ -614,7 +701,11 @@ AbstractBackgroundWidget {
 
                             Rectangle {
                                 anchors.fill: parent
-                                radius: Appearance.rounding.small
+                                readonly property var radii: root.getSlotRadii(root.division, slotRoot.index, root.shapeName, root.widgetSize, root.margin, root.padding)
+                                topLeftRadius: radii.tl
+                                topRightRadius: radii.tr
+                                bottomLeftRadius: radii.bl
+                                bottomRightRadius: radii.br
                                 visible: root.division !== "1x1"
                             }
                         }
