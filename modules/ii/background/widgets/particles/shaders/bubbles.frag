@@ -31,8 +31,10 @@ void main() {
         }
     }
 
-    vec3 baseBubbleCol = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.5, 0.8, 1.0);
-    vec3 rainbowTint = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.9, 0.6, 0.95);
+    bool hasPrimary = primaryColor.a > 0.05;
+    bool hasSecondary = secondaryColor.a > 0.05;
+    vec3 baseBubbleCol = hasPrimary ? primaryColor.rgb : vec3(0.5, 0.8, 1.0);
+    vec3 rainbowTint = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(1.0), 0.25) : vec3(0.9, 0.6, 0.95));
 
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);

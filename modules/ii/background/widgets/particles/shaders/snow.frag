@@ -31,8 +31,10 @@ void main() {
         }
     }
 
-    vec3 snowColor = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.92, 0.95, 1.0);
-    vec3 snowGlow = (secondaryColor.a > 0.05) ? secondaryColor.rgb : snowColor;
+    bool hasPrimary = primaryColor.a > 0.05;
+    bool hasSecondary = secondaryColor.a > 0.05;
+    vec3 snowColor = hasPrimary ? primaryColor.rgb : vec3(0.92, 0.95, 1.0);
+    vec3 snowGlow = hasSecondary ? secondaryColor.rgb : snowColor;
 
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);

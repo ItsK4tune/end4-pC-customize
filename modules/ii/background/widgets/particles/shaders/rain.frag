@@ -31,8 +31,10 @@ void main() {
         }
     }
 
-    vec3 rainTint = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.72, 0.85, 1.0);
-    vec3 highlightTint = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.92, 0.96, 1.0);
+    bool hasPrimary = primaryColor.a > 0.05;
+    bool hasSecondary = secondaryColor.a > 0.05;
+    vec3 rainTint = hasPrimary ? primaryColor.rgb : vec3(0.72, 0.85, 1.0);
+    vec3 highlightTint = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(1.0), 0.35) : vec3(0.92, 0.96, 1.0));
 
     float windSlant = tan(windAngle);
 

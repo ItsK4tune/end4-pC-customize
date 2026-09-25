@@ -41,8 +41,10 @@ void main() {
         }
     }
 
-    vec3 autumnGold = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.96, 0.65, 0.14);
-    vec3 autumnCrimson = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.85, 0.22, 0.10);
+    bool hasPrimary = primaryColor.a > 0.05;
+    bool hasSecondary = secondaryColor.a > 0.05;
+    vec3 autumnGold = hasPrimary ? primaryColor.rgb : vec3(0.96, 0.65, 0.14);
+    vec3 autumnCrimson = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(0.0), 0.25) : vec3(0.85, 0.22, 0.10));
     vec3 autumnAmber = mix(autumnCrimson, autumnGold, 0.5);
 
     for (int layer = 1; layer <= 2; layer++) {

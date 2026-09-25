@@ -35,8 +35,10 @@ void main() {
     vec2 gridCoord = flowCoord / cellSize;
     vec2 currentCell = floor(gridCoord);
 
-    vec3 warmYellow = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.95, 0.95, 0.35);
-    vec3 limeGlow = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.65, 1.0, 0.25);
+    bool hasPrimary = primaryColor.a > 0.05;
+    bool hasSecondary = secondaryColor.a > 0.05;
+    vec3 warmYellow = hasPrimary ? primaryColor.rgb : vec3(0.95, 0.95, 0.35);
+    vec3 limeGlow = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(1.0), 0.3) : vec3(0.65, 1.0, 0.25));
 
     vec2 windDrift = vec2(sin(windAngle), -cos(windAngle)) * time * 35.0;
 

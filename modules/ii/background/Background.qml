@@ -396,6 +396,7 @@ Variants {
                 }
 
                 WidgetsLoader {
+                    anchors.fill: parent
                     screen: bgRoot.screen
                     wallpaperItem: wallpaper
                     wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered

@@ -38,8 +38,10 @@ void main() {
         }
     }
 
-    vec3 baseColor1 = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(1.0, 0.74, 0.83);
-    vec3 baseColor2 = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.96, 0.48, 0.62);
+    bool hasPrimary = primaryColor.a > 0.05;
+    bool hasSecondary = secondaryColor.a > 0.05;
+    vec3 baseColor1 = hasPrimary ? primaryColor.rgb : vec3(1.0, 0.74, 0.83);
+    vec3 baseColor2 = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(1.0), 0.2) : vec3(0.96, 0.48, 0.62));
 
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);

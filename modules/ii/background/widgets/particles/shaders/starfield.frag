@@ -31,8 +31,10 @@ void main() {
         }
     }
 
-    vec3 starBaseCol = (primaryColor.a > 0.05) ? primaryColor.rgb : vec3(0.85, 0.92, 1.0);
-    vec3 starGlowCol = (secondaryColor.a > 0.05) ? secondaryColor.rgb : vec3(0.55, 0.75, 1.0);
+    bool hasPrimary = primaryColor.a > 0.05;
+    bool hasSecondary = secondaryColor.a > 0.05;
+    vec3 starBaseCol = hasPrimary ? primaryColor.rgb : vec3(0.85, 0.92, 1.0);
+    vec3 starGlowCol = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(1.0), 0.3) : vec3(0.55, 0.75, 1.0));
 
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);
