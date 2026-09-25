@@ -30,10 +30,24 @@ Singleton {
         if (root.gpsActive) {
             console.info("[WeatherService] Switching to GPS location mode.")
             positionSource.start()
+            if (positionSource.position.latitudeValid && positionSource.position.longitudeValid) {
+                root.location = {
+                    lat: positionSource.position.coordinate.latitude,
+                    lon: positionSource.position.coordinate.longitude,
+                    valid: true
+                }
+                root.getData()
+            } else {
+                positionSource.update()
+            }
         } else {
             console.info("[WeatherService] Switching to manual location mode.")
             positionSource.stop()
-            root.location.valid = false
+            root.location = {
+                lat: 0,
+                lon: 0,
+                valid: false
+            }
             root.getData()
         }
     }
@@ -105,6 +119,8 @@ Singleton {
         temp.windDir = data?.wind?.deg || 0
         temp.wCode = data?.weather?.[0]?.id || 0
         temp.city = data?.name || root.city || "City"
+        temp.lat = (data?.coord?.lat !== undefined) ? data.coord.lat : null
+        temp.lon = (data?.coord?.lon !== undefined) ? data.coord.lon : null
 
         if (root.useUSCS) {
             temp.wind = (data?.wind?.speed || 0) + " mph"
@@ -182,6 +198,16 @@ Singleton {
         if (root.gpsActive) {
             console.info("[WeatherService] Starting GPS service.")
             positionSource.start()
+            if (positionSource.position.latitudeValid && positionSource.position.longitudeValid) {
+                root.location = {
+                    lat: positionSource.position.coordinate.latitude,
+                    lon: positionSource.position.coordinate.longitude,
+                    valid: true
+                }
+                root.getData()
+            } else {
+                positionSource.update()
+            }
         } else {
             root.getData()
         }
@@ -230,9 +256,11 @@ Singleton {
 
         onPositionChanged: {
             if (position.latitudeValid && position.longitudeValid) {
-                root.location.lat = position.coordinate.latitude
-                root.location.lon = position.coordinate.longitude
-                root.location.valid = true
+                root.location = {
+                    lat: position.coordinate.latitude,
+                    lon: position.coordinate.longitude,
+                    valid: true
+                }
                 root.getData()
             } else {
                 root.gpsActive = root.location.valid ? true : false
@@ -243,7 +271,11 @@ Singleton {
         onValidityChanged: {
             if (!positionSource.valid) {
                 positionSource.stop()
-                root.location.valid = false
+                root.location = {
+                    lat: 0,
+                    lon: 0,
+                    valid: false
+                }
                 root.gpsActive = false
                 console.error("[WeatherService] Could not acquire valid GPS backend.")
                 if (root.enabled) root.getData()
