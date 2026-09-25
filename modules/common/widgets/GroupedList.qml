@@ -10,7 +10,7 @@ Item {
     property color bgcolor: Appearance.colors.colLayer1
     property real itemVerticalPadding: 24
     Layout.fillWidth: true
-    implicitHeight: root.visible ? col.implicitHeight : 0
+    implicitHeight: col.implicitHeight
 
     ColumnLayout {
         id: col
@@ -21,22 +21,10 @@ Item {
             model: root.items.length
             delegate: Rectangle {
                 required property int index
-                readonly property bool itemVisible: root.items[index]?.visible ?? true
-                visible: itemVisible
-                readonly property bool isFirst: {
-                    for (let i = 0; i < index; i++) {
-                        if (root.items[i]?.visible ?? true) return false
-                    }
-                    return true
-                }
-                readonly property bool isLast: {
-                    for (let i = index + 1; i < root.items.length; i++) {
-                        if (root.items[i]?.visible ?? true) return false
-                    }
-                    return true
-                }
+                readonly property bool isFirst: index === 0
+                readonly property bool isLast: index === root.items.length - 1
                 Layout.fillWidth: true
-                implicitHeight: itemVisible ? ((root.items[index]?.implicitHeight ?? 0) + root.itemVerticalPadding) : 0
+                implicitHeight: (root.items[index]?.implicitHeight ?? 0) + root.itemVerticalPadding
                 color: root.bgcolor
                 topLeftRadius:     isFirst ? root.bigRadius : root.smallRadius
                 topRightRadius:    isFirst ? root.bigRadius : root.smallRadius
