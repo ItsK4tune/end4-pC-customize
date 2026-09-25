@@ -34,13 +34,30 @@ Singleton {
         return result
     }
 
+    property real manualOffset: 0.0
+
+    function adjustOffset(delta) {
+        root.manualOffset = Math.round((root.manualOffset + delta) * 10) / 10
+    }
+
+    function resetOffset() {
+        root.manualOffset = 0.0
+    }
+
+    function seekToLine(idx) {
+        if (idx >= 0 && idx < root.lyricsLines.length && root.activePlayer && (root.activePlayer.canSeek ?? false)) {
+            const targetTime = Math.max(0, root.lyricsLines[idx].time - root.manualOffset)
+            root.activePlayer.position = targetTime
+        }
+    }
+
     Timer {
         id: syncTimer
-        interval: 300
+        interval: 200
         repeat: true
         running: root.status === "ok" && root.lyricsLines.length > 0
         onTriggered: {
-            const pos = root.activePlayer?.position ?? 0
+            const pos = (root.activePlayer?.position ?? 0) + root.manualOffset
             let idx = -1
             for (let i = 0; i < root.lyricsLines.length; i++) {
                 if (root.lyricsLines[i].time <= pos) idx = i
@@ -111,14 +128,16 @@ Singleton {
         root.activeIndex = -1
         root.slots = ["", "", "", "", "", "", ""]
         root.status = "loading"
+        root.manualOffset = 0.0
 
         if (!title) { root.status = "no_info"; return }
 
+        const dbusName = root.activePlayer?.dbusName ?? ""
         const scriptFile = FileUtils.trimFileProtocol(`${Directories.scriptPath}/lyrics/lyrics.py`)
         lyricsProc.command = [
             "python3",
             scriptFile,
-            title, artist, durSec
+            title, artist, durSec, dbusName
         ]
         lyricsProc.running = true
     }
@@ -140,6 +159,16 @@ Singleton {
         function restart() {
             root.restartLyrics(true)
         }
+        function adjustOffset(delta) {
+            root.adjustOffset(delta)
+        }
+        function resetOffset() {
+            root.resetOffset()
+        }
+        function seekToLine(idx) {
+            root.seekToLine(idx)
+        }
+        property real manualOffset: root.manualOffset
         property string status: root.status
         property int linesCount: root.lyricsLines.length
         property real playerPos: root.activePlayer?.position ?? 0
