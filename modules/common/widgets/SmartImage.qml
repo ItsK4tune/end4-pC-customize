@@ -16,6 +16,10 @@ Item {
     property real sourceWidth: parent?.width ?? 0
     property real sourceHeight: parent?.height ?? 0
     property string loopMode: "end to front" // "none" | "boomerang" | "end to front"
+    property real panX: 0.5
+    property real panY: 0.5
+    readonly property real overflowX: cropContainer.overflowX
+    readonly property real overflowY: cropContainer.overflowY
 
     readonly property string cleanSource: {
         if (!source || source === "") return "";
@@ -128,66 +132,91 @@ Item {
         }
     }
 
-    VideoOutput {
-        id: videoOutput
+    Item {
+        id: cropContainer
         anchors.fill: parent
-        fillMode: {
-            if (root.fillMode === Image.PreserveAspectFit) return VideoOutput.PreserveAspectFit;
-            if (root.fillMode === Image.Stretch) return VideoOutput.Stretch;
-            return VideoOutput.PreserveAspectCrop;
+        clip: true
+
+        readonly property real containerW: cropContainer.width
+        readonly property real containerH: cropContainer.height
+        readonly property real rawW: root.isVideo
+            ? (videoOutput.implicitWidth > 0 ? videoOutput.implicitWidth : containerW)
+            : (root.isAnimated
+                ? (animImage.implicitWidth > 0 ? animImage.implicitWidth : containerW)
+                : (staticImage.implicitWidth > 0 ? staticImage.implicitWidth : containerW))
+        readonly property real rawH: root.isVideo
+            ? (videoOutput.implicitHeight > 0 ? videoOutput.implicitHeight : containerH)
+            : (root.isAnimated
+                ? (animImage.implicitHeight > 0 ? animImage.implicitHeight : containerH)
+                : (staticImage.implicitHeight > 0 ? staticImage.implicitHeight : containerH))
+        readonly property real scaleFactor: Math.max(containerW / Math.max(1, rawW), containerH / Math.max(1, rawH))
+        readonly property real actualW: rawW * scaleFactor
+        readonly property real actualH: rawH * scaleFactor
+        readonly property real overflowX: Math.max(0, actualW - containerW)
+        readonly property real overflowY: Math.max(0, actualH - containerH)
+        readonly property real targetX: -overflowX * Math.max(0.0, Math.min(1.0, root.panX))
+        readonly property real targetY: -overflowY * Math.max(0.0, Math.min(1.0, root.panY))
+
+        VideoOutput {
+            id: videoOutput
+            width: cropContainer.actualW
+            height: cropContainer.actualH
+            x: cropContainer.targetX
+            y: cropContainer.targetY
+            fillMode: VideoOutput.Stretch
+            visible: root.isVideo && root.cleanSource !== ""
         }
-        visible: root.isVideo && root.cleanSource !== ""
-    }
 
-    // Animated GIF
-    property bool gifReversing: false
+        AnimatedImage {
+            id: animImage
+            width: cropContainer.actualW
+            height: cropContainer.actualH
+            x: cropContainer.targetX
+            y: cropContainer.targetY
+            source: root.isAnimated && root.cleanSource !== "" ? root.cleanSource : ""
+            fillMode: Image.Stretch
+            playing: !root.paused && (root.loopMode !== "boomerang" || !root.gifReversing)
+            paused: root.paused || (root.loopMode === "none" && currentFrame >= frameCount - 1 && frameCount > 1)
+            cache: false
+            visible: root.isAnimated && root.cleanSource !== "" && status === Image.Ready
 
-    AnimatedImage {
-        id: animImage
-        anchors.fill: parent
-        source: root.isAnimated && root.cleanSource !== "" ? root.cleanSource : ""
-        fillMode: root.fillMode
-        playing: !root.paused && (root.loopMode !== "boomerang" || !root.gifReversing)
-        paused: root.paused || (root.loopMode === "none" && currentFrame >= frameCount - 1 && frameCount > 1)
-        cache: false
-        visible: root.isAnimated && root.cleanSource !== "" && status === Image.Ready
-
-        onCurrentFrameChanged: {
-            if (root.loopMode === "boomerang" && frameCount > 1) {
-                if (currentFrame >= frameCount - 1 && !root.gifReversing) {
-                    root.gifReversing = true;
-                    gifReverseTimer.running = true;
+            onCurrentFrameChanged: {
+                if (root.loopMode === "boomerang" && frameCount > 1) {
+                    if (currentFrame >= frameCount - 1 && !root.gifReversing) {
+                        root.gifReversing = true;
+                        gifReverseTimer.running = true;
+                    }
                 }
             }
         }
-    }
 
-    Timer {
-        id: gifReverseTimer
-        interval: 60
-        repeat: true
-        running: false
-        onTriggered: {
-            if (root.paused) return;
-            if (animImage.currentFrame > 0) {
-                animImage.currentFrame = animImage.currentFrame - 1;
-            } else {
-                gifReverseTimer.running = false;
-                root.gifReversing = false;
+        Timer {
+            id: gifReverseTimer
+            interval: 60
+            repeat: true
+            running: false
+            onTriggered: {
+                if (root.paused) return;
+                if (animImage.currentFrame > 0) {
+                    animImage.currentFrame = animImage.currentFrame - 1;
+                } else {
+                    gifReverseTimer.running = false;
+                    root.gifReversing = false;
+                }
             }
         }
-    }
 
-    // Static image
-    StyledImage {
-        id: staticImage
-        anchors.fill: parent
-        source: root.isStatic ? root.cleanSource : ""
-        fillMode: root.fillMode
-        cache: false
-        antialiasing: true
-        sourceSize.width: root.sourceWidth > 0 ? root.sourceWidth : parent.width
-        sourceSize.height: root.sourceHeight > 0 ? root.sourceHeight : parent.height
-        visible: root.isStatic
+        StyledImage {
+            id: staticImage
+            width: cropContainer.actualW
+            height: cropContainer.actualH
+            x: cropContainer.targetX
+            y: cropContainer.targetY
+            source: root.isStatic ? root.cleanSource : ""
+            fillMode: Image.Stretch
+            cache: false
+            antialiasing: true
+            visible: root.isStatic
+        }
     }
 }
