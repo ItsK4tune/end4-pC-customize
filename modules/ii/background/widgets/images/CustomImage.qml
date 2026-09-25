@@ -476,14 +476,12 @@ AbstractBackgroundWidget {
                         opacity: slotRoot.slotPath === "" ? 0.35 : 0
                     }
 
-                    StyledImage {
+                    SmartImage {
                         anchors.fill: parent
                         source: slotRoot.slotPath !== "" ? slotRoot.slotPath : ""
                         fillMode: Image.PreserveAspectCrop
-                        cache: false
-                        antialiasing: true
-                        sourceSize.width: parent.width
-                        sourceSize.height: parent.height
+                        sourceWidth: parent.width
+                        sourceHeight: parent.height
                         visible: slotRoot.slotPath !== ""
                     }
 
