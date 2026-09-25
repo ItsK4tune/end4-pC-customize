@@ -473,5 +473,8 @@
   "Last updated: ": "Cập nhật lần cuối: ",
   "Fetching data...": "Đang tải dữ liệu...",
   "Cloud cover": "Mây che phủ",
-  "Refresh": "Làm mới"
+  "Refresh": "Làm mới",
+  "Enable GPS based location": "Bật định vị qua GPS",
+  "Fahrenheit unit": "Đơn vị Fahrenheit (°F)",
+  "Polling interval (m)": "Chu kỳ cập nhật (phút)"
 }
