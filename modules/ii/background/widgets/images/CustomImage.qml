@@ -367,6 +367,7 @@ AbstractBackgroundWidget {
         onTriggered: {
             if (root.instanceIndex >= 0) {
                 root.updateInstanceProperty({
+                    shape: root.shapeName,
                     division: root.division,
                     margin: root.margin,
                     padding: root.padding,
@@ -380,6 +381,7 @@ AbstractBackgroundWidget {
                     showSettings: root.showSettingsPopup
                 });
             } else {
+                Config.options.background.widgets.customImage.shape = root.shapeName;
                 Config.options.background.widgets.customImage.division = root.division;
                 Config.options.background.widgets.customImage.margin = root.margin;
                 Config.options.background.widgets.customImage.padding = root.padding;
@@ -402,6 +404,7 @@ AbstractBackgroundWidget {
                 }
             }
         }
+        if (props.shape !== undefined) root.shapeName = props.shape;
         if (props.division !== undefined) root.division = props.division;
         if (props.margin !== undefined) root.margin = props.margin;
         if (props.padding !== undefined) {
@@ -951,6 +954,99 @@ AbstractBackgroundWidget {
                 }
             }
 
+            // Frame Shape selector
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 3
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    MaterialSymbol {
+                        text: "shapes"
+                        iconSize: 14
+                        color: Appearance.colors.colSubtext
+                    }
+
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: Translation.tr("Shape")
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
+                    }
+
+                    StyledText {
+                        text: root.shapeName
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        font.weight: Font.Medium
+                        color: Appearance.colors.colPrimary
+                    }
+                }
+
+                Flickable {
+                    id: shapeFlickable
+                    Layout.fillWidth: true
+                    implicitHeight: 28
+                    contentWidth: shapeRow.implicitWidth
+                    flickableDirection: Flickable.HorizontalFlick
+                    boundsBehavior: Flickable.StopAtBounds
+                    clip: true
+
+                    MouseArea {
+                        anchors.fill: parent
+                        propagateComposedEvents: true
+                        onWheel: (wheel) => {
+                            shapeFlickable.contentX = Math.max(0, Math.min(shapeFlickable.contentWidth - shapeFlickable.width, shapeFlickable.contentX - wheel.angleDelta.y));
+                        }
+                    }
+
+                    Row {
+                        id: shapeRow
+                        spacing: 4
+
+                        Repeater {
+                            model: [
+                                "Cookie4Sided", "Circle", "Square", "Arch", "SemiCircle", "Oval", "Pill",
+                                "Clover4Leaf", "Clover8Leaf", "Flower", "Heart", "Ghostish", "Bun", "Puffy",
+                                "SoftBoom", "SoftBurst", "Burst", "Sunny", "VerySunny",
+                                "Cookie6Sided", "Cookie7Sided", "Cookie9Sided", "Cookie12Sided",
+                                "Triangle", "Diamond", "Slanted", "ClamShell", "Pentagon", "Gem", "PuffyDiamond", "PixelCircle"
+                            ]
+
+                            delegate: Rectangle {
+                                id: shapeBtn
+                                required property string modelData
+                                required property int index
+
+                                width: 28
+                                height: 28
+                                radius: Appearance.rounding.small
+                                color: root.shapeName === modelData ? Appearance.colors.colPrimary : (shapeBtnHover.containsMouse ? Appearance.colors.colLayer2 : Appearance.colors.colLayer1)
+
+                                MaterialShape {
+                                    anchors.centerIn: parent
+                                    implicitSize: 17
+                                    shape: root.getShape(shapeBtn.modelData)
+                                    color: root.shapeName === shapeBtn.modelData ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
+                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                }
+
+                                MouseArea {
+                                    id: shapeBtnHover
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        root.updateInstanceSetting({ shape: shapeBtn.modelData });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
             // Division quick selector
             RowLayout {
                 Layout.fillWidth: true
@@ -1034,6 +1130,49 @@ AbstractBackgroundWidget {
                     to: 32
                     value: root.padding
                     onMoved: root.updateInstanceSetting({ padding: Math.round(value), gap: Math.round(value) })
+                }
+            }
+
+            // Rotation slider (-180 to +180 deg)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                MaterialSymbol {
+                    text: "rotate_right"
+                    iconSize: 16
+                    color: Appearance.colors.colSubtext
+                }
+                StyledText {
+                    text: `${Translation.tr("Angle")}: ${Math.round(root.widgetRotation)}°`
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colSubtext
+                }
+                StyledSlider {
+                    Layout.fillWidth: true
+                    configuration: StyledSlider.Configuration.XS
+                    from: -180
+                    to: 180
+                    value: root.widgetRotation
+                    onMoved: root.updateInstanceSetting({ rotation: Math.round(value) })
+                }
+                Rectangle {
+                    width: 18
+                    height: 18
+                    radius: 9
+                    color: Appearance.colors.colLayer1
+                    visible: root.widgetRotation !== 0
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 12
+                        text: "restart_alt"
+                        color: Appearance.colors.colOnLayer0
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.updateInstanceSetting({ rotation: 0 })
+                    }
                 }
             }
 
@@ -1159,49 +1298,6 @@ AbstractBackgroundWidget {
                     to: 1
                     value: root.bgBlur
                     onMoved: root.updateInstanceSetting({ bgBlur: value })
-                }
-            }
-
-            // Rotation slider (-180 to +180 deg)
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 6
-
-                MaterialSymbol {
-                    text: "rotate_right"
-                    iconSize: 16
-                    color: Appearance.colors.colSubtext
-                }
-                StyledText {
-                    text: `${Translation.tr("Angle")}: ${Math.round(root.widgetRotation)}°`
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colSubtext
-                }
-                StyledSlider {
-                    Layout.fillWidth: true
-                    configuration: StyledSlider.Configuration.XS
-                    from: -180
-                    to: 180
-                    value: root.widgetRotation
-                    onMoved: root.updateInstanceSetting({ rotation: Math.round(value) })
-                }
-                Rectangle {
-                    width: 18
-                    height: 18
-                    radius: 9
-                    color: Appearance.colors.colLayer1
-                    visible: root.widgetRotation !== 0
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        iconSize: 12
-                        text: "restart_alt"
-                        color: Appearance.colors.colOnLayer0
-                    }
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.updateInstanceSetting({ rotation: 0 })
-                    }
                 }
             }
 
