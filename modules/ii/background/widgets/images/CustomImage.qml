@@ -16,8 +16,10 @@ AbstractBackgroundWidget {
     hoverEnabled: true
 
     property string imagePath: Config.options.background.widgets.customImage.path ?? ""
-    property bool dropHover: false
     property real widgetSize: Config.options.background.widgets.customImage.size ?? 200
+    property string division: Config.options.background.widgets.customImage.division ?? "1x1"
+    property real gap: Config.options.background.widgets.customImage.gap ?? 4
+    property var imagesList: Config.options.background.widgets.customImage.images ?? []
 
     implicitWidth: contentItem.implicitWidth
     implicitHeight: contentItem.implicitHeight
@@ -63,6 +65,106 @@ AbstractBackgroundWidget {
         }
     }
 
+    function getSlotLayouts(div, totalW, totalH, g) {
+        if (totalW <= 0 || totalH <= 0) return [];
+        let validGap = Math.max(0, g);
+        switch (div) {
+            case "1x2": {
+                let w1 = Math.floor((totalW - validGap) / 2);
+                let w2 = Math.max(1, totalW - validGap - w1);
+                return [
+                    { x: 0, y: 0, width: w1, height: totalH },
+                    { x: w1 + validGap, y: 0, width: w2, height: totalH }
+                ];
+            }
+            case "2x1": {
+                let h1 = Math.floor((totalH - validGap) / 2);
+                let h2 = Math.max(1, totalH - validGap - h1);
+                return [
+                    { x: 0, y: 0, width: totalW, height: h1 },
+                    { x: 0, y: h1 + validGap, width: totalW, height: h2 }
+                ];
+            }
+            case "2x2": {
+                let w1 = Math.floor((totalW - validGap) / 2);
+                let w2 = Math.max(1, totalW - validGap - w1);
+                let h1 = Math.floor((totalH - validGap) / 2);
+                let h2 = Math.max(1, totalH - validGap - h1);
+                return [
+                    { x: 0, y: 0, width: w1, height: h1 },
+                    { x: w1 + validGap, y: 0, width: w2, height: h1 },
+                    { x: 0, y: h1 + validGap, width: w1, height: h2 },
+                    { x: w1 + validGap, y: h1 + validGap, width: w2, height: h2 }
+                ];
+            }
+            case "1L-2R": {
+                let w1 = Math.floor((totalW - validGap) / 2);
+                let w2 = Math.max(1, totalW - validGap - w1);
+                let h1 = Math.floor((totalH - validGap) / 2);
+                let h2 = Math.max(1, totalH - validGap - h1);
+                return [
+                    { x: 0, y: 0, width: w1, height: totalH },
+                    { x: w1 + validGap, y: 0, width: w2, height: h1 },
+                    { x: w1 + validGap, y: h1 + validGap, width: w2, height: h2 }
+                ];
+            }
+            case "1T-2B": {
+                let w1 = Math.floor((totalW - validGap) / 2);
+                let w2 = Math.max(1, totalW - validGap - w1);
+                let h1 = Math.floor((totalH - validGap) / 2);
+                let h2 = Math.max(1, totalH - validGap - h1);
+                return [
+                    { x: 0, y: 0, width: totalW, height: h1 },
+                    { x: 0, y: h1 + validGap, width: w1, height: h2 },
+                    { x: w1 + validGap, y: h1 + validGap, width: w2, height: h2 }
+                ];
+            }
+            case "1x3": {
+                let w1 = Math.floor((totalW - validGap * 2) / 3);
+                let w2 = Math.floor((totalW - validGap * 2) / 3);
+                let w3 = Math.max(1, totalW - validGap * 2 - w1 - w2);
+                return [
+                    { x: 0, y: 0, width: w1, height: totalH },
+                    { x: w1 + validGap, y: 0, width: w2, height: totalH },
+                    { x: (w1 + validGap) + w2 + validGap, y: 0, width: w3, height: totalH }
+                ];
+            }
+            case "1x1":
+            default: {
+                return [
+                    { x: 0, y: 0, width: totalW, height: totalH }
+                ];
+            }
+        }
+    }
+
+    function getSlotPath(index) {
+        if (root.imagesList && root.imagesList.length > index && root.imagesList[index]) {
+            return root.imagesList[index];
+        }
+        if (index === 0 && root.imagePath !== "") {
+            return root.imagePath;
+        }
+        return "";
+    }
+
+    function setSlotImage(index, path) {
+        let currentImages = [];
+        if (root.imagesList) {
+            for (let i = 0; i < root.imagesList.length; i++) {
+                currentImages.push(root.imagesList[i]);
+            }
+        }
+        while (currentImages.length <= index) {
+            currentImages.push("");
+        }
+        currentImages[index] = path;
+        if (index === 0) {
+            Config.options.background.widgets.customImage.path = path;
+        }
+        Config.options.background.widgets.customImage.images = currentImages;
+    }
+
     Item {
         id: contentItem
         implicitWidth: root.widgetSize
@@ -105,55 +207,130 @@ AbstractBackgroundWidget {
                 }
             }
 
-            StyledImage {
-                anchors.fill: parent
-                source: root.imagePath !== "" ? root.imagePath : ""
-                fillMode: Image.PreserveAspectCrop
-                cache: false
-                antialiasing: true
-                sourceSize.width: parent.width
-                sourceSize.height: parent.height
-                visible: root.imagePath !== ""
-            }
+            Repeater {
+                id: slotsRepeater
+                model: root.getSlotLayouts(root.division, imageShape.width, imageShape.height, root.gap)
 
-            // Placeholder + hover hint
-            MaterialSymbol {
-                anchors.centerIn: parent
-                iconSize: contentItem.implicitWidth / 3
-                text: root.dropHover ? "download" : "image"
-                fill: root.dropHover ? 1 : 0
-                color: root.dropHover
-                    ? Appearance.colors.colPrimary
-                    : Appearance.colors.colOnPrimaryContainer
-                visible: root.imagePath === ""
-                Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
-            }
+                delegate: Item {
+                    id: slotRoot
+                    required property var modelData
+                    required property int index
 
-            DropArea {
-                anchors.fill: parent
-                keys: ["text/uri-list"]
-                onEntered: (drag) => {
-                    drag.accept(Qt.CopyAction)
-                    root.dropHover = true
-                }
-                onExited: {
-                    root.dropHover = false
-                }
-                onDropped: (drop) => {
-                    if (drop.hasUrls && drop.urls.length > 0) {
-                        var cleanPath = drop.urls[0].toString().replace(/^file:\/\//, "")
-                        var ext = cleanPath.split(".").pop().toLowerCase()
-                        var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"]
-                        if (accepted.indexOf(ext) !== -1) {
-                            Config.options.background.widgets.customImage.path = cleanPath
+                    x: modelData.x
+                    y: modelData.y
+                    width: modelData.width
+                    height: modelData.height
+                    clip: true
+
+                    property bool slotHover: false
+                    property string slotPath: root.getSlotPath(index)
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color: Appearance.colors.colLayer1
+                        opacity: slotRoot.slotPath === "" ? 0.35 : 0
+                    }
+
+                    StyledImage {
+                        anchors.fill: parent
+                        source: slotRoot.slotPath !== "" ? slotRoot.slotPath : ""
+                        fillMode: Image.PreserveAspectCrop
+                        cache: false
+                        antialiasing: true
+                        sourceSize.width: parent.width
+                        sourceSize.height: parent.height
+                        visible: slotRoot.slotPath !== ""
+                    }
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: Math.max(16, Math.min(parent.width, parent.height) / 3)
+                        text: slotRoot.slotHover ? "download" : "image"
+                        fill: slotRoot.slotHover ? 1 : 0
+                        color: slotRoot.slotHover
+                            ? Appearance.colors.colPrimary
+                            : Appearance.colors.colOnPrimaryContainer
+                        visible: slotRoot.slotPath === ""
+                        Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
+                    }
+
+                    Rectangle {
+                        anchors.fill: parent
+                        color: Appearance.colors.colPrimary
+                        opacity: slotRoot.slotHover ? 0.25 : 0
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
+                    }
+
+                    // Hover delete/clear button
+                    Item {
+                        anchors {
+                            top: parent.top
+                            right: parent.right
+                            margins: 4
+                        }
+                        width: 22
+                        height: 22
+                        visible: slotRoot.slotPath !== "" && slotMouseArea.containsMouse
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: width / 2
+                            color: Appearance.colors.colLayer0
+                            opacity: 0.85
+                        }
+
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            iconSize: 14
+                            text: "close"
+                            color: Appearance.colors.colOnLayer0
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.setSlotImage(slotRoot.index, "")
+                            }
                         }
                     }
-                    root.dropHover = false
+
+                    MouseArea {
+                        id: slotMouseArea
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        acceptedButtons: Qt.NoButton
+                        onEntered: slotRoot.slotHover = true
+                        onExited: slotRoot.slotHover = false
+                    }
+
+                    DropArea {
+                        anchors.fill: parent
+                        keys: ["text/uri-list"]
+                        onEntered: (drag) => {
+                            drag.accept(Qt.CopyAction)
+                            slotRoot.slotHover = true
+                        }
+                        onExited: {
+                            slotRoot.slotHover = false
+                        }
+                        onDropped: (drop) => {
+                            if (drop.hasUrls && drop.urls.length > 0) {
+                                var cleanPath = drop.urls[0].toString().replace(/^file:\/\//, "")
+                                var ext = cleanPath.split(".").pop().toLowerCase()
+                                var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"]
+                                if (accepted.indexOf(ext) !== -1) {
+                                    root.setSlotImage(slotRoot.index, cleanPath)
+                                }
+                            }
+                            slotRoot.slotHover = false
+                        }
+                    }
                 }
             }
         }
 
-        ResizeHandler{
+        ResizeHandler {
             anchorItem: imageShape
             hoverActive: root.containsMouse
             locked: Config.options.background.widgetsLocked
