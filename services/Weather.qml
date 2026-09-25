@@ -190,7 +190,7 @@ Singleton {
     }
 
     function formatCityName(cityName) {
-        return cityName.trim().split(/\s+/).join('+')
+        return encodeURIComponent(cityName.trim());
     }
 
     function startService() {

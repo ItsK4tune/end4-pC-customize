@@ -25,15 +25,17 @@ Singleton {
     readonly property bool connected: Bluetooth.devices.values.some(d => root.isConnected(d))
 
     function sortFunction(a, b) {
+        const aName = a?.name || "";
+        const bName = b?.name || "";
         // Ones with meaningful names before MAC addresses
         const macRegex = /^([0-9A-Fa-f]{2}-){5}[0-9A-Fa-f]{2}$/;
-        const aIsMac = macRegex.test(a.name);
-        const bIsMac = macRegex.test(b.name);
+        const aIsMac = macRegex.test(aName);
+        const bIsMac = macRegex.test(bName);
         if (aIsMac !== bIsMac)
             return aIsMac ? 1 : -1;
 
         // Alphabetical by name
-        return a.name.localeCompare(b.name);
+        return aName.localeCompare(bName);
     }
     property list<var> connectedDevices: Bluetooth.devices.values.filter(d => root.isConnected(d)).sort(sortFunction)
     property list<var> pairedButNotConnectedDevices: Bluetooth.devices.values.filter(d => d.paired && !root.isConnected(d)).sort(sortFunction)

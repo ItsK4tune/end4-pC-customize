@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 
-QUICKSHELL_CONFIG_NAME="ii"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CONFIG_DIR="${CONFIG_DIR:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
+QUICKSHELL_CONFIG_NAME="$(basename "$CONFIG_DIR")"
 XDG_CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}"
 XDG_CACHE_HOME="${XDG_CACHE_HOME:-$HOME/.cache}"
 XDG_STATE_HOME="${XDG_STATE_HOME:-$HOME/.local/state}"
-CONFIG_DIR="$XDG_CONFIG_HOME/quickshell/$QUICKSHELL_CONFIG_NAME"
 CACHE_DIR="$XDG_CACHE_HOME/quickshell"
 STATE_DIR="$XDG_STATE_HOME/quickshell"
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SHELL_CONFIG_FILE="$XDG_CONFIG_HOME/illogical-impulse/config.json"
 MATUGEN_DIR="$XDG_CONFIG_HOME/matugen"
 terminalscheme="$SCRIPT_DIR/terminal/scheme-base.json"
@@ -345,7 +345,9 @@ switch() {
         done
     fi
 
-    source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
+    if [[ -n "$ILLOGICAL_IMPULSE_VIRTUAL_ENV" && -f "$ILLOGICAL_IMPULSE_VIRTUAL_ENV/bin/activate" ]]; then
+        source "$ILLOGICAL_IMPULSE_VIRTUAL_ENV/bin/activate"
+    fi
 
     if [[ -n "$colors_lock_flag" ]]; then
         output_scss="$STATE_DIR/user/generated/material_colors_lock.scss"
@@ -355,7 +357,9 @@ switch() {
 
     python3 "$SCRIPT_DIR/generate_colors_material.py" "${generate_colors_material_args[@]}" \
         > "$output_scss"
-    deactivate
+    if [[ -n "$ILLOGICAL_IMPULSE_VIRTUAL_ENV" ]] && command -v deactivate >/dev/null 2>&1; then
+        deactivate
+    fi
 
     if [[ -z "$colors_lock_flag" ]]; then
         "$SCRIPT_DIR"/applycolor.sh
@@ -391,9 +395,13 @@ main() {
 
     detect_scheme_type_from_image() {
         local img="$1"
-        source "$(eval echo $ILLOGICAL_IMPULSE_VIRTUAL_ENV)/bin/activate"
+        if [[ -n "$ILLOGICAL_IMPULSE_VIRTUAL_ENV" && -f "$ILLOGICAL_IMPULSE_VIRTUAL_ENV/bin/activate" ]]; then
+            source "$ILLOGICAL_IMPULSE_VIRTUAL_ENV/bin/activate"
+        fi
         "$SCRIPT_DIR"/scheme_for_image.py "$img" 2>/dev/null | tr -d '\n'
-        deactivate
+        if [[ -n "$ILLOGICAL_IMPULSE_VIRTUAL_ENV" ]] && command -v deactivate >/dev/null 2>&1; then
+            deactivate
+        fi
     }
 
     while [[ $# -gt 0 ]]; do

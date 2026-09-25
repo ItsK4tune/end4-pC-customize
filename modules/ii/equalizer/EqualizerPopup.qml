@@ -129,7 +129,7 @@ Scope {
         id: coverArtDownloader
         property string targetFile: root.artUrl
         property string targetPath: root.artFilePath
-        command: ["bash", "-c", `[ -f ${targetPath} ] || curl -4 -sSL '${targetFile}' -o '${targetPath}'`]
+        command: ["bash", "-c", `[ -f "${targetPath}" ] || curl -4 -sSL '${targetFile}' -o '${targetPath}'`]
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) root.colorSourceFilePath = Qt.resolvedUrl(root.artFilePath)
         }

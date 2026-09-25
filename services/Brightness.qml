@@ -34,15 +34,15 @@ Singleton {
             return;
         }
 
-        const focusedName = Hyprland.focusedMonitor.name;
-        const monitor = monitors.find(m => focusedName === m.screen.name);
+        const focusedName = Hyprland?.focusedMonitor?.name ?? "";
+        const monitor = (focusedName ? monitors.find(m => focusedName === m.screen.name) : null) ?? monitors[0];
         if (monitor)
             monitor.setBrightness(monitor.brightness + 0.05);
     }
 
     function decreaseBrightness(): void {
-        const focusedName = Hyprland.focusedMonitor.name;
-        const monitor = monitors.find(m => focusedName === m.screen.name);
+        const focusedName = Hyprland?.focusedMonitor?.name ?? "";
+        const monitor = (focusedName ? monitors.find(m => focusedName === m.screen.name) : null) ?? monitors[0];
         if (monitor && monitor.brightness > 0) 
             monitor.setBrightness(monitor.brightness - 0.05);
         // if brightness is 0, then decrease gamma
