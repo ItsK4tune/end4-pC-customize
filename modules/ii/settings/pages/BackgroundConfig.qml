@@ -1085,17 +1085,7 @@ ContentPage {
                     buttonIcon: "check"
                     text: Translation.tr("Enable")
                     checked: Config.options.background.widgets.customImage.enable
-                    onCheckedChanged: {
-                        if (checked) {
-                            if (!customImageSection.instances || customImageSection.instances.length === 0) {
-                                customImageSection.addInstance();
-                            } else {
-                                Config.options.background.widgets.customImage.enable = true;
-                            }
-                        } else {
-                            Config.options.background.widgets.customImage.enable = false;
-                        }
-                    }
+                    onCheckedChanged: Config.options.background.widgets.customImage.enable = checked
                 }
 
                 RowLayout {

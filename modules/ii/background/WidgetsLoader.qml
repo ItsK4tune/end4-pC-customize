@@ -50,7 +50,26 @@ Item {
             if (!ci) return;
             let insts = ci.instances;
             if (ci.enable && (!insts || insts.length === 0)) {
-                ci.enable = false;
+                ci.instances = [{
+                    id: "ci_1",
+                    x: ci.x ?? 100,
+                    y: ci.y ?? 100,
+                    z: ci.z ?? 0,
+                    size: ci.size ?? 200,
+                    shape: ci.shape ?? "Cookie4Sided",
+                    division: ci.division ?? "1x1",
+                    margin: ci.margin ?? 0,
+                    padding: ci.padding ?? (ci.gap ?? 4),
+                    gap: ci.padding ?? (ci.gap ?? 4),
+                    images: (ci.images ?? []).slice(),
+                    path: ci.path ?? "",
+                    bgPath: ci.bgPath ?? "",
+                    bgOpacity: ci.bgOpacity ?? 1.0,
+                    bgDim: ci.bgDim ?? 0.0,
+                    bgBlur: ci.bgBlur ?? 0.0,
+                    rotation: ci.rotation ?? 0,
+                    loopMode: ci.loopMode ?? "end to front"
+                }];
             }
         }
     }
