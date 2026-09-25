@@ -73,21 +73,7 @@ AbstractBackgroundWidget {
     property string hostname: SystemInfo.hostname
     property string username: Config.options.profile.displayName === "" ? SystemInfo.username : Config.options.profile.displayName
     property string userDisplay: username.length > 10 ? username : (username + "@" + hostname)
-    property var currentQuip: weatherQuip()
-
-    function weatherQuip() {
-        const desc = (Weather.data?.description ?? "").toLowerCase();
-        const temp = Weather.data?.temp ?? "--";
-        if (desc.includes("rain"))
-            return { text: `• raining, grab a coffee`, icon: "coffee" };
-        if (desc.includes("clear"))
-            return { text: `• good day to touch grass`, icon: "eco" };
-        if (desc.includes("cloud"))
-            return { text: `• a bit cloudy today`, icon: "cloud" };
-        if (desc.includes("snow"))
-            return { text: `• snowing`, icon: "ac_unit" };
-        return { text: `• ${Weather.data?.description ?? ""}`, icon: "thermostat" };
-    }
+    property var currentQuip: WeatherQuips.currentQuip
 
     function greetingFor(hour) {
         if (hour < 12) return "Good Morning"
@@ -416,26 +402,38 @@ AbstractBackgroundWidget {
                             Layout.preferredHeight: root.avatarSize / 2
                         }
 
-                        RowLayout {
+                        Item {
                             Layout.fillWidth: true
-                            spacing: 6
+                            implicitHeight: quipRow.implicitHeight
 
-                            MaterialSymbol {
-                                Layout.alignment: Qt.AlignTop
-                                Layout.topMargin: 2
-                                iconSize: Appearance.font.pixelSize.normal
-                                text: root.currentQuip.icon
-                                color: Appearance.colors.colOnPrimaryContainer
-                                opacity: 0.85
+                            RowLayout {
+                                id: quipRow
+                                anchors.fill: parent
+                                spacing: 6
+
+                                MaterialSymbol {
+                                    Layout.alignment: Qt.AlignTop
+                                    Layout.topMargin: 2
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    text: root.currentQuip.icon
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                    opacity: 0.85
+                                }
+
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    wrapMode: Text.WordWrap
+                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                    opacity: 0.85
+                                    text: root.currentQuip.text
+                                }
                             }
 
-                            StyledText {
-                                Layout.fillWidth: true
-                                wrapMode: Text.WordWrap
-                                font.pixelSize: Appearance.font.pixelSize.small
-                                color: Appearance.colors.colOnPrimaryContainer
-                                opacity: 0.85
-                                text: root.currentQuip.text
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: WeatherQuips.shuffle()
                             }
                         } 
 
