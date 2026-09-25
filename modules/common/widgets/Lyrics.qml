@@ -1,6 +1,7 @@
 pragma ComponentBehavior: Bound
 
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.services
 import QtQuick
@@ -222,18 +223,19 @@ Item {
             anchors {
                 bottom: parent.bottom
                 horizontalCenter: parent.horizontalCenter
-                bottomMargin: 8
+                bottomMargin: 10
             }
             visible: root.isDetached && LyricsService.status === "ok" && LyricsService.activeIndex >= 0
             implicitWidth: reattachLayout.implicitWidth + 24
-            implicitHeight: 30
+            implicitHeight: 32
             radius: Appearance.rounding.full
-            color: ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 0.15)
-            border.color: Appearance.colors.colPrimary
+            color: reattachMouse.containsMouse ? ColorUtils.transparentize(root.activeColor, 0.70) : ColorUtils.transparentize(Appearance.colors.colLayer2, 0.2)
+            border.color: ColorUtils.transparentize(root.activeColor, 0.35)
             border.width: 1
 
             opacity: visible ? 1 : 0
             Behavior on opacity { NumberAnimation { duration: 200 } }
+            Behavior on color { ColorAnimation { duration: 150 } }
 
             RowLayout {
                 id: reattachLayout
@@ -243,18 +245,21 @@ Item {
                 MaterialSymbol {
                     iconSize: 16
                     text: "my_location"
-                    color: Appearance.colors.colOnPrimaryContainer
+                    color: root.activeColor
                 }
 
                 StyledText {
                     text: Translation.tr("Sync to current")
                     font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnPrimaryContainer
+                    font.weight: Font.DemiBold
+                    color: root.activeColor
                 }
             }
 
             MouseArea {
+                id: reattachMouse
                 anchors.fill: parent
+                hoverEnabled: true
                 cursorShape: Qt.PointingHandCursor
                 onClicked: root.reattachAndScroll()
             }
