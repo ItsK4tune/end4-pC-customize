@@ -193,6 +193,33 @@ AbstractBackgroundWidget {
         }
     }
 
+    function getSlotCount(div) {
+        switch (div) {
+            case "1x2": return 2;
+            case "2x1": return 2;
+            case "2x2": return 4;
+            case "1L-2R": return 3;
+            case "1T-2B": return 3;
+            case "1x3": return 3;
+            case "1x1":
+            default: return 1;
+        }
+    }
+
+    function getSlotLayout(div, index, totalW, totalH, p, m) {
+        let layouts = root.getSlotLayouts(div, totalW, totalH, p, m);
+        if (layouts && index >= 0 && index < layouts.length) {
+            return layouts[index];
+        }
+        let mx = Math.max(0, m ?? 0);
+        return {
+            x: mx,
+            y: mx,
+            width: Math.max(1, totalW - mx * 2),
+            height: Math.max(1, totalH - mx * 2)
+        };
+    }
+
     function getSlotPath(index) {
         if (root.imagesList && root.imagesList.length > index && root.imagesList[index]) {
             return root.imagesList[index];
@@ -551,21 +578,41 @@ AbstractBackgroundWidget {
 
             Repeater {
                 id: slotsRepeater
-                model: root.getSlotLayouts(root.division, imageShape.width, imageShape.height, root.padding, root.margin)
+                model: root.getSlotCount(root.division)
 
                 delegate: Item {
                     id: slotRoot
-                    required property var modelData
                     required property int index
 
-                    x: modelData.x
-                    y: modelData.y
-                    width: modelData.width
-                    height: modelData.height
-                    clip: true
+                    readonly property var slotLayout: root.getSlotLayout(root.division, index, imageShape.width, imageShape.height, root.padding, root.margin)
+
+                    x: slotLayout.x
+                    y: slotLayout.y
+                    width: slotLayout.width
+                    height: slotLayout.height
 
                     property bool slotHover: false
                     property string slotPath: root.getSlotPath(index)
+
+                    layer.enabled: true
+                    layer.effect: OpacityMask {
+                        maskSource: Item {
+                            width: slotRoot.width
+                            height: slotRoot.height
+
+                            MaterialShape {
+                                anchors.fill: parent
+                                shape: getShape(root.shapeName)
+                                visible: root.division === "1x1"
+                            }
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Appearance.rounding.small
+                                visible: root.division !== "1x1"
+                            }
+                        }
+                    }
 
                     Rectangle {
                         anchors.fill: parent
@@ -607,11 +654,12 @@ AbstractBackgroundWidget {
                         anchors {
                             top: parent.top
                             right: parent.right
-                            margins: 4
+                            margins: (root.division === "1x1" && (root.shapeName === "Circle" || root.shapeName === "Cookie4Sided" || root.shapeName === "Heart" || root.shapeName === "Diamond")) ? Math.round(parent.width * 0.12) : 4
                         }
                         width: 22
                         height: 22
                         visible: slotRoot.slotPath !== "" && slotMouseArea.containsMouse
+                        z: 10
 
                         Rectangle {
                             anchors.fill: parent
@@ -699,12 +747,8 @@ AbstractBackgroundWidget {
         id: controlBarWrapper
         anchors {
             horizontalCenter: contentItem.horizontalCenter
-            bottom: contentItem.top
-            bottomMargin: {
-                let rad = Math.abs(root.widgetRotation * Math.PI / 180);
-                let extraH = ((Math.abs(Math.sin(rad)) + Math.abs(Math.cos(rad)) - 1) * root.widgetSize) / 2;
-                return Math.max(2, extraH + 2);
-            }
+            bottom: contentItem.verticalCenter
+            bottomMargin: Math.round((root.widgetSize * 1.4142) / 2 + 6)
         }
         height: 36
         width: controlButtonsRow.implicitWidth + 16
@@ -806,13 +850,9 @@ AbstractBackgroundWidget {
         visible: root.showSettingsPopup
         z: 200
         anchors {
-            top: contentItem.bottom
-            topMargin: {
-                let rad = Math.abs(root.widgetRotation * Math.PI / 180);
-                let extraH = ((Math.abs(Math.sin(rad)) + Math.abs(Math.cos(rad)) - 1) * root.widgetSize) / 2;
-                return Math.max(8, extraH + 8);
-            }
             horizontalCenter: contentItem.horizontalCenter
+            top: contentItem.verticalCenter
+            topMargin: Math.round((root.widgetSize * 1.4142) / 2 + 8)
         }
         width: 290
         height: settingsCardCol.implicitHeight + 20
@@ -1155,53 +1195,6 @@ AbstractBackgroundWidget {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.updateInstanceSetting({ rotation: 0 })
-                    }
-                }
-            }
-
-            // Loop Mode selector
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 6
-                MaterialSymbol {
-                    text: "repeat"
-                    iconSize: 16
-                    color: Appearance.colors.colSubtext
-                }
-                StyledText {
-                    text: Translation.tr("Loop Mode")
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colSubtext
-                }
-                Item { Layout.fillWidth: true }
-                RowLayout {
-                    spacing: 4
-                    Repeater {
-                        model: [
-                            { val: "end to front", icon: "repeat", tip: Translation.tr("End to Front") },
-                            { val: "boomerang",   icon: "sync_alt", tip: Translation.tr("Boomerang") },
-                            { val: "none",        icon: "play_arrow", tip: Translation.tr("None") },
-                        ]
-                        delegate: Rectangle {
-                            required property var modelData
-                            implicitWidth: 32
-                            implicitHeight: 22
-                            radius: Appearance.rounding.small
-                            color: root.loopMode === modelData.val ? Appearance.colors.colPrimary : Appearance.colors.colLayer1
-
-                            MaterialSymbol {
-                                anchors.centerIn: parent
-                                iconSize: 14
-                                text: modelData.icon
-                                color: root.loopMode === modelData.val ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.updateInstanceSetting({ loopMode: modelData.val })
-                            }
-                        }
                     }
                 }
             }
