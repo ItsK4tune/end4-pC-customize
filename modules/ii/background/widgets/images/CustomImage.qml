@@ -905,26 +905,29 @@ AbstractBackgroundWidget {
                 }
                 // Full settings button
                 Rectangle {
-                    width: 22
-                    height: 22
-                    radius: 11
-                    color: "transparent"
+                    width: 24
+                    height: 24
+                    radius: 12
+                    color: fullSettingsHover.containsMouse ? Appearance.colors.colLayer2 : Appearance.colors.colLayer1
+
                     MaterialSymbol {
                         anchors.centerIn: parent
                         iconSize: 15
-                        text: "open_in_new"
-                        color: Appearance.colors.colSubtext
+                        text: "tune"
+                        color: fullSettingsHover.containsMouse ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer0
                     }
                     MouseArea {
+                        id: fullSettingsHover
                         anchors.fill: parent
+                        hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             root.showSettingsPopup = false;
                             let targetPage = root.instanceIndex >= 0
                                 ? `Desktop:Custom Image:${root.instanceIndex}`
                                 : "Desktop:Custom Image";
-                            GlobalStates.settingsPage = targetPage;
                             GlobalStates.settingsOpen = true;
+                            GlobalStates.settingsPage = targetPage;
                         }
                     }
                 }
@@ -1202,48 +1205,6 @@ AbstractBackgroundWidget {
                 }
             }
 
-            // Link to full settings
-            Rectangle {
-                Layout.fillWidth: true
-                implicitHeight: 28
-                radius: Appearance.rounding.small
-                color: moreSettingsHover.containsMouse ? Appearance.colors.colLayer2 : Appearance.colors.colLayer1
-
-                RowLayout {
-                    anchors.centerIn: parent
-                    spacing: 6
-                    MaterialSymbol {
-                        text: "tune"
-                        iconSize: 15
-                        color: Appearance.colors.colPrimary
-                    }
-                    StyledText {
-                        text: Translation.tr("Open Detailed Settings")
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.colors.colOnLayer0
-                    }
-                    MaterialSymbol {
-                        text: "arrow_forward"
-                        iconSize: 13
-                        color: Appearance.colors.colSubtext
-                    }
-                }
-
-                MouseArea {
-                    id: moreSettingsHover
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        root.showSettingsPopup = false;
-                        let targetPage = root.instanceIndex >= 0
-                            ? `Desktop:Custom Image:${root.instanceIndex}`
-                            : "Desktop:Custom Image";
-                        GlobalStates.settingsPage = targetPage;
-                        GlobalStates.settingsOpen = true;
-                    }
-                }
-            }
         }
     }
 }

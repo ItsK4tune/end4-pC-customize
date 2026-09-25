@@ -44,14 +44,25 @@ Item {
                 
                 if (searchTerm !== "") {
                     let loader = pagesRepeater.itemAt(idx);
+                    let tryGoTo = function() {
+                        if (loader && loader.item && typeof loader.item.goTo === "function") {
+                            loader.item.goTo(searchTerm);
+                        }
+                    };
                     if (loader && loader.item && typeof loader.item.goTo === "function") {
-                        loader.item.goTo(searchTerm);
+                        tryGoTo();
+                        Qt.callLater(tryGoTo);
                     } else if (loader) {
-                        loader.onLoaded.connect(function() {
-                            if (loader.item && typeof loader.item.goTo === "function") {
-                                loader.item.goTo(searchTerm);
-                            }
-                        });
+                        let onLoadedHandler = function() {
+                            tryGoTo();
+                            Qt.callLater(tryGoTo);
+                            try { loader.loaded.disconnect(onLoadedHandler); } catch (e) {}
+                        };
+                        try {
+                            loader.loaded.connect(onLoadedHandler);
+                        } catch (e) {
+                            tryGoTo();
+                        }
                     }
                 }
             }
