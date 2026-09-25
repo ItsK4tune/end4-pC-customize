@@ -267,6 +267,29 @@ AbstractBackgroundWidget {
         Config.options.background.widgets.customImage.instances = newList;
     }
 
+    property bool controlBarVisible: false
+    property bool showSettingsPopup: false
+
+    Timer {
+        id: hideControlBarTimer
+        interval: 350
+        repeat: false
+        onTriggered: {
+            if (!root.containsMouse && !controlBarHoverArea.containsMouse && !root.showSettingsPopup) {
+                root.controlBarVisible = false;
+            }
+        }
+    }
+
+    onContainsMouseChanged: {
+        if (root.containsMouse) {
+            hideControlBarTimer.stop();
+            root.controlBarVisible = true;
+        } else if (!controlBarHoverArea.containsMouse && !root.showSettingsPopup) {
+            hideControlBarTimer.restart();
+        }
+    }
+
     Item {
         id: contentItem
         implicitWidth: root.widgetSize
@@ -280,55 +303,104 @@ AbstractBackgroundWidget {
         }
 
         // On-widget mini controls
-        Row {
+        Item {
+            id: controlBarWrapper
             anchors {
                 horizontalCenter: parent.horizontalCenter
                 bottom: parent.top
-                bottomMargin: 6
+                bottomMargin: 2
             }
-            spacing: 6
-            z: 10
-            visible: root.containsMouse && !Config.options.background.widgetsLocked
+            height: 36
+            width: controlButtonsRow.implicitWidth + 16
+            z: 100
+            visible: (root.controlBarVisible || controlBarHoverArea.containsMouse || root.showSettingsPopup) && !Config.options.background.widgetsLocked
 
-            Rectangle {
-                width: 24
-                height: 24
-                radius: 12
-                color: Appearance.colors.colLayer0
-                opacity: 0.9
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    iconSize: 14
-                    text: "content_copy"
-                    color: Appearance.colors.colOnLayer0
+            MouseArea {
+                id: controlBarHoverArea
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: {
+                    hideControlBarTimer.stop();
+                    root.controlBarVisible = true;
                 }
-
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.duplicateInstance()
+                onExited: {
+                    if (!root.containsMouse && !root.showSettingsPopup) {
+                        hideControlBarTimer.restart();
+                    }
                 }
             }
 
-            Rectangle {
-                width: 24
-                height: 24
-                radius: 12
-                color: Appearance.colors.colErrorContainer
-                opacity: 0.9
+            Row {
+                id: controlButtonsRow
+                anchors.centerIn: parent
+                spacing: 6
 
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    iconSize: 14
-                    text: "delete"
-                    color: Appearance.colors.colOnErrorContainer
+                // 1. Duplicate
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: Appearance.colors.colLayer0
+                    opacity: 0.95
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "content_copy"
+                        color: Appearance.colors.colOnLayer0
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.duplicateInstance()
+                    }
                 }
 
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.requestDelete()
+                // 2. Setting (per instance)
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: root.showSettingsPopup ? Appearance.colors.colPrimary : Appearance.colors.colLayer0
+                    opacity: 0.95
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "settings"
+                        color: root.showSettingsPopup ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.showSettingsPopup = !root.showSettingsPopup;
+                        }
+                    }
+                }
+
+                // 3. Delete
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: Appearance.colors.colErrorContainer
+                    opacity: 0.95
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "delete"
+                        color: Appearance.colors.colOnErrorContainer
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.requestDelete()
+                    }
                 }
             }
         }
