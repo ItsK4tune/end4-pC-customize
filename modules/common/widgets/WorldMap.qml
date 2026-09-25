@@ -53,12 +53,44 @@ Item {
     readonly property bool gpsFixValid: Weather.gpsActive && Weather.location.valid
         && !(Weather.location.lat === 0 && Weather.location.lon === 0)
 
-    readonly property var gpsSnapped: root.gpsFixValid
-        ? root.nearestCity(Weather.location.lat, Weather.location.lon)
-        : null
+    readonly property var markerCoords: {
+        // 1. Precise GPS fix
+        if (root.gpsFixValid) {
+            return {
+                lat: Weather.location.lat,
+                lon: Weather.location.lon,
+                name: Weather.data?.city ? Weather.data.city : (Weather.activeLocationName || "")
+            }
+        }
 
-    readonly property var cityFallback: findCityCoords(Config.options.bar.weather.city)
-    readonly property var markerCoords: root.gpsFixValid ? root.gpsSnapped : root.cityFallback
+        // 2. Weather API response coordinates (works for ANY city returned by OpenWeather)
+        if (Weather.data?.lat !== undefined && Weather.data?.lon !== undefined && Weather.data.lat !== null && isFinite(Weather.data.lat) && isFinite(Weather.data.lon)) {
+            return {
+                lat: Weather.data.lat,
+                lon: Weather.data.lon,
+                name: Weather.data.city || Config.options.bar.weather.city
+            }
+        }
+
+        // 3. User entered direct coordinates (e.g. "21.02,105.83")
+        const parsed = Weather.parseCoordinates(Config.options.bar.weather.city)
+        if (parsed) {
+            return {
+                lat: parsed.lat,
+                lon: parsed.lon,
+                name: Weather.data?.city || Config.options.bar.weather.city
+            }
+        }
+
+        // 4. Fallback: match in offline city database
+        const cityMatch = findCityCoords(Weather.data?.city || Config.options.bar.weather.city)
+        if (cityMatch) {
+            return cityMatch
+        }
+
+        return null
+    }
+
     readonly property bool hasMarker: root.markerCoords !== null
         && isFinite(root.markerCoords.lat) && isFinite(root.markerCoords.lon)
         && root.width > 0 && root.height > 0
@@ -144,10 +176,10 @@ Item {
     }
 
     StyledText {
-        visible: root.hasMarker && root.gpsFixValid
+        visible: root.hasMarker && (root.markerCoords?.name ?? "") !== ""
         x: marker.x + marker.width + 4
         y: marker.y - 2
-        text: root.gpsSnapped?.name ?? ""
+        text: root.markerCoords?.name ?? ""
         font.pixelSize: Appearance.font.pixelSize.smallest
         color: root.markerColor
         opacity: 0.85

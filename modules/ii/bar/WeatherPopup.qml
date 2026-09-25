@@ -137,8 +137,8 @@ StyledPopup {
             Layout.fillWidth: true
 
             WeatherCard {
-                title: Translation.tr("Rain?")
-                symbol: "rainy"
+                title: Translation.tr("Cloud cover")
+                symbol: "cloud"
                 value: Weather.data?.cr ?? "24%"
             }
             WeatherCard {

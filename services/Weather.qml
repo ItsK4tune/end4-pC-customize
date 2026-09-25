@@ -11,20 +11,57 @@ import qs.modules.common
 Singleton {
     id: root
 
-    // 10 minute
-    readonly property int fetchInterval: Config.options.bar.weather.fetchInterval * 60 * 1000
+    readonly property bool enabled: Config.options.bar.weather.enable
+    readonly property int fetchInterval: Math.max(5, (Config.options.bar.weather.fetchInterval || 10)) * 60 * 1000
     readonly property string city: Config.options.bar.weather.city
     readonly property bool useUSCS: Config.options.bar.weather.useUSCS
     property bool gpsActive: Config.options.bar.weather.enableGPS
 
-    onUseUSCSChanged: root.getData()
-    onCityChanged: root.getData()
+    onEnabledChanged: {
+        if (root.enabled) {
+            startService()
+        } else {
+            stopService()
+        }
+    }
+
+    onGpsActiveChanged: {
+        if (!root.enabled) return
+        if (root.gpsActive) {
+            console.info("[WeatherService] Switching to GPS location mode.")
+            positionSource.start()
+            if (positionSource.position.latitudeValid && positionSource.position.longitudeValid) {
+                root.location = {
+                    lat: positionSource.position.coordinate.latitude,
+                    lon: positionSource.position.coordinate.longitude,
+                    valid: true
+                }
+                root.getData()
+            } else {
+                positionSource.update()
+            }
+        } else {
+            console.info("[WeatherService] Switching to manual location mode.")
+            positionSource.stop()
+            root.location = {
+                lat: 0,
+                lon: 0,
+                valid: false
+            }
+            root.getData()
+        }
+    }
+
+    onUseUSCSChanged: if (root.enabled) root.getData()
+    onCityChanged: if (root.enabled && !root.gpsActive) root.getData()
 
     property var location: ({
         valid: false,
         lat: 0,
         lon: 0
     })
+
+    property string activeLocationName: data.city ? data.city : (city ? city : (gpsActive ? "GPS" : "Not set"))
 
     property var data: ({
         uv: 0,
@@ -40,8 +77,23 @@ Singleton {
         press: "",
         temp: "",
         tempFeelsLike: "",
+        clouds: "",
+        cr: "",
         lastRefresh: ""
     })
+
+    function parseCoordinates(input) {
+        if (!input || typeof input !== "string") return null
+        const parts = input.split(",").map(s => s.trim())
+        if (parts.length === 2) {
+            const lat = parseFloat(parts[0])
+            const lon = parseFloat(parts[1])
+            if (!isNaN(lat) && !isNaN(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+                return { lat, lon }
+            }
+        }
+        return null
+    }
 
     function refineData(data) {
         let temp = {}
@@ -49,9 +101,9 @@ Singleton {
         const snowMm = data?.snow?.["1h"] || data?.snow?.["3h"] || 0
 
         temp.description = data?.weather?.[0]?.description || ""
-        temp.cr = data?.clouds?.all !== undefined
-            ? Math.round(data.clouds.all * 0.8) + "%"
-            : "0%"
+        const cloudVal = data?.clouds?.all !== undefined ? data.clouds.all : 0
+        temp.clouds = cloudVal + "%"
+        temp.cr = cloudVal + "%" // Cloud coverage
         temp.humidity = (data?.main?.humidity || 0) + "%"
 
         const fmt = (unix) => new Date(unix * 1000).toLocaleTimeString("en-US", {
@@ -66,7 +118,9 @@ Singleton {
 
         temp.windDir = data?.wind?.deg || 0
         temp.wCode = data?.weather?.[0]?.id || 0
-        temp.city = data?.name || "City"
+        temp.city = data?.name || root.city || "City"
+        temp.lat = (data?.coord?.lat !== undefined) ? data.coord.lat : null
+        temp.lon = (data?.coord?.lon !== undefined) ? data.coord.lon : null
 
         if (root.useUSCS) {
             temp.wind = (data?.wind?.speed || 0) + " mph"
@@ -93,6 +147,8 @@ Singleton {
     }
 
     function getData() {
+        if (!root.enabled) return
+
         const defaultApiKey = "8b05d62206f459e1d298cbe5844d7d87"
         let apiKey = KeyringStorage.keyringData?.apiKeys?.openweather || defaultApiKey
 
@@ -107,7 +163,13 @@ Singleton {
         if (root.gpsActive && root.location.valid) {
             url += `lat=${root.location.lat}&lon=${root.location.lon}`
         } else {
-            url += `q=${formatCityName(root.city)}`
+            const coords = parseCoordinates(root.city)
+            if (coords) {
+                url += `lat=${coords.lat}&lon=${coords.lon}`
+            } else {
+                const targetCity = root.city && root.city.trim() !== "" ? root.city.trim() : "Hanoi"
+                url += `q=${formatCityName(targetCity)}`
+            }
         }
 
         url += `&units=${units}`
@@ -119,14 +181,48 @@ Singleton {
         fetcher.running = true
     }
 
+    function refresh() {
+        if (!root.enabled) return
+        if (root.gpsActive) {
+            positionSource.update()
+        }
+        root.getData()
+    }
+
     function formatCityName(cityName) {
         return cityName.trim().split(/\s+/).join('+')
     }
 
+    function startService() {
+        if (!root.enabled) return
+        if (root.gpsActive) {
+            console.info("[WeatherService] Starting GPS service.")
+            positionSource.start()
+            if (positionSource.position.latitudeValid && positionSource.position.longitudeValid) {
+                root.location = {
+                    lat: positionSource.position.coordinate.latitude,
+                    lon: positionSource.position.coordinate.longitude,
+                    valid: true
+                }
+                root.getData()
+            } else {
+                positionSource.update()
+            }
+        } else {
+            root.getData()
+        }
+    }
+
+    function stopService() {
+        console.info("[WeatherService] Stopping weather service.")
+        positionSource.stop()
+        pollTimer.stop()
+    }
+
     Component.onCompleted: {
-        if (!root.gpsActive) return
-        console.info("[WeatherService] Starting GPS service.")
-        positionSource.start()
+        if (root.enabled) {
+            startService()
+        }
     }
 
     Process {
@@ -156,12 +252,15 @@ Singleton {
     PositionSource {
         id: positionSource
         updateInterval: root.fetchInterval
+        active: root.enabled && root.gpsActive
 
         onPositionChanged: {
             if (position.latitudeValid && position.longitudeValid) {
-                root.location.lat = position.coordinate.latitude
-                root.location.lon = position.coordinate.longitude
-                root.location.valid = true
+                root.location = {
+                    lat: position.coordinate.latitude,
+                    lon: position.coordinate.longitude,
+                    valid: true
+                }
                 root.getData()
             } else {
                 root.gpsActive = root.location.valid ? true : false
@@ -172,18 +271,24 @@ Singleton {
         onValidityChanged: {
             if (!positionSource.valid) {
                 positionSource.stop()
-                root.location.valid = false
+                root.location = {
+                    lat: 0,
+                    lon: 0,
+                    valid: false
+                }
                 root.gpsActive = false
                 console.error("[WeatherService] Could not acquire valid GPS backend.")
+                if (root.enabled) root.getData()
             }
         }
     }
 
     Timer {
-        running: !root.gpsActive
+        id: pollTimer
+        running: root.enabled && !root.gpsActive
         repeat: true
         interval: root.fetchInterval
-        triggeredOnStart: !root.gpsActive
+        triggeredOnStart: root.enabled && !root.gpsActive
         onTriggered: root.getData()
     }
 }
