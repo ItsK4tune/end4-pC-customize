@@ -33,6 +33,28 @@ Item {
     readonly property bool onThisScreen: Config.options.background.screenList.length === 0
         || Config.options.background.screenList.includes(root.screen.name)
 
+    Connections {
+        target: Config.options?.background?.widgets?.customImage ?? null
+        function onInstancesChanged() {
+            let ci = Config.options?.background?.widgets?.customImage;
+            if (!ci) return;
+            let insts = ci.instances;
+            if (!insts || insts.length === 0) {
+                if (ci.enable) {
+                    ci.enable = false;
+                }
+            }
+        }
+        function onEnableChanged() {
+            let ci = Config.options?.background?.widgets?.customImage;
+            if (!ci) return;
+            let insts = ci.instances;
+            if (ci.enable && (!insts || insts.length === 0)) {
+                ci.enable = false;
+            }
+        }
+    }
+
     Repeater {
         model: [
             { key: "particles" },
@@ -171,73 +193,6 @@ Item {
             readonly property int activeCount: Config.options.background.widgets.customImage.enable
                 ? (currentInstances?.length ?? 0)
                 : 0
-
-            Connections {
-                target: Config.options.background.widgets.customImage
-                function onEnableChanged() {
-                    let enable = Config.options.background.widgets.customImage.enable;
-                    let insts = Config.options.background.widgets.customImage.instances;
-                    if (enable && (!insts || insts.length === 0)) {
-                        let current = Config.options.background.widgets.customImage;
-                        Config.options.background.widgets.customImage.instances = [{
-                            id: "ci_1",
-                            x: current.x ?? 100,
-                            y: current.y ?? 100,
-                            z: current.z ?? 0,
-                            size: current.size ?? 200,
-                            shape: current.shape ?? "Cookie4Sided",
-                            division: current.division ?? "1x1",
-                            margin: current.margin ?? 0,
-                            padding: current.padding ?? (current.gap ?? 4),
-                            gap: current.padding ?? (current.gap ?? 4),
-                            images: (current.images ?? []).slice(),
-                            path: current.path ?? "",
-                            bgPath: current.bgPath ?? "",
-                            bgOpacity: current.bgOpacity ?? 1.0,
-                            bgDim: current.bgDim ?? 0.0,
-                            bgBlur: current.bgBlur ?? 0.0,
-                            rotation: current.rotation ?? 0,
-                            loopMode: current.loopMode ?? "end to front"
-                        }];
-                    }
-                }
-                function onInstancesChanged() {
-                    let insts = Config.options.background.widgets.customImage.instances;
-                    if (!insts || insts.length === 0) {
-                        if (Config.options.background.widgets.customImage.enable) {
-                            Config.options.background.widgets.customImage.enable = false;
-                        }
-                    }
-                }
-            }
-
-            Component.onCompleted: {
-                let enable = Config.options.background.widgets.customImage.enable;
-                let insts = Config.options.background.widgets.customImage.instances;
-                if (enable && (!insts || insts.length === 0)) {
-                    let current = Config.options.background.widgets.customImage;
-                    Config.options.background.widgets.customImage.instances = [{
-                        id: "ci_1",
-                        x: current.x ?? 100,
-                        y: current.y ?? 100,
-                        z: current.z ?? 0,
-                        size: current.size ?? 200,
-                        shape: current.shape ?? "Cookie4Sided",
-                        division: current.division ?? "1x1",
-                        margin: current.margin ?? 0,
-                        padding: current.padding ?? (current.gap ?? 4),
-                        gap: current.padding ?? (current.gap ?? 4),
-                        images: (current.images ?? []).slice(),
-                        path: current.path ?? "",
-                        bgPath: current.bgPath ?? "",
-                        bgOpacity: current.bgOpacity ?? 1.0,
-                        bgDim: current.bgDim ?? 0.0,
-                        bgBlur: current.bgBlur ?? 0.0,
-                        rotation: current.rotation ?? 0,
-                        loopMode: current.loopMode ?? "end to front"
-                    }];
-                }
-            }
 
             Repeater {
                 model: customImagesWrapper.activeCount

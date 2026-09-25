@@ -17,6 +17,7 @@ AbstractBackgroundWidget {
 
     configEntryName: "customImage"
     hoverEnabled: true
+    visible: (Config.options.background.widgets.customImage.enable ?? false)
 
     property int instanceIndex: -1
     property var instanceConfig: null
