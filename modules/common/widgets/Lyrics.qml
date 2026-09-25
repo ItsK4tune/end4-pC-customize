@@ -173,7 +173,8 @@ Item {
                 readonly property int dist: Math.abs(index - LyricsService.activeIndex)
 
                 width: listView.width
-                implicitHeight: lyricText.implicitHeight + 10
+                height: Math.max(34, lyricText.implicitHeight + 12)
+                implicitHeight: height
 
                 StyledText {
                     id: lyricText
