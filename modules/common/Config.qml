@@ -416,6 +416,10 @@ Singleton {
                         property real gap: 4
                         property list<string> images: []
                         property list<var> instances: []
+                        property string bgPath: ""
+                        property real bgOpacity: 1.0
+                        property real bgDim: 0.0
+                        property real rotation: 0
                     }
 
                     property JsonObject sticker: JsonObject {

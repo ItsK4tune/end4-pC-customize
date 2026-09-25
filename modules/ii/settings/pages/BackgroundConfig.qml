@@ -1020,7 +1020,11 @@ ContentPage {
                         division: current.division ?? "1x1",
                         gap: current.gap ?? 4,
                         images: (current.images ?? []).slice(),
-                        path: current.path ?? ""
+                        path: current.path ?? "",
+                        bgPath: current.bgPath ?? "",
+                        bgOpacity: current.bgOpacity ?? 1.0,
+                        bgDim: current.bgDim ?? 0.0,
+                        rotation: current.rotation ?? 0
                     });
                 }
                 let lastItem = newList[newList.length - 1];
@@ -1034,7 +1038,11 @@ ContentPage {
                     division: "1x1",
                     gap: 4,
                     images: [],
-                    path: ""
+                    path: "",
+                    bgPath: "",
+                    bgOpacity: 1.0,
+                    bgDim: 0.0,
+                    rotation: 0
                 });
                 Config.options.background.widgets.customImage.instances = newList;
                 Config.options.background.widgets.customImage.enable = true;
@@ -1183,6 +1191,92 @@ ContentPage {
                     to: 24
                     stopIndicatorValues: [0, 4, 8]
                     onValueChanged: customImageSection.updateCurrentTarget({ gap: Math.round(value) })
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    visible: (customImageSection.currentTarget?.division ?? "1x1") !== "1x1" && (customImageSection.currentTarget?.gap ?? 0) > 0
+                    spacing: 8
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: 40
+                        radius: Appearance.rounding.small
+                        color: Appearance.colors.colLayer2
+                        border.width: 1
+                        border.color: bgDropAreaConfig.containsDrag ? Appearance.colors.colPrimary : "transparent"
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            spacing: 8
+
+                            MaterialSymbol {
+                                text: (customImageSection.currentTarget?.bgPath ?? "") !== "" ? "image" : "add_photo_alternate"
+                                iconSize: 20
+                                color: Appearance.colors.colPrimary
+                            }
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                elide: Text.ElideMiddle
+                                text: (customImageSection.currentTarget?.bgPath ?? "") !== ""
+                                    ? (customImageSection.currentTarget?.bgPath ?? "").split("/").pop()
+                                    : Translation.tr("Drop Frame Background Image")
+                                color: Appearance.colors.colOnLayer1
+                                font.pixelSize: Appearance.font.pixelSize.normal
+                            }
+
+                            RippleButtonWithIcon {
+                                visible: (customImageSection.currentTarget?.bgPath ?? "") !== ""
+                                materialIcon: "close"
+                                mainText: Translation.tr("Clear")
+                                onClicked: customImageSection.updateCurrentTarget({ bgPath: "" })
+                            }
+                        }
+
+                        DropArea {
+                            id: bgDropAreaConfig
+                            anchors.fill: parent
+                            keys: ["text/uri-list"]
+                            onDropped: (drop) => {
+                                if (drop.hasUrls && drop.urls.length > 0) {
+                                    var cleanPath = decodeURIComponent(drop.urls[0].toString().replace(/^file:\/\//, ""));
+                                    var ext = cleanPath.split(".").pop().toLowerCase();
+                                    var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"];
+                                    if (accepted.indexOf(ext) !== -1) {
+                                        customImageSection.updateCurrentTarget({ bgPath: cleanPath });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    visible: (customImageSection.currentTarget?.division ?? "1x1") !== "1x1" && (customImageSection.currentTarget?.gap ?? 0) > 0 && (customImageSection.currentTarget?.bgPath ?? "") !== ""
+                    text: Translation.tr("Background Dim")
+                    value: Math.round((customImageSection.currentTarget?.bgDim ?? 0) * 100)
+                    usePercentTooltip: true
+                    buttonIcon: "brightness_medium"
+                    from: 0
+                    to: 100
+                    stopIndicatorValues: [0, 50, 100]
+                    onValueChanged: customImageSection.updateCurrentTarget({ bgDim: value / 100 })
+                }
+
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Rotation Angle")
+                    value: customImageSection.currentTarget?.rotation ?? 0
+                    usePercentTooltip: false
+                    buttonIcon: "rotate_right"
+                    from: -45
+                    to: 45
+                    stopIndicatorValues: [-45, 0, 45]
+                    onValueChanged: customImageSection.updateCurrentTarget({ rotation: Math.round(value) })
                 }
             }
         }

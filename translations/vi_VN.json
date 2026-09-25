@@ -482,5 +482,14 @@
   "Custom Image": "Ảnh tùy chỉnh",
   "Division": "Phân chia khung",
   "Border Gap": "Khoảng cách viền",
-  "Add Widget": "Thêm Widget"
+  "Add Widget": "Thêm Widget",
+  "Rotation Angle": "Góc xoay",
+  "Background Dim": "Độ tối nền khung",
+  "Drop Frame Background Image": "Kéo thả ảnh nền khung",
+  "Drop Frame Bg Image": "Kéo thả ảnh nền khung",
+  "Bg Image Set": "Đã đặt ảnh nền",
+  "Angle": "Góc xoay",
+  "Dim": "Độ tối",
+  "Gap": "Khoảng cách",
+  "Clear": "Xóa"
 }

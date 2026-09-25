@@ -2,6 +2,7 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import QtQuick.Controls
 import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
 import Quickshell
@@ -25,6 +26,10 @@ AbstractBackgroundWidget {
     property real gap: (instanceConfig?.gap ?? Config.options.background.widgets.customImage.gap) ?? 4
     property var imagesList: (instanceConfig?.images ?? Config.options.background.widgets.customImage.images) ?? []
     property string shapeName: (instanceConfig?.shape ?? Config.options.background.widgets.customImage.shape) ?? "Cookie4Sided"
+    property string bgPath: (instanceConfig?.bgPath ?? Config.options.background.widgets.customImage.bgPath) ?? ""
+    property real bgOpacity: (instanceConfig?.bgOpacity ?? Config.options.background.widgets.customImage.bgOpacity) ?? 1.0
+    property real bgDim: (instanceConfig?.bgDim ?? Config.options.background.widgets.customImage.bgDim) ?? 0.0
+    property real widgetRotation: (instanceConfig?.rotation ?? Config.options.background.widgets.customImage.rotation) ?? 0
 
     implicitWidth: contentItem.implicitWidth
     implicitHeight: contentItem.implicitHeight
@@ -245,6 +250,21 @@ AbstractBackgroundWidget {
         }
     }
 
+    function updateInstanceSetting(props) {
+        if (root.instanceIndex >= 0) {
+            if (root.instanceConfig) {
+                for (let k in props) {
+                    root.instanceConfig[k] = props[k];
+                }
+            }
+            root.updateInstanceProperty(props);
+        } else {
+            for (let k in props) {
+                Config.options.background.widgets.customImage[k] = props[k];
+            }
+        }
+    }
+
     function duplicateInstance() {
         let list = Config.options.background.widgets.customImage.instances;
         let current = root.instanceConfig ? Object.assign({}, root.instanceConfig) : {
@@ -256,7 +276,11 @@ AbstractBackgroundWidget {
             division: root.division,
             gap: root.gap,
             images: (root.imagesList || []).slice(),
-            path: root.imagePath
+            path: root.imagePath,
+            bgPath: root.bgPath,
+            bgOpacity: root.bgOpacity,
+            bgDim: root.bgDim,
+            rotation: root.widgetRotation
         };
         let newItem = Object.assign({}, current);
         newItem.id = "ci_" + Date.now();
@@ -277,7 +301,11 @@ AbstractBackgroundWidget {
                 division: root.division,
                 gap: root.gap,
                 images: (root.imagesList || []).slice(),
-                path: root.imagePath
+                path: root.imagePath,
+                bgPath: root.bgPath,
+                bgOpacity: root.bgOpacity,
+                bgDim: root.bgDim,
+                rotation: root.widgetRotation
             });
         }
         newList.push(newItem);
@@ -311,6 +339,7 @@ AbstractBackgroundWidget {
         id: contentItem
         implicitWidth: root.widgetSize
         implicitHeight: root.widgetSize
+        rotation: root.widgetRotation
 
         Behavior on implicitWidth {
             animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
@@ -449,6 +478,28 @@ AbstractBackgroundWidget {
                     width: imageShape.width
                     height: imageShape.height
                     shape: getShape(root.shapeName)
+                }
+            }
+
+            // Background frame layer (visible when gap > 0 and division != 1x1)
+            Item {
+                id: frameBgLayer
+                anchors.fill: parent
+                visible: root.division !== "1x1" && root.gap > 0
+
+                SmartImage {
+                    anchors.fill: parent
+                    source: root.bgPath
+                    fillMode: Image.PreserveAspectCrop
+                    opacity: root.bgOpacity
+                    visible: root.bgPath !== ""
+                }
+
+                Rectangle {
+                    anchors.fill: parent
+                    color: Appearance.colors.colLayer0
+                    opacity: root.bgDim
+                    visible: root.bgDim > 0
                 }
             }
 
@@ -591,6 +642,291 @@ AbstractBackgroundWidget {
                     savePositionTimer.restart();
                 } else {
                     Config.options.background.widgets.customImage.size = root.widgetSize;
+                }
+            }
+        }
+    }
+
+    Item {
+        id: quickSettingsPopup
+        visible: root.showSettingsPopup
+        z: 200
+        anchors {
+            top: contentItem.bottom
+            topMargin: 8
+            horizontalCenter: contentItem.horizontalCenter
+        }
+        width: 290
+        height: settingsCardCol.implicitHeight + 20
+
+        Rectangle {
+            anchors.fill: parent
+            radius: Appearance.rounding.large
+            color: Appearance.colors.colLayer0
+            border.width: 1
+            border.color: Appearance.colors.colLayer0Border
+
+            StyledDropShadow {
+                target: parent
+                z: -1
+            }
+        }
+
+        ColumnLayout {
+            id: settingsCardCol
+            anchors {
+                fill: parent
+                margins: 10
+            }
+            spacing: 8
+
+            // Header
+            RowLayout {
+                Layout.fillWidth: true
+                MaterialSymbol {
+                    text: "settings"
+                    iconSize: 18
+                    color: Appearance.colors.colPrimary
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    text: root.instanceIndex >= 0 ? `${Translation.tr("Widget")} ${root.instanceIndex + 1}` : Translation.tr("Custom Image")
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnLayer0
+                }
+                // Full settings button
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: "transparent"
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "open_in_new"
+                        color: Appearance.colors.colOnLayer0Secondary
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.showSettingsPopup = false;
+                            GlobalStates.settingsPage = "Background:Custom Image";
+                            GlobalStates.settingsOpen = true;
+                        }
+                    }
+                }
+                // Close button
+                Rectangle {
+                    width: 22
+                    height: 22
+                    radius: 11
+                    color: "transparent"
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "close"
+                        color: Appearance.colors.colOnLayer0Secondary
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.showSettingsPopup = false
+                    }
+                }
+            }
+
+            // Division quick selector
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                Repeater {
+                    model: [
+                        { icon: "crop_square",   val: "1x1", tip: "1x1" },
+                        { icon: "view_column_2", val: "1x2", tip: "1x2" },
+                        { icon: "splitscreen",   val: "2x1", tip: "2x1" },
+                        { icon: "grid_view",     val: "2x2", tip: "2x2" },
+                        { icon: "dashboard",     val: "1L-2R", tip: "1L+2R" },
+                        { icon: "view_agenda",   val: "1T-2B", tip: "1T+2B" },
+                        { icon: "view_column",   val: "1x3", tip: "1x3" },
+                    ]
+                    delegate: Rectangle {
+                        required property var modelData
+                        Layout.fillWidth: true
+                        implicitHeight: 26
+                        radius: Appearance.rounding.small
+                        color: root.division === modelData.val ? Appearance.colors.colPrimary : Appearance.colors.colLayer1
+
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            iconSize: 15
+                            text: modelData.icon
+                            color: root.division === modelData.val ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.updateInstanceSetting({ division: modelData.val })
+                        }
+                    }
+                }
+            }
+
+            // Gap slider
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                MaterialSymbol {
+                    text: "border_inner"
+                    iconSize: 16
+                    color: Appearance.colors.colOnLayer0Secondary
+                }
+                StyledText {
+                    text: `${Translation.tr("Gap")}: ${Math.round(root.gap)}px`
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colOnLayer0Secondary
+                }
+                Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 24
+                    value: root.gap
+                    onMoved: root.updateInstanceSetting({ gap: Math.round(value) })
+                }
+            }
+
+            // Frame Background drop area (when gap > 0 and not 1x1)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: root.division !== "1x1" && root.gap > 0
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 32
+                    radius: Appearance.rounding.small
+                    color: Appearance.colors.colLayer1
+                    border.width: 1
+                    border.color: bgDropArea.containsDrag ? Appearance.colors.colPrimary : "transparent"
+
+                    RowLayout {
+                        anchors.centerIn: parent
+                        spacing: 6
+                        MaterialSymbol {
+                            text: root.bgPath !== "" ? "image" : "add_photo_alternate"
+                            iconSize: 16
+                            color: Appearance.colors.colPrimary
+                        }
+                        StyledText {
+                            text: root.bgPath !== "" ? Translation.tr("Bg Image Set") : Translation.tr("Drop Frame Bg Image")
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: Appearance.colors.colOnLayer0
+                        }
+                        // Clear bg button
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: Appearance.colors.colLayer0
+                            visible: root.bgPath !== ""
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                iconSize: 12
+                                text: "close"
+                                color: Appearance.colors.colOnLayer0
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.updateInstanceSetting({ bgPath: "" })
+                            }
+                        }
+                    }
+
+                    DropArea {
+                        id: bgDropArea
+                        anchors.fill: parent
+                        keys: ["text/uri-list"]
+                        onDropped: (drop) => {
+                            if (drop.hasUrls && drop.urls.length > 0) {
+                                var cleanPath = decodeURIComponent(drop.urls[0].toString().replace(/^file:\/\//, ""));
+                                var ext = cleanPath.split(".").pop().toLowerCase();
+                                var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"];
+                                if (accepted.indexOf(ext) !== -1) {
+                                    root.updateInstanceSetting({ bgPath: cleanPath });
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Frame Background Dim slider (when bgPath is set)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: root.division !== "1x1" && root.gap > 0 && root.bgPath !== ""
+
+                MaterialSymbol {
+                    text: "brightness_medium"
+                    iconSize: 16
+                    color: Appearance.colors.colOnLayer0Secondary
+                }
+                StyledText {
+                    text: `${Translation.tr("Dim")}: ${Math.round(root.bgDim * 100)}%`
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colOnLayer0Secondary
+                }
+                Slider {
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 1
+                    value: root.bgDim
+                    onMoved: root.updateInstanceSetting({ bgDim: value })
+                }
+            }
+
+            // Rotation slider (-45 to +45 deg)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+
+                MaterialSymbol {
+                    text: "rotate_right"
+                    iconSize: 16
+                    color: Appearance.colors.colOnLayer0Secondary
+                }
+                StyledText {
+                    text: `${Translation.tr("Angle")}: ${Math.round(root.widgetRotation)}°`
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colOnLayer0Secondary
+                }
+                Slider {
+                    Layout.fillWidth: true
+                    from: -45
+                    to: 45
+                    value: root.widgetRotation
+                    onMoved: root.updateInstanceSetting({ rotation: Math.round(value) })
+                }
+                Rectangle {
+                    width: 18
+                    height: 18
+                    radius: 9
+                    color: Appearance.colors.colLayer1
+                    visible: root.widgetRotation !== 0
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 12
+                        text: "restart_alt"
+                        color: Appearance.colors.colOnLayer0
+                    }
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.updateInstanceSetting({ rotation: 0 })
+                    }
                 }
             }
         }
