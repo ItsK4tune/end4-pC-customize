@@ -488,9 +488,6 @@ AbstractBackgroundWidget {
             animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
         }
 
-        // On-widget mini controls
-        Item {
-
         MaterialShape {
             id: shadowShape
             anchors.fill: parent
@@ -1253,5 +1250,4 @@ AbstractBackgroundWidget {
             }
         }
     }
-}
 }
