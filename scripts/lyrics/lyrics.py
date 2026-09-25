@@ -72,23 +72,25 @@ def is_non_music(title: str, artist: str, url: str) -> bool:
 
 def get_mpris_url(dbus_name: str = None) -> str:
     """Attempt to retrieve xesam:url from playerctl."""
-    cmd = ["playerctl"]
+    targets = []
     if dbus_name and dbus_name.strip():
-        cmd.extend(["-p", dbus_name.strip()])
-    cmd.extend(["metadata", "xesam:url"])
-    try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=1.5)
-        if res.returncode == 0 and res.stdout.strip():
-            url = res.stdout.strip()
-            if url.startswith("http"):
-                return url
-    except Exception:
-        pass
+        cleaned = dbus_name.strip()
+        if cleaned.startswith("org.mpris.MediaPlayer2."):
+            cleaned = cleaned[len("org.mpris.MediaPlayer2."):]
+        targets.append(cleaned)
+        # Also try base player name before dot, e.g. "firefox" from "firefox.instance_1_219"
+        base = cleaned.split(".")[0]
+        if base and base not in targets:
+            targets.append(base)
+    targets.append(None)  # fallback to any active player
 
-    # Fallback: check any running playerctl player
-    if dbus_name:
+    for target in targets:
+        cmd = ["playerctl"]
+        if target:
+            cmd.extend(["-p", target])
+        cmd.extend(["metadata", "xesam:url"])
         try:
-            res = subprocess.run(["playerctl", "metadata", "xesam:url"], capture_output=True, text=True, timeout=1.5)
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=0.8)
             if res.returncode == 0 and res.stdout.strip():
                 url = res.stdout.strip()
                 if url.startswith("http"):
@@ -182,13 +184,14 @@ def clean_song_info(raw_title: str, raw_artist: str = ""):
     title = re.sub(r"〈[^〉]*〉", " ", title)
     title = re.sub(r"《[^》]*》", " ", title)
 
-    # Strip video junk tags
+    # Strip video junk tags in ANY brackets: (), [], {}, 「」, 『』, 【】, 〔〕, 〈〉, 《》, etc.
     junk_patterns = [
-        r"[\(\[](official\s*)?(music\s*)?(video|audio|lyrics?|hd|4k|mv|pv|visualizer|clip|audio\s*video|lyric\s*video)[^\)\]]*[\)\]]",
-        r"[\(\[](full\s*album|remastered|extended\s*mix|original\s*mix|acoustic|live\s*version|performance)[^\)\]]*[\)\]]",
-        r"[\(\[](vietsub|engsub|kara|thuyết\s*minh)[^\)\]]*[\)\]]",
-        r"[\(\[]the\s*first\s*take[\)\]]",
-        r"\|\s*(official\s*)?(music\s*)?(video|audio|lyrics?|mv|pv|visualizer).*$",
+        r"[(\[\{「『【〔〈《［](official\s*)?(music\s*)?(video|audio|lyrics?|hd|4k|mv|pv|visualizer|clip|audio\s*video|lyric\s*video)[^)\]\}」』】〕〉》］]*[)\]\}」』】〕〉》］]",
+        r"[(\[\{「『【〔〈《［](full\s*album|remastered|extended\s*mix|original\s*mix|acoustic|live\s*version|performance)[^)\]\}」』】〕〉》］]*[)\]\}」』】〕〉》］]",
+        r"[(\[\{「『【〔〈《［](vietsub|engsub|kara|thuyết\s*minh)[^)\]\}」』】〕〉》］]*[)\]\}」』】〕〉》］]",
+        r"[(\[\{「『【〔〈《［]the\s*first\s*take[)\]\}」』】〕〉》］]",
+        r"[(\[\{「『【〔〈《［](teasers?|trailers?|dance\s*practice|behind\s*the\s*scenes?|making\s*of)[^)\]\}」』】〕〉》］]*[)\]\}」』】〕〉》］]",
+        r"\|\s*(official\s*)?(music\s*)?(video|audio|lyrics?|mv|pv|visualizer|hd|4k).*$",
         r"/\s*the\s*first\s*take.*$",
     ]
     for pat in junk_patterns:
@@ -196,9 +199,15 @@ def clean_song_info(raw_title: str, raw_artist: str = ""):
 
     title = re.sub(r"\s+", " ", title).strip()
 
-    # Extract Japanese brackets 「...」 or 『...』
+    # Extract Japanese brackets 「...」 or 『...』 only if they contain actual title, not junk
     jp_match = re.search(r"[「『]([^」』]+)[」』]", title)
-    jp_title = jp_match.group(1).strip() if jp_match else None
+    jp_title = None
+    if jp_match:
+        candidate = jp_match.group(1).strip()
+        c_low = candidate.lower()
+        is_tag = any(tag in c_low for tag in ["video", "audio", "lyric", "mv", "pv", "hd", "4k", "teaser", "remix", "live", "ver", "full"])
+        if not is_tag and len(candidate) > 0:
+            jp_title = candidate
 
     # Extract single/double quoted title: 'Ditto', "Song"
     quote_match = re.search(r"['\"‘“]([^'\"’”]{2,})['\"’”]", title)
@@ -276,10 +285,13 @@ def parse_plain(plain_text: str, duration: float) -> list:
         return []
     if duration <= 0:
         duration = max(len(raw_lines) * 4.0, 180.0)
-    step = duration / len(raw_lines)
+    # Estimate standard music intro/outro buffer rather than starting line 0 at 0.0s
+    intro_est = min(15.0, max(5.0, duration * 0.06))
+    singing_dur = max(duration - intro_est - 10.0, len(raw_lines) * 2.5)
+    step = singing_dur / len(raw_lines)
     lines = []
     for i, line in enumerate(raw_lines):
-        lines.append({"time": round(i * step, 2), "text": line})
+        lines.append({"time": round(intro_est + (i * step), 2), "text": line})
     return lines
 
 def fetch_json(url: str):
@@ -369,7 +381,7 @@ def score_item(item: dict, target_title: str, target_artist: str, target_dur: fl
 
     score = (sim_artist * 40.0) + (sim_title * 40.0)
 
-    # Proximity of duration: prefer master/radio cut that matches player length
+    # Proximity of duration:
     if target_dur > 0 and duration > 0:
         diff = abs(target_dur - duration)
         if diff <= 2.0:
@@ -381,12 +393,19 @@ def score_item(item: dict, target_title: str, target_artist: str, target_dur: fl
         elif diff <= 30.0:
             score += 0.0
         else:
-            score -= min(35.0, diff * 0.5)
+            # If item has synced lyrics, YouTube MV intro/dialogue/outro often makes target_dur 30-150s longer.
+            # Do NOT heavily penalize synced lyrics for duration mismatch!
+            if has_synced:
+                score -= min(8.0, diff * 0.05)
+            else:
+                score -= min(35.0, diff * 0.5)
 
+    # Real synchronized lyrics get absolute, overwhelming priority over plain text!
+    # Synced lyrics must ALWAYS beat plain lyrics when artist & title match.
     if has_synced:
-        score += 30.0
+        score += 80.0
     elif has_plain:
-        score += 10.0
+        score += 5.0
 
     return score
 
