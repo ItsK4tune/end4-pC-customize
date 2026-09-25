@@ -31,6 +31,18 @@ void main() {
         }
     }
 
+    for (int i = 0; i < 4; i++) {
+        float prog = (i == 0) ? clickProgress.x : ((i == 1) ? clickProgress.y : ((i == 2) ? clickProgress.z : clickProgress.w));
+        if (prog < 1.0) {
+            vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
+            float cDist = length(fragCoord - cPos);
+            float waveR = prog * 300.0;
+            float shock = smoothstep(45.0, 0.0, abs(cDist - waveR)) * pow(1.0 - prog, 1.5);
+            vec2 pushDir = (cDist > 1.0) ? ((fragCoord - cPos) / cDist) : vec2(0.0, 1.0);
+            flowCoord += pushDir * shock * 40.0;
+        }
+    }
+
     bool hasPrimary = primaryColor.a > 0.05;
     bool hasSecondary = secondaryColor.a > 0.05;
     vec3 baseBubbleCol = hasPrimary ? primaryColor.rgb : vec3(0.5, 0.8, 1.0);
@@ -38,9 +50,9 @@ void main() {
 
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);
-        float riseSpeed = (30.0 + 20.0 * l) * (1.0 + bass * 0.3 + mid * 0.2);
-        float sway = sin(time * (0.7 + 0.3 * l + mid * 0.3) + l * 2.1) * (15.0 * l + mid * 8.0);
-        vec2 layerCoord = flowCoord + vec2(sway - time * riseSpeed * tan(windAngle), time * riseSpeed);
+        float riseSpeed = (30.0 + 20.0 * l) * (1.0 + bass * 0.1);
+        float sway = sin(time * (0.7 + 0.3 * l) + l * 2.1) * (15.0 * l + mid * 8.0);
+        vec2 layerCoord = flowCoord + vec2(sway - windDrift * riseSpeed, time * riseSpeed);
 
         float cellSize = 180.0;
         vec2 grid = layerCoord / cellSize;
@@ -58,7 +70,7 @@ void main() {
                 vec2 p = layerCoord - pInCell;
                 float dist = length(p);
 
-                float radius = (12.0 + 9.0 * rnd.x + 3.0 * l) * particleSize * (1.0 + bass * 0.25);
+                float radius = (12.0 + 9.0 * rnd.x + 3.0 * l) * particleSize * (1.0 + bass * 0.12);
                 float maxDist = radius * (1.2 + particleBlur * 1.5);
 
                 if (dist < maxDist) {
@@ -71,7 +83,7 @@ void main() {
 
                     float cellEnvelope = smoothstep(cellSize * 1.8, cellSize * 1.2, dist);
                     float bubbleAlpha = (ring * 0.75 + innerGlow + highlight) * (0.4 + 0.3 * l) * particleAlpha * cellEnvelope;
-                    vec3 bCol = mix(baseBubbleCol, rainbowTint, 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + time * (1.0 + treble * 2.0)));
+                    vec3 bCol = mix(baseBubbleCol, rainbowTint, 0.5 + 0.5 * sin(atan(p.y, p.x) * 2.0 + time * 1.0 + treble * 0.8));
 
                     if (mouseInfluence > 0.0) {
                         bCol += rainbowTint * 0.4 * mouseInfluence;
@@ -80,10 +92,10 @@ void main() {
                         alpha = min(1.0, alpha + halo * 0.6);
                     }
                     if (bass > 0.05) {
-                        bubbleAlpha = min(1.0, bubbleAlpha * (1.0 + bass * 0.35));
+                        bubbleAlpha = min(1.0, bubbleAlpha * (1.0 + bass * 0.15));
                     }
                     if (treble > 0.05) {
-                        bCol += baseBubbleCol * 0.35 * treble;
+                        bCol += baseBubbleCol * 0.2 * treble;
                     }
 
                     color = mix(color, bCol, bubbleAlpha * (1.0 - alpha));
@@ -99,9 +111,10 @@ void main() {
             vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
             float clickDist = length(fragCoord - cPos);
             float waveRadius = prog * 300.0;
-            float wave = smoothstep(20.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - prog);
-            color += (rainbowTint + vec3(0.3)) * wave * 0.75 * particleAlpha;
-            alpha = min(1.0, alpha + wave * 0.65);
+            float wave = smoothstep(7.0, 0.0, abs(clickDist - waveRadius)) * pow(1.0 - prog, 1.8);
+            float core = exp(-clickDist / 28.0) * max(0.0, 1.0 - prog * 3.5) * 0.4;
+            color += (rainbowTint + vec3(0.12)) * (wave * 0.35 + core) * particleAlpha;
+            alpha = min(1.0, alpha + wave * 0.25 + core * 0.3);
         }
     }
 

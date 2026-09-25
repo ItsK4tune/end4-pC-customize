@@ -31,6 +31,18 @@ void main() {
         }
     }
 
+    for (int i = 0; i < 4; i++) {
+        float prog = (i == 0) ? clickProgress.x : ((i == 1) ? clickProgress.y : ((i == 2) ? clickProgress.z : clickProgress.w));
+        if (prog < 1.0) {
+            vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
+            float cDist = length(fragCoord - cPos);
+            float waveR = prog * 320.0;
+            float shock = smoothstep(45.0, 0.0, abs(cDist - waveR)) * pow(1.0 - prog, 1.5);
+            vec2 pushDir = (cDist > 1.0) ? ((fragCoord - cPos) / cDist) : vec2(0.0, 1.0);
+            flowCoord += pushDir * shock * 35.0;
+        }
+    }
+
     bool hasPrimary = primaryColor.a > 0.05;
     bool hasSecondary = secondaryColor.a > 0.05;
     vec3 starBaseCol = hasPrimary ? primaryColor.rgb : vec3(0.85, 0.92, 1.0);
@@ -38,9 +50,9 @@ void main() {
 
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);
-        float fallSpeed = (6.0 + 8.0 * l) * (1.0 + bass * 0.4 + mid * 0.3);
+        float fallSpeed = (6.0 + 8.0 * l) * (1.0 + bass * 0.12 + mid * 0.08);
         float sway = sin(time * 0.2 + l * 2.0) * (5.0 * l);
-        vec2 layerCoord = flowCoord + vec2(sway - time * fallSpeed * tan(windAngle), -time * fallSpeed);
+        vec2 layerCoord = flowCoord + vec2(sway - windDrift * fallSpeed, -time * fallSpeed);
 
         float cellSize = 150.0;
         vec2 grid = layerCoord / cellSize;
@@ -60,9 +72,9 @@ void main() {
 
                 float rndPhase = hash11(rnd.x * 53.31);
                 float twinkle = pow(0.5 + 0.5 * sin(time * (1.5 + 2.0 * rnd.x) + rndPhase * 6.28), 3.0);
-                twinkle = mix(0.25, 1.0, twinkle) * (1.0 + bass * 0.6 + treble * 0.5);
+                twinkle = mix(0.3, 1.0, twinkle) * (1.0 + bass * 0.2 + treble * 0.15);
 
-                float starSize = (1.2 + 0.7 * l + 0.6 * rnd.y) * particleSize * (1.0 + bass * 0.2);
+                float starSize = (1.2 + 0.7 * l + 0.6 * rnd.y) * particleSize * (1.0 + bass * 0.1);
                 float maxGlow = starSize * (3.5 + particleBlur * 4.0);
 
                 if (dist < maxGlow) {
@@ -83,7 +95,7 @@ void main() {
                         starAlpha = min(1.0, starAlpha * (1.0 + mouseInfluence * 2.5));
                     }
                     if (treble > 0.05) {
-                        currentCol += starGlowCol * 0.4 * treble;
+                        currentCol += starGlowCol * 0.25 * treble;
                     }
 
                     color += currentCol * starAlpha;
@@ -99,9 +111,10 @@ void main() {
             vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
             float clickDist = length(fragCoord - cPos);
             float waveRadius = prog * 320.0;
-            float wave = smoothstep(22.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - prog);
-            color += (starBaseCol + vec3(0.4)) * wave * 0.8 * particleAlpha;
-            alpha = min(1.0, alpha + wave * 0.7);
+            float wave = smoothstep(7.0, 0.0, abs(clickDist - waveRadius)) * pow(1.0 - prog, 1.8);
+            float core = exp(-clickDist / 28.0) * max(0.0, 1.0 - prog * 3.5) * 0.4;
+            color += (starBaseCol + vec3(0.15)) * (wave * 0.35 + core) * particleAlpha;
+            alpha = min(1.0, alpha + wave * 0.25 + core * 0.3);
         }
     }
 

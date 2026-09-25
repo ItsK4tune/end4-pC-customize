@@ -38,6 +38,18 @@ void main() {
         }
     }
 
+    for (int i = 0; i < 4; i++) {
+        float prog = (i == 0) ? clickProgress.x : ((i == 1) ? clickProgress.y : ((i == 2) ? clickProgress.z : clickProgress.w));
+        if (prog < 1.0) {
+            vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
+            float cDist = length(fragCoord - cPos);
+            float waveR = prog * 300.0;
+            float shock = smoothstep(45.0, 0.0, abs(cDist - waveR)) * pow(1.0 - prog, 1.5);
+            vec2 pushDir = (cDist > 1.0) ? ((fragCoord - cPos) / cDist) : vec2(0.0, 1.0);
+            flowCoord += pushDir * shock * 40.0;
+        }
+    }
+
     bool hasPrimary = primaryColor.a > 0.05;
     bool hasSecondary = secondaryColor.a > 0.05;
     vec3 baseColor1 = hasPrimary ? primaryColor.rgb : vec3(1.0, 0.74, 0.83);
@@ -45,9 +57,9 @@ void main() {
 
     for (int layer = 1; layer <= 2; layer++) {
         float l = float(layer);
-        float layerSpeed = (40.0 + 30.0 * l) * (1.0 + bass * 0.25);
-        float sway = sin(time * (0.7 + mid * 0.6) + l * 2.0) * (20.0 + 12.0 * l + mid * 14.0);
-        vec2 layerCoord = flowCoord + vec2(sway - time * layerSpeed * tan(windAngle), -time * layerSpeed);
+        float layerSpeed = (40.0 + 30.0 * l) * (1.0 + bass * 0.12);
+        float sway = sin(time * 0.7 + l * 2.0) * (20.0 + 12.0 * l + mid * 8.0);
+        vec2 layerCoord = flowCoord + vec2(sway - windDrift * layerSpeed, -time * layerSpeed);
 
         float cellSize = 160.0;
         vec2 grid = layerCoord / cellSize;
@@ -65,13 +77,13 @@ void main() {
                 vec2 p = layerCoord - pInCell;
                 float unscaledDist = length(p);
 
-                float rot = time * (0.8 + 0.4 * spawn + mid * 0.5) + spawn * 6.28 + windAngle * 0.7;
+                float rot = time * (0.8 + 0.4 * spawn) + spawn * 6.28 + windAngle * 0.8 + mid * 0.2;
                 p = rotate(p, rot);
 
                 float flip = 0.35 + 0.65 * abs(cos(time * 1.4 + spawn * 6.28));
                 vec2 scaledP = vec2(p.x / flip, p.y);
 
-                float pSize = (7.0 + 4.0 * l + 2.0 * spawn) * particleSize * (1.0 + bass * 0.35);
+                float pSize = (7.0 + 4.0 * l + 2.0 * spawn) * particleSize * (1.0 + bass * 0.15);
                 float d = petalSDF(scaledP, pSize);
 
                 float blurWidth = 1.2 + particleBlur * 6.0;
@@ -84,10 +96,10 @@ void main() {
                         petalCol += baseColor1 * 0.4 * mouseInfluence;
                     }
                     if (bass > 0.05) {
-                        petalCol += baseColor1 * bass * 0.35;
+                        petalCol += baseColor1 * bass * 0.18;
                     }
                     if (treble > 0.05) {
-                        petalCol += baseColor2 * treble * 0.45 * edge;
+                        petalCol += baseColor2 * treble * 0.22 * edge;
                     }
 
                     float cellEnvelope = smoothstep(cellSize * 1.8, cellSize * 1.2, unscaledDist);
@@ -112,9 +124,10 @@ void main() {
             vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
             float clickDist = length(fragCoord - cPos);
             float waveRadius = prog * 300.0;
-            float wave = smoothstep(22.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - prog);
-            color += (baseColor1 + vec3(0.25)) * wave * 0.75 * particleAlpha;
-            alpha = min(1.0, alpha + wave * 0.65);
+            float wave = smoothstep(7.0, 0.0, abs(clickDist - waveRadius)) * pow(1.0 - prog, 1.8);
+            float core = exp(-clickDist / 28.0) * max(0.0, 1.0 - prog * 3.5) * 0.4;
+            color += (baseColor1 + vec3(0.12)) * (wave * 0.35 + core) * particleAlpha;
+            alpha = min(1.0, alpha + wave * 0.25 + core * 0.3);
         }
     }
 

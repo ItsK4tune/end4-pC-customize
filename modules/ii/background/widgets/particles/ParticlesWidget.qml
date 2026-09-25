@@ -109,6 +109,10 @@ Item {
     property real fpsCapInterval: root.fpsCapValue === "30" ? (1.0 / 30.0) : (root.fpsCapValue === "60" ? (1.0 / 60.0) : 0.0)
     property real frameAccumulator: 0.0
     property real accumulatedTime: 0.0
+    property real accumulatedWindDrift: 0.0
+    property real smoothedBass: 0.0
+    property real smoothedMid: 0.0
+    property real smoothedTreble: 0.0
 
     FrameAnimation {
         running: root.visible && root.opacity > 0 && !root.isAnimationPaused
@@ -117,7 +121,21 @@ Item {
             if (root.fpsCapInterval > 0.0 && root.frameAccumulator < root.fpsCapInterval) {
                 return;
             }
-            root.accumulatedTime += root.frameAccumulator * root.speedValue;
+            const dt = root.frameAccumulator;
+            root.accumulatedTime += dt * root.speedValue;
+            root.accumulatedWindDrift += dt * Math.tan((root.windAngleValue * Math.PI) / 180.0);
+
+            const targetBass = root.audioReactiveValue ? Math.min(1.0, levelEngine.bass * root.bassGainValue * 0.7) : 0.0;
+            const targetMid = root.audioReactiveValue ? Math.min(1.0, root.midLevel * root.midGainValue * 0.7) : 0.0;
+            const targetTreble = root.audioReactiveValue ? Math.min(1.0, root.trebleLevel * root.trebleGainValue * 0.7) : 0.0;
+
+            const attackRate = 1.0 - Math.exp(-dt * 20.0);
+            const decayRate = 1.0 - Math.exp(-dt * 5.0);
+
+            root.smoothedBass += (targetBass > root.smoothedBass ? attackRate : decayRate) * (targetBass - root.smoothedBass);
+            root.smoothedMid += (targetMid > root.smoothedMid ? attackRate : decayRate) * (targetMid - root.smoothedMid);
+            root.smoothedTreble += (targetTreble > root.smoothedTreble ? attackRate : decayRate) * (targetTreble - root.smoothedTreble);
+
             root.frameAccumulator = 0.0;
         }
     }
@@ -201,9 +219,9 @@ Item {
         }
     }
 
-    readonly property real effectiveBass: root.audioReactiveValue ? Math.min(2.0, levelEngine.bass * root.bassGainValue) : 0.0
-    readonly property real effectiveMid: root.audioReactiveValue ? Math.min(2.0, root.midLevel * root.midGainValue) : 0.0
-    readonly property real effectiveTreble: root.audioReactiveValue ? Math.min(2.0, root.trebleLevel * root.trebleGainValue) : 0.0
+    readonly property real effectiveBass: root.smoothedBass
+    readonly property real effectiveMid: root.smoothedMid
+    readonly property real effectiveTreble: root.smoothedTreble
 
     HoverHandler {
         id: hoverHandler
@@ -236,7 +254,7 @@ Item {
         anchors.fill: parent
         style: root.preset
         time: root.accumulatedTime
-        speed: 1.0
+        windDrift: root.accumulatedWindDrift
         density: root.densityValue
         particleSize: root.particleSizeValue
         particleAlpha: root.particleAlphaValue

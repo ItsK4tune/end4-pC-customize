@@ -5,7 +5,7 @@ ShaderEffect {
 
     required property string style
     property real time: 0.0
-    property real speed: 1.0
+    property real windDrift: 0.0
     property real density: 1.0
     property real particleSize: 1.0
     property real particleAlpha: 1.0

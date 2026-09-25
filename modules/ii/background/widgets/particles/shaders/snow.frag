@@ -31,6 +31,18 @@ void main() {
         }
     }
 
+    for (int i = 0; i < 4; i++) {
+        float prog = (i == 0) ? clickProgress.x : ((i == 1) ? clickProgress.y : ((i == 2) ? clickProgress.z : clickProgress.w));
+        if (prog < 1.0) {
+            vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
+            float cDist = length(fragCoord - cPos);
+            float waveR = prog * 280.0;
+            float shock = smoothstep(45.0, 0.0, abs(cDist - waveR)) * pow(1.0 - prog, 1.5);
+            vec2 pushDir = (cDist > 1.0) ? ((fragCoord - cPos) / cDist) : vec2(0.0, 1.0);
+            flowCoord += pushDir * shock * 35.0;
+        }
+    }
+
     bool hasPrimary = primaryColor.a > 0.05;
     bool hasSecondary = secondaryColor.a > 0.05;
     vec3 snowColor = hasPrimary ? primaryColor.rgb : vec3(0.92, 0.95, 1.0);
@@ -38,9 +50,9 @@ void main() {
 
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);
-        float fallSpeed = (35.0 + 25.0 * l) * (1.0 + bass * 0.25);
-        float sway = sin(time * (0.6 + 0.2 * l + mid * 0.4) + l * 1.5) * (12.0 * l + mid * 8.0);
-        vec2 layerCoord = flowCoord + vec2(sway - time * fallSpeed * tan(windAngle), -time * fallSpeed);
+        float fallSpeed = (35.0 + 25.0 * l) * (1.0 + bass * 0.1);
+        float sway = sin(time * (0.6 + 0.2 * l) + l * 1.5) * (12.0 * l + mid * 6.0);
+        vec2 layerCoord = flowCoord + vec2(sway - windDrift * fallSpeed, -time * fallSpeed);
 
         float cellSize = 150.0;
         vec2 grid = layerCoord / cellSize;
@@ -58,7 +70,7 @@ void main() {
                 vec2 p = layerCoord - pInCell;
                 float dist = length(p);
 
-                float radius = (1.5 + 1.1 * l + 0.8 * rnd.x) * particleSize * (1.0 + bass * 0.3);
+                float radius = (1.5 + 1.1 * l + 0.8 * rnd.x) * particleSize * (1.0 + bass * 0.15);
                 float blurWidth = radius * (1.5 + particleBlur * 3.0);
 
                 if (dist < blurWidth * 2.2) {
@@ -69,10 +81,10 @@ void main() {
                         currentFlakeCol += snowGlow * 0.4 * mouseInfluence;
                     }
                     if (bass > 0.05) {
-                        flakeAlpha = min(1.0, flakeAlpha * (1.0 + bass * 0.4));
+                        flakeAlpha = min(1.0, flakeAlpha * (1.0 + bass * 0.18));
                     }
                     if (treble > 0.05) {
-                        currentFlakeCol += snowGlow * 0.4 * treble;
+                        currentFlakeCol += snowGlow * 0.25 * treble;
                     }
 
                     float cellEnvelope = smoothstep(cellSize * 1.8, cellSize * 1.2, dist);
@@ -97,9 +109,10 @@ void main() {
             vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
             float clickDist = length(fragCoord - cPos);
             float waveRadius = prog * 280.0;
-            float wave = smoothstep(20.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - prog);
-            color += (snowColor + vec3(0.3)) * wave * 0.75 * particleAlpha;
-            alpha = min(1.0, alpha + wave * 0.65);
+            float wave = smoothstep(7.0, 0.0, abs(clickDist - waveRadius)) * pow(1.0 - prog, 1.8);
+            float core = exp(-clickDist / 28.0) * max(0.0, 1.0 - prog * 3.5) * 0.4;
+            color += (snowColor + vec3(0.15)) * (wave * 0.35 + core) * particleAlpha;
+            alpha = min(1.0, alpha + wave * 0.25 + core * 0.3);
         }
     }
 

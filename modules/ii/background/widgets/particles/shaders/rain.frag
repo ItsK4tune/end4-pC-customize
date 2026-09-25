@@ -31,6 +31,18 @@ void main() {
         }
     }
 
+    for (int i = 0; i < 4; i++) {
+        float prog = (i == 0) ? clickProgress.x : ((i == 1) ? clickProgress.y : ((i == 2) ? clickProgress.z : clickProgress.w));
+        if (prog < 1.0) {
+            vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
+            float cDist = length(fragCoord - cPos);
+            float waveR = prog * 320.0;
+            float shock = smoothstep(45.0, 0.0, abs(cDist - waveR)) * pow(1.0 - prog, 1.5);
+            vec2 pushDir = (cDist > 1.0) ? ((fragCoord - cPos) / cDist) : vec2(0.0, 1.0);
+            flowCoord += pushDir * shock * 45.0;
+        }
+    }
+
     bool hasPrimary = primaryColor.a > 0.05;
     bool hasSecondary = secondaryColor.a > 0.05;
     vec3 rainTint = hasPrimary ? primaryColor.rgb : vec3(0.72, 0.85, 1.0);
@@ -40,9 +52,8 @@ void main() {
 
     for (int layer = 1; layer <= 3; layer++) {
         float l = float(layer);
-        float fallSpeed = (650.0 + 350.0 * l) * (1.0 + bass * 0.25);
-        float horizSpeed = fallSpeed * windSlant;
-        vec2 layerCoord = flowCoord + vec2(-time * horizSpeed, -time * fallSpeed);
+        float fallSpeed = (650.0 + 350.0 * l) * (1.0 + bass * 0.12);
+        vec2 layerCoord = flowCoord + vec2(-windDrift * fallSpeed, -time * fallSpeed);
 
         vec2 skewedCoord = vec2(layerCoord.x - layerCoord.y * windSlant, layerCoord.y);
 
@@ -63,7 +74,7 @@ void main() {
                 vec2 p = skewedCoord - pInCell;
                 vec2 rotP = rotate(p, -windAngle);
 
-                float streakLen = (28.0 + 22.0 * l + 18.0 * rnd.y) * particleSize * (1.0 + bass * 0.35 + mid * 0.2);
+                float streakLen = (28.0 + 22.0 * l + 18.0 * rnd.y) * particleSize * (1.0 + bass * 0.15 + mid * 0.1);
                 float streakWidth = (0.75 + 0.35 * l) * (1.0 + particleBlur * 1.8);
 
                 float dx = abs(rotP.x);
@@ -86,10 +97,10 @@ void main() {
                         streakAlpha = min(1.0, streakAlpha * (1.0 + mouseInfluence * 2.2));
                     }
                     if (bass > 0.05) {
-                        streakAlpha = min(1.0, streakAlpha * (1.0 + bass * 0.35));
+                        streakAlpha = min(1.0, streakAlpha * (1.0 + bass * 0.15));
                     }
                     if (treble > 0.05) {
-                        currentRainCol += highlightTint * treble * 0.45;
+                        currentRainCol += highlightTint * treble * 0.25;
                     }
 
                     color = mix(color, currentRainCol, streakAlpha * (1.0 - alpha));
@@ -137,9 +148,10 @@ void main() {
             vec2 cPos = (i == 0) ? clickPos0 : ((i == 1) ? clickPos1 : ((i == 2) ? clickPos2 : clickPos3));
             float clickDist = length(fragCoord - cPos);
             float waveRadius = prog * 320.0;
-            float wave = smoothstep(20.0, 0.0, abs(clickDist - waveRadius)) * (1.0 - prog);
-            color += (highlightTint + vec3(0.2)) * wave * 0.75 * particleAlpha;
-            alpha = min(1.0, alpha + wave * 0.65);
+            float wave = smoothstep(7.0, 0.0, abs(clickDist - waveRadius)) * pow(1.0 - prog, 1.8);
+            float core = exp(-clickDist / 28.0) * max(0.0, 1.0 - prog * 3.5) * 0.4;
+            color += (highlightTint + vec3(0.12)) * (wave * 0.35 + core) * particleAlpha;
+            alpha = min(1.0, alpha + wave * 0.25 + core * 0.3);
         }
     }
 
