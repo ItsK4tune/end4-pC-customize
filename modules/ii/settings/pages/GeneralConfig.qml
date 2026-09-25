@@ -185,6 +185,146 @@ ContentPage {
         }
 
         ContentSection {
+            icon: "weather_mix"
+            shape: MaterialShape.Shape.Pill
+            title: Translation.tr("Weather")
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "partly_cloudy_day"
+                    text: Translation.tr("Enable Weather service")
+                    checked: Config.options.bar.weather.enable
+                    onCheckedChanged: {
+                        Config.options.bar.weather.enable = checked;
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    visible: Config.options.bar.weather.enable
+                    spacing: 12
+
+                    ConfigSwitch {
+                        buttonIcon: "assistant_navigation"
+                        text: Translation.tr("Enable GPS based location")
+                        checked: Config.options.bar.weather.enableGPS
+                        onCheckedChanged: {
+                            Config.options.bar.weather.enableGPS = checked;
+                        }
+                    }
+
+                    ConfigTextArea {
+                        id: cityField
+                        Layout.fillWidth: true
+                        enabled: !Config.options.bar.weather.enableGPS
+                        opacity: Config.options.bar.weather.enableGPS ? 0.5 : 1.0
+                        buttonIcon: "location_city"
+                        text: Translation.tr("City name or coordinates")
+                        placeholderText: Translation.tr("e.g. Hanoi, Yen Bai, Tokyo, or 21.02,105.83")
+                        value: Config.options.bar.weather.city
+                        onValueChanged: cityDebounceTimer.restart()
+
+                        Timer {
+                            id: cityDebounceTimer
+                            interval: 800
+                            running: false
+                            onTriggered: Config.options.bar.weather.city = cityField.value.trim()
+                        }
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: statusRow.implicitHeight + 16
+                        radius: Appearance.rounding.normal
+                        color: Appearance.colors.colLayer1
+
+                        RowLayout {
+                            id: statusRow
+                            anchors {
+                                fill: parent
+                                margins: 10
+                            }
+                            spacing: 10
+
+                            MaterialSymbol {
+                                iconSize: 22
+                                text: Config.options.bar.weather.enableGPS ? "my_location" : "pin_drop"
+                                color: Appearance.colors.colPrimary
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 2
+
+                                StyledText {
+                                    text: {
+                                        const mode = Config.options.bar.weather.enableGPS
+                                            ? Translation.tr("Auto GPS Mode")
+                                            : Translation.tr("Manual Location Mode");
+                                        const loc = Weather.data?.city ? Weather.data.city : (Weather.city ? Weather.city : "...");
+                                        const temp = Weather.data?.temp ? ` • ${Weather.data.temp}` : "";
+                                        const desc = Weather.data?.description ? ` (${Weather.data.description})` : "";
+                                        return `${mode}: ${loc}${temp}${desc}`;
+                                    }
+                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnLayer1
+                                    elide: Text.ElideRight
+                                }
+
+                                StyledText {
+                                    text: Weather.data?.lastRefresh ? (Translation.tr("Last updated: ") + Weather.data.lastRefresh) : Translation.tr("Fetching data...")
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    color: Appearance.colors.colOnLayer1
+                                    opacity: 0.6
+                                    elide: Text.ElideRight
+                                }
+                            }
+
+                            RippleButtonWithIcon {
+                                Layout.alignment: Qt.AlignVCenter
+                                Layout.preferredHeight: 38
+                                materialIcon: "refresh"
+                                mainText: Translation.tr("Refresh")
+                                nerdIcon: ""
+                                onClicked: Weather.refresh()
+                            }
+                        }
+                    }
+
+                    ConfigRow {
+                        uniform: true
+                        ConfigSwitch {
+                            buttonIcon: "thermometer"
+                            text: Translation.tr("Fahrenheit unit")
+                            checked: Config.options.bar.weather.useUSCS
+                            onCheckedChanged: {
+                                Config.options.bar.weather.useUSCS = checked;
+                            }
+                        }
+                        ConfigSpinBox {
+                            icon: "av_timer"
+                            text: Translation.tr("Polling interval (m)")
+                            value: Config.options.bar.weather.fetchInterval
+                            from: 5
+                            to: 60
+                            stepSize: 5
+                            onValueChanged: {
+                                Config.options.bar.weather.fetchInterval = value;
+                            }
+                        }
+                    }
+                }
+            }
+
+            WorldMap {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 240
+                visible: Config.options.bar.weather.enable
+            }
+        }
+
+        ContentSection {
             icon: "battery_android_full"
             shape: MaterialShape.Shape.SemiCircle
             title: Translation.tr("Battery")
