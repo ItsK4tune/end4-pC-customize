@@ -1009,6 +1009,23 @@ ContentPage {
                 let newList = [];
                 if (instances && instances.length > 0) {
                     for (let i = 0; i < instances.length; i++) newList.push(instances[i]);
+                    let lastItem = newList[newList.length - 1];
+                    newList.push({
+                        id: "ci_" + Date.now(),
+                        x: Math.round((lastItem.x || 100) + 40),
+                        y: Math.round((lastItem.y || 100) + 40),
+                        z: (lastItem.z || 0) + 1,
+                        size: lastItem.size ?? 200,
+                        shape: lastItem.shape ?? "Circle",
+                        division: "1x1",
+                        gap: 4,
+                        images: [],
+                        path: "",
+                        bgPath: "",
+                        bgOpacity: 1.0,
+                        bgDim: 0.0,
+                        rotation: 0
+                    });
                 } else {
                     newList.push({
                         id: "ci_1",
@@ -1027,23 +1044,6 @@ ContentPage {
                         rotation: current.rotation ?? 0
                     });
                 }
-                let lastItem = newList[newList.length - 1];
-                newList.push({
-                    id: "ci_" + Date.now(),
-                    x: Math.round((lastItem.x || 100) + 40),
-                    y: Math.round((lastItem.y || 100) + 40),
-                    z: (lastItem.z || 0) + 1,
-                    size: 200,
-                    shape: "Circle",
-                    division: "1x1",
-                    gap: 4,
-                    images: [],
-                    path: "",
-                    bgPath: "",
-                    bgOpacity: 1.0,
-                    bgDim: 0.0,
-                    rotation: 0
-                });
                 Config.options.background.widgets.customImage.instances = newList;
                 Config.options.background.widgets.customImage.enable = true;
                 customImageSection.instanceTab = newList.length - 1;

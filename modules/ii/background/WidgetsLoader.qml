@@ -165,14 +165,18 @@ Item {
             width: root.screen.width
             height: root.screen.height
             z: Config.options.background.widgets.customImage.z ?? 0
+            visible: Config.options.background.widgets.customImage.enable
 
             Repeater {
                 model: {
+                    if (!Config.options.background.widgets.customImage.enable) {
+                        return [];
+                    }
                     let insts = Config.options.background.widgets.customImage.instances;
                     if (insts && insts.length > 0) {
                         return insts;
                     }
-                    if (Config.options.background.widgets.customImage.enable && Config.options.background.widgets.customImage.path !== "") {
+                    if (Config.options.background.widgets.customImage.path !== "") {
                         return [ Config.options.background.widgets.customImage ];
                     }
                     return [];
