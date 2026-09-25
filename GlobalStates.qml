@@ -10,6 +10,7 @@ pragma ComponentBehavior: Bound
 Singleton {
     id: root
     signal requestBluetoothDialog()
+    signal desktopClicked(real x, real y)
     property bool barOpen: true
     property bool crosshairOpen: false
     property bool equalizerOpen: false

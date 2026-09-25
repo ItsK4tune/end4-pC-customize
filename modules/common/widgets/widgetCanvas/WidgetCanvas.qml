@@ -113,6 +113,7 @@ MouseArea {
     }
 
     onPressed: (mouse) => {
+        GlobalStates.desktopClicked(mouse.x, mouse.y)
         if (Config.options.background.widgetsLocked) return
         GlobalStates.desktopWidgetKeyboardFocus = true 
         root.forceActiveFocus() 

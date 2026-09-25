@@ -1,5 +1,7 @@
 import QtQuick
 import Quickshell
+import qs
+import qs.services
 
 import qs.modules.common
 import qs.modules.ii.background
@@ -51,8 +53,8 @@ Scope {
     PanelLoader { component: WallpaperSelector {} }
     PanelLoader { component: Settings {} }
     PanelLoader { component: DesktopMenu {} }
-    PanelLoader { component: DropShelfPanel {} }
-    PanelLoader { component: NiriBackdrop {} }
-    PanelLoader { component: ScreenFrame {} }
-    PanelLoader { component: ParticlesOverlayWindow {} }
+    PanelLoader { extraCondition: GlobalStates.dropShelfOpen; component: DropShelfPanel {} }
+    PanelLoader { extraCondition: WM.compositor === "niri"; component: NiriBackdrop {} }
+    PanelLoader { extraCondition: Config.options.bar.showFrame; component: ScreenFrame {} }
+    PanelLoader { extraCondition: (Config.options?.background?.widgets?.particles?.enable ?? false) && (Config.options?.background?.widgets?.particles?.layerMode === "window"); component: ParticlesOverlayWindow {} }
 }

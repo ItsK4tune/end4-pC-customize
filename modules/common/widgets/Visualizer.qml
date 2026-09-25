@@ -48,12 +48,12 @@ Item {
         spacing: root.dotSpacing
 
         Repeater {
-            model: root.barCount
+            model: !root.vertical ? root.barCount : 0
             Rectangle {
                 required property int index
                 width: root.dotSize
                 property real pointValue: {
-                    if (!root.isPlaying || root.points.length === 0) return root.dotSize
+                    if (!root.isPlaying || root.points.length === 0 || root.vertical) return root.dotSize
                     const idx = Math.floor(index * root.points.length / root.barCount)
                     const v = root.points[idx] ?? 0
                     return Math.max(root.dotSize, (v / root.maxVisualizerValue) * root.maxBarHeight)
@@ -63,7 +63,10 @@ Item {
                 anchors.verticalCenter: parent.verticalCenter
                 color: Appearance.colors.colPrimary
                 opacity: root.isPlaying ? 0.85 : 0.3
-                Behavior on height { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+                Behavior on height {
+                    enabled: !root.vertical && root.isPlaying
+                    NumberAnimation { duration: 80; easing.type: Easing.OutQuad }
+                }
                 Behavior on opacity { NumberAnimation { duration: 300 } }
             }
         }
@@ -76,12 +79,12 @@ Item {
         spacing: root.dotSpacing
 
         Repeater {
-            model: root.barCount
+            model: root.vertical ? root.barCount : 0
             Rectangle {
                 required property int index
                 height: root.dotSize
                 property real pointValue: {
-                    if (!root.isPlaying || root.points.length === 0) return root.dotSize
+                    if (!root.isPlaying || root.points.length === 0 || !root.vertical) return root.dotSize
                     const rawIndex = root.mirrored ? (root.barCount - 1 - index) : index
                     const idx = Math.floor(rawIndex * root.points.length / root.barCount)
                     const v = root.points[idx] ?? 0
@@ -92,7 +95,10 @@ Item {
                 anchors.horizontalCenter: parent.horizontalCenter
                 color: Appearance.colors.colPrimary
                 opacity: root.isPlaying ? 0.85 : 0.3
-                Behavior on width { NumberAnimation { duration: 80; easing.type: Easing.OutQuad } }
+                Behavior on width {
+                    enabled: root.vertical && root.isPlaying
+                    NumberAnimation { duration: 80; easing.type: Easing.OutQuad }
+                }
                 Behavior on opacity { NumberAnimation { duration: 300 } }
             }
         }

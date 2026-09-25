@@ -24,8 +24,8 @@ ShaderEffect {
     property vector2d clickPos1: Qt.vector2d(-9999.0, -9999.0)
     property vector2d clickPos2: Qt.vector2d(-9999.0, -9999.0)
     property vector2d clickPos3: Qt.vector2d(-9999.0, -9999.0)
-    property color primaryColor: Qt.rgba(0, 0, 0, 0)
-    property color secondaryColor: Qt.rgba(0, 0, 0, 0)
+    property vector4d primaryColor: Qt.vector4d(0.0, 0.0, 0.0, 0.0)
+    property vector4d secondaryColor: Qt.vector4d(0.0, 0.0, 0.0, 0.0)
 
     blending: true
     fragmentShader: Qt.resolvedUrl(`shaders/${style}.frag.qsb`)

@@ -28,8 +28,20 @@ Canvas {
     }
 
     onRoundedPolygonChanged: {
+        if (!root.roundedPolygon) return;
+        if (!root.prevRoundedPolygon) {
+            root.prevRoundedPolygon = root.roundedPolygon;
+            delete root.morph;
+            root.morph = new Morph.Morph(root.roundedPolygon, root.roundedPolygon);
+            root.progress = 1;
+            requestPaint();
+            return;
+        }
+        if (root.prevRoundedPolygon === root.roundedPolygon) {
+            return;
+        }
         delete root.morph;
-        root.morph = new Morph.Morph(root.prevRoundedPolygon ?? root.roundedPolygon, root.roundedPolygon);
+        root.morph = new Morph.Morph(root.prevRoundedPolygon, root.roundedPolygon);
         morphBehavior.enabled = false;
         root.progress = 0;
         morphBehavior.enabled = true;

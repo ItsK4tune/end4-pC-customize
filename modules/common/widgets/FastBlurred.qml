@@ -14,7 +14,9 @@ Item {
 
     readonly property real oversample: blurRadius * 1.5
 
-    layer.enabled: true
+    readonly property bool isEffectActive: root.visible && root.opacity > 0 && root.width > 0 && root.height > 0 && root.blurSource !== null
+
+    layer.enabled: root.isEffectActive
     layer.effect: OpacityMask {
         maskSource: Rectangle {
             width: root.width; height: root.height
@@ -29,21 +31,21 @@ Item {
         width: root.width + root.oversample * 2
         height: root.height + root.oversample * 2
         radius: root.blurRadius
-        visible: root.blurSource !== null
-        source: root.blurSource ? shaderSource : null
+        visible: root.isEffectActive
+        source: root.isEffectActive ? shaderSource : null
 
         ShaderEffectSource {
             id: shaderSource
-            sourceItem: root.blurSource
+            sourceItem: root.isEffectActive ? root.blurSource : null
             sourceRect: {
+                if (!root.isEffectActive) return Qt.rect(0, 0, 0, 0)
                 var _fx = root.trackX
                 var _fy = root.trackY
-                if (!root.blurSource) return Qt.rect(0, 0, 0, 0)
                 var pt = root.mapToItem(root.blurSource, -root.oversample, -root.oversample)
                 return Qt.rect(pt.x, pt.y, blur.width, blur.height)
             }
             hideSource: false
-            live: true
+            live: root.isEffectActive
         }
     }
 

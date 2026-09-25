@@ -34,12 +34,7 @@ Item {
             Quickshell.iconPath("user-desktop", "image-missing"))     // ← fallback Desktop
     }
 
-    Component.onCompleted: {
-        console.log("appId:", root.activeWindow?.appId)
-        console.log("class:", root.biggestWindow?.class)
-        console.log("guessIcon:", AppSearch.guessIcon(root.activeAppClass))
-        console.log("iconPath:", root.mainAppIconSource)
-    }
+
 
     implicitWidth:  vertical ? Appearance.sizes.verticalBarWidth : Math.min(colLayout.implicitWidth + 12, 280)
     implicitHeight: vertical ? iconItem.implicitHeight : Appearance.sizes.barHeight

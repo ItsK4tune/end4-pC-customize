@@ -221,8 +221,8 @@ Variants {
                 cache: true
                 mipmap: true
                 smooth: true
-                layer.enabled: true
-                visible: !bgRoot.videoRevealed
+                layer.enabled: !bgRoot.videoRevealed && bgRoot.transitionProgress < 1.0
+                visible: !bgRoot.videoRevealed && bgRoot.transitionProgress < 1.0
                 opacity: bgRoot.videoRevealed ? 0 : 1
             }
 

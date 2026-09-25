@@ -58,6 +58,16 @@ Item {
         return Qt.rgba(0, 0, 0, 0);
     }
 
+    readonly property vector4d effectivePrimaryVec: {
+        const c = root.effectivePrimaryColor;
+        return Qt.vector4d(c.r, c.g, c.b, c.a);
+    }
+
+    readonly property vector4d effectiveSecondaryVec: {
+        const c = root.effectiveSecondaryColor;
+        return Qt.vector4d(c.r, c.g, c.b, c.a);
+    }
+
     readonly property real mouseModeValue: {
         switch (configEntry?.mouseInteraction ?? "repel") {
             case "repel": return 1.0;
@@ -77,19 +87,23 @@ Item {
     readonly property string fpsCapValue: configEntry?.fpsCap ?? "auto"
     readonly property string pauseModeValue: configEntry?.pauseMode ?? ((configEntry?.pauseFullscreen ?? true) ? "fullscreen" : "none")
 
-    readonly property bool isFullscreenActive: WM.windowList.some(w => w.fullscreen)
+    readonly property bool isFullscreenActive: WM.fullscreenOnMonitor(root.screen?.name ?? "")
     readonly property bool hasWindowsOnWorkspace: {
-        const monitorName = root.screen?.name;
-        if (monitorName) {
-            const ws = Hyprland.workspaces.values.find(w => w.active && w.monitor && w.monitor.name === monitorName);
-            return ws ? (ws.toplevels.values.length > 0) : false;
-        }
-        return Hyprland.workspaces.values.some(w => w.active && w.toplevels.values.length > 0);
+        const monitorName = root.screen?.name ?? "";
+        const wsId = WM.activeWorkspaceForMonitor(monitorName)?.id ?? WM.activeWorkspace?.id ?? 1;
+        return WM.windowList.some(w => w.workspaceId === wsId);
     }
     readonly property bool isAnimationPaused: {
         if (root.pauseModeValue === "hasWindows") return root.hasWindowsOnWorkspace || root.isFullscreenActive;
         if (root.pauseModeValue === "fullscreen") return root.isFullscreenActive;
         return false;
+    }
+
+    Connections {
+        target: GlobalStates
+        function onDesktopClicked(x, y) {
+            root.triggerClickBurst(x, y);
+        }
     }
 
     property real fpsCapInterval: root.fpsCapValue === "30" ? (1.0 / 30.0) : (root.fpsCapValue === "60" ? (1.0 / 60.0) : 0.0)
@@ -240,7 +254,7 @@ Item {
         clickPos2: Qt.vector2d(root.clickPositionsX[2], root.clickPositionsY[2])
         clickPos3: Qt.vector2d(root.clickPositionsX[3], root.clickPositionsY[3])
         mousePos: Qt.vector2d(root.smoothMouseX, root.smoothMouseY)
-        primaryColor: root.effectivePrimaryColor
-        secondaryColor: root.effectiveSecondaryColor
+        primaryColor: root.effectivePrimaryVec
+        secondaryColor: root.effectiveSecondaryVec
     }
 }

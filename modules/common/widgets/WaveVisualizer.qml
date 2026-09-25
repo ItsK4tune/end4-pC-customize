@@ -12,8 +12,11 @@ Canvas { // Visualizer
     property bool live: true
     property color color: Appearance.m3colors.m3primary
 
+    readonly property bool isVisualizerActive: root.visible && root.live && root.opacity > 0 && root.width > 0 && root.height > 0
     property bool paintPending: false
+
     onPointsChanged: {
+        if (!root.isVisualizerActive) return;
         // Cava can emit frames much faster than we need to redraw + re-blur this canvas.
         // Coalesce bursts to the throttle's rate instead of repainting (and re-rendering
         // the blur layer) on every single frame, which is what was driving unbounded
@@ -26,14 +29,23 @@ Canvas { // Visualizer
         }
     }
 
+    onIsVisualizerActiveChanged: {
+        if (!root.isVisualizerActive) {
+            paintThrottle.stop();
+            root.paintPending = false;
+        }
+    }
+
     Timer {
         id: paintThrottle
         interval: 33 // ~30fps cap
         onTriggered: {
-            if (root.paintPending) {
+            if (root.paintPending && root.isVisualizerActive) {
                 root.paintPending = false;
                 root.requestPaint();
                 paintThrottle.start();
+            } else {
+                root.paintPending = false;
             }
         }
     }
@@ -42,6 +54,7 @@ Canvas { // Visualizer
     onPaint: {
         var ctx = getContext("2d");
         ctx.clearRect(0, 0, width, height);
+        if (!root.isVisualizerActive) return;
 
         var points = root.points;
         var maxVal = root.maxVisualizerValue || 1;
@@ -85,7 +98,7 @@ Canvas { // Visualizer
         ctx.fill();
     }
 
-    layer.enabled: true
+    layer.enabled: root.isVisualizerActive
     layer.effect: MultiEffect { // Blur a bit to obscure away the points
         source: root
         saturation: 0.2

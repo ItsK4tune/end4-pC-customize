@@ -136,6 +136,7 @@ Item {
     Component {
         id: particlesComp
         ParticlesWidget {
+            screen: root.screen
             screenWidth: root.screen.width
             screenHeight: root.screen.height
             scaledScreenWidth: root.screen.width

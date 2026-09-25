@@ -41,6 +41,7 @@ Singleton {
     property string maxAvailableDiskString: kbToGbString(diskTotal)
 
     property string thermalPath: ""
+    property int diskUpdateCounter: 0
 
     Process {
         id: findThermalPathProc
@@ -146,8 +147,13 @@ Singleton {
                 tempProcFallback.running = true
             }
 
-            diskProc.running = false
-            diskProc.running = true
+            if (root.diskUpdateCounter <= 0) {
+                diskProc.running = false
+                diskProc.running = true
+                root.diskUpdateCounter = 10
+            } else {
+                root.diskUpdateCounter--
+            }
 
             const textMeminfo = fileMeminfo.text()
             memoryTotal = Number(textMeminfo.match(/MemTotal: *(\d+)/)?.[1] ?? 1)

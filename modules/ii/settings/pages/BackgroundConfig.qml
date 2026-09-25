@@ -54,90 +54,97 @@ ContentPage {
             title: Translation.tr("Wallpaper")
             shape: MaterialShape.Shape.Clover4Leaf
 
-            Rectangle {
+            Loader {
                 Layout.fillWidth: true
-                visible: WM.compositor !== "niri"
-                implicitHeight: wrapperCol.implicitHeight + 16
-                topLeftRadius: Appearance.rounding.verylarge
-                topRightRadius: Appearance.rounding.verylarge
-                bottomLeftRadius: Appearance.rounding.normal
-                bottomRightRadius: Appearance.rounding.normal
-                color: Appearance.colors.colLayer1
+                sourceComponent: WM.compositor === "niri" ? niriHeaderComponent : hyprlandHeaderComponent
+            }
 
-                ColumnLayout {
-                    id: wrapperCol
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    spacing: 8
+            Component {
+                id: hyprlandHeaderComponent
+                Rectangle {
+                    width: parent.width
+                    implicitHeight: wrapperCol.implicitHeight + 16
+                    topLeftRadius: Appearance.rounding.verylarge
+                    topRightRadius: Appearance.rounding.verylarge
+                    bottomLeftRadius: Appearance.rounding.normal
+                    bottomRightRadius: Appearance.rounding.normal
+                    color: Appearance.colors.colLayer1
 
-                    Carousel {
-                        Layout.fillWidth: true
-                        implicitHeight: 280
-                        largeItemWidthRatio: 0.5
-                        mediumItemWidthRatio: 0.485
-                        itemSpacing: 8
-                        model: [
-                            page.displayPathFor(Config.options.background.wallpaperPath),
-                            page.displayPathFor(
-                                Config.options.background.lockWall !== ""
-                                    ? Config.options.background.lockWall
-                                    : Config.options.background.wallpaperPath
-                            )
-                        ]
-                        wheelEnabled: false
-                        dragEnabled: false
-                        clickAction: (index, modelData) => {
-                            GlobalStates.wallpaperSelectorTarget = index === 1 ? "lockWall" : "wallpaper"
-                            GlobalStates.wallpaperSelectorOpen = true
-                        }
-                    }
-
-                    RowLayout {
-                        Layout.fillWidth: true
+                    ColumnLayout {
+                        id: wrapperCol
+                        anchors.fill: parent
+                        anchors.margins: 8
                         spacing: 8
 
-                        Rectangle {
+                        Carousel {
                             Layout.fillWidth: true
-                            implicitHeight: 24
-                            radius: Appearance.rounding.normal
-                            color: "transparent"
-
-                            RowLayout {
-                                anchors.centerIn: parent
-                                spacing: 8
-                                MaterialSymbol {
-                                    text: "desktop_windows"
-                                    iconSize: Appearance.font.pixelSize.larger
-                                    color: Appearance.colors.colPrimary
-                                }
-                                StyledText {
-                                    text: Translation.tr("Desktop")
-                                    font.pixelSize: Appearance.font.pixelSize.normal
-                                    font.weight: Font.Medium
-                                    color: Appearance.colors.colOnLayer1
-                                }
+                            implicitHeight: 280
+                            largeItemWidthRatio: 0.5
+                            mediumItemWidthRatio: 0.485
+                            itemSpacing: 8
+                            model: [
+                                page.displayPathFor(Config.options.background.wallpaperPath),
+                                page.displayPathFor(
+                                    Config.options.background.lockWall !== ""
+                                        ? Config.options.background.lockWall
+                                        : Config.options.background.wallpaperPath
+                                )
+                            ]
+                            wheelEnabled: false
+                            dragEnabled: false
+                            clickAction: (index, modelData) => {
+                                GlobalStates.wallpaperSelectorTarget = index === 1 ? "lockWall" : "wallpaper"
+                                GlobalStates.wallpaperSelectorOpen = true
                             }
                         }
 
-                        Rectangle {
+                        RowLayout {
                             Layout.fillWidth: true
-                            implicitHeight: 24
-                            radius: Appearance.rounding.normal
-                            color: "transparent"
+                            spacing: 8
 
-                            RowLayout {
-                                anchors.centerIn: parent
-                                spacing: 8
-                                MaterialSymbol {
-                                    text: "lock"
-                                    iconSize: Appearance.font.pixelSize.larger
-                                    color: Appearance.colors.colPrimary
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: 24
+                                radius: Appearance.rounding.normal
+                                color: "transparent"
+
+                                RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 8
+                                    MaterialSymbol {
+                                        text: "desktop_windows"
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: Appearance.colors.colPrimary
+                                    }
+                                    StyledText {
+                                        text: Translation.tr("Desktop")
+                                        font.pixelSize: Appearance.font.pixelSize.normal
+                                        font.weight: Font.Medium
+                                        color: Appearance.colors.colOnLayer1
+                                    }
                                 }
-                                StyledText {
-                                    text: Translation.tr("Lockscreen")
-                                    font.pixelSize: Appearance.font.pixelSize.normal
-                                    font.weight: Font.Medium
-                                    color: Appearance.colors.colOnLayer1
+                            }
+
+                            Rectangle {
+                                Layout.fillWidth: true
+                                implicitHeight: 24
+                                radius: Appearance.rounding.normal
+                                color: "transparent"
+
+                                RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 8
+                                    MaterialSymbol {
+                                        text: "lock"
+                                        iconSize: Appearance.font.pixelSize.larger
+                                        color: Appearance.colors.colPrimary
+                                    }
+                                    StyledText {
+                                        text: Translation.tr("Lockscreen")
+                                        font.pixelSize: Appearance.font.pixelSize.normal
+                                        font.weight: Font.Medium
+                                        color: Appearance.colors.colOnLayer1
+                                    }
                                 }
                             }
                         }
@@ -145,57 +152,59 @@ ContentPage {
                 }
             }
 
-            Rectangle {
-                Layout.fillWidth: true
-                visible: WM.compositor === "niri"
-                implicitHeight: niriWrapperCol.implicitHeight + 16
-                topLeftRadius: Appearance.rounding.verylarge
-                topRightRadius: Appearance.rounding.verylarge
-                bottomLeftRadius: Appearance.rounding.normal
-                bottomRightRadius: Appearance.rounding.normal
-                color: Appearance.colors.colLayer1
+            Component {
+                id: niriHeaderComponent
+                Rectangle {
+                    width: parent.width
+                    implicitHeight: niriWrapperCol.implicitHeight + 16
+                    topLeftRadius: Appearance.rounding.verylarge
+                    topRightRadius: Appearance.rounding.verylarge
+                    bottomLeftRadius: Appearance.rounding.normal
+                    bottomRightRadius: Appearance.rounding.normal
+                    color: Appearance.colors.colLayer1
 
-                ColumnLayout {
-                    id: niriWrapperCol
-                    anchors.fill: parent
-                    anchors.margins: 8
-                    spacing: 8
+                    ColumnLayout {
+                        id: niriWrapperCol
+                        anchors.fill: parent
+                        anchors.margins: 8
+                        spacing: 8
 
-                    Carousel {
-                        Layout.fillWidth: true
-                        implicitHeight: 280
-                        largeItemWidthRatio: 1
-                        mediumItemWidthRatio: 0
-                        itemSpacing: 8
-                        model: [page.displayPathFor(Config.options.background.wallpaperPath)]
-                        wheelEnabled: false
-                        dragEnabled: false
-                        clickAction: (index, modelData) => {
-                            GlobalStates.wallpaperSelectorTarget = "wallpaper"
-                            GlobalStates.wallpaperSelectorOpen = true
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 24
-                        radius: Appearance.rounding.normal
-                        color: "transparent"
-
-                        RowLayout {
-                            anchors.centerIn: parent
-                            spacing: 8
-                            MaterialSymbol {
-                                text: "image"
-                                iconSize: Appearance.font.pixelSize.larger
-                                color: Appearance.colors.colPrimary
+                        Carousel {
+                            Layout.fillWidth: true
+                            implicitHeight: 280
+                            largeItemWidthRatio: 1
+                            mediumItemWidthRatio: 0
+                            itemSpacing: 8
+                            model: [page.displayPathFor(Config.options.background.wallpaperPath)]
+                            wheelEnabled: false
+                            dragEnabled: false
+                            clickAction: (index, modelData) => {
+                                GlobalStates.wallpaperSelectorTarget = "wallpaper"
+                                GlobalStates.wallpaperSelectorOpen = true
                             }
-                            StyledText {
-                                text: Config.options.background.wallpaperPath.split("/").pop()
-                                font.pixelSize: Appearance.font.pixelSize.normal
-                                font.weight: Font.Medium
-                                color: Appearance.colors.colOnLayer1
-                                elide: Text.ElideMiddle
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 24
+                            radius: Appearance.rounding.normal
+                            color: "transparent"
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 8
+                                MaterialSymbol {
+                                    text: "image"
+                                    iconSize: Appearance.font.pixelSize.larger
+                                    color: Appearance.colors.colPrimary
+                                }
+                                StyledText {
+                                    text: Config.options.background.wallpaperPath.split("/").pop()
+                                    font.pixelSize: Appearance.font.pixelSize.normal
+                                    font.weight: Font.Medium
+                                    color: Appearance.colors.colOnLayer1
+                                    elide: Text.ElideMiddle
+                                }
                             }
                         }
                     }
