@@ -15,14 +15,35 @@ AbstractBackgroundWidget {
     configEntryName: "customImage"
     hoverEnabled: true
 
-    property string imagePath: Config.options.background.widgets.customImage.path ?? ""
-    property real widgetSize: Config.options.background.widgets.customImage.size ?? 200
-    property string division: Config.options.background.widgets.customImage.division ?? "1x1"
-    property real gap: Config.options.background.widgets.customImage.gap ?? 4
-    property var imagesList: Config.options.background.widgets.customImage.images ?? []
+    property int instanceIndex: -1
+    property var instanceConfig: null
+    customConfigEntry: instanceConfig
+
+    property string imagePath: (instanceConfig?.path ?? Config.options.background.widgets.customImage.path) ?? ""
+    property real widgetSize: (instanceConfig?.size ?? Config.options.background.widgets.customImage.size) ?? 200
+    property string division: (instanceConfig?.division ?? Config.options.background.widgets.customImage.division) ?? "1x1"
+    property real gap: (instanceConfig?.gap ?? Config.options.background.widgets.customImage.gap) ?? 4
+    property var imagesList: (instanceConfig?.images ?? Config.options.background.widgets.customImage.images) ?? []
+    property string shapeName: (instanceConfig?.shape ?? Config.options.background.widgets.customImage.shape) ?? "Cookie4Sided"
 
     implicitWidth: contentItem.implicitWidth
     implicitHeight: contentItem.implicitHeight
+
+    onPositionCommitted: {
+        if (root.instanceIndex >= 0) {
+            root.updateInstanceProperty({
+                x: root.x,
+                y: root.y,
+                z: root.z
+            });
+        }
+    }
+
+    onDeleteRequested: {
+        if (root.instanceIndex >= 0) {
+            root.removeInstance(root.instanceIndex);
+        }
+    }
 
     function getShape(name) {
         switch (name) {
@@ -159,10 +180,91 @@ AbstractBackgroundWidget {
             currentImages.push("");
         }
         currentImages[index] = path;
-        if (index === 0) {
-            Config.options.background.widgets.customImage.path = path;
+
+        if (root.instanceIndex >= 0) {
+            let updates = { images: currentImages };
+            if (index === 0) updates.path = path;
+            root.updateInstanceProperty(updates);
+        } else {
+            if (index === 0) {
+                Config.options.background.widgets.customImage.path = path;
+            }
+            Config.options.background.widgets.customImage.images = currentImages;
         }
-        Config.options.background.widgets.customImage.images = currentImages;
+    }
+
+    function updateInstanceProperty(props) {
+        let list = Config.options.background.widgets.customImage.instances;
+        if (!list || root.instanceIndex < 0 || root.instanceIndex >= list.length) return;
+        let newList = [];
+        for (let i = 0; i < list.length; i++) {
+            if (i === root.instanceIndex) {
+                let item = Object.assign({}, list[i]);
+                for (let k in props) {
+                    item[k] = props[k];
+                }
+                newList.push(item);
+            } else {
+                newList.push(list[i]);
+            }
+        }
+        Config.options.background.widgets.customImage.instances = newList;
+    }
+
+    function removeInstance(idx) {
+        let list = Config.options.background.widgets.customImage.instances;
+        if (!list) return;
+        let newList = [];
+        for (let i = 0; i < list.length; i++) {
+            if (i !== idx) {
+                newList.push(list[i]);
+            }
+        }
+        if (newList.length === 0) {
+            Config.options.background.widgets.customImage.instances = [];
+            Config.options.background.widgets.customImage.enable = false;
+        } else {
+            Config.options.background.widgets.customImage.instances = newList;
+        }
+    }
+
+    function duplicateInstance() {
+        let list = Config.options.background.widgets.customImage.instances;
+        let current = root.instanceConfig ? Object.assign({}, root.instanceConfig) : {
+            x: root.x,
+            y: root.y,
+            z: root.z,
+            size: root.widgetSize,
+            shape: root.shapeName,
+            division: root.division,
+            gap: root.gap,
+            images: (root.imagesList || []).slice(),
+            path: root.imagePath
+        };
+        let newItem = Object.assign({}, current);
+        newItem.id = "ci_" + Date.now();
+        newItem.x = Math.round((current.x || 100) + 30);
+        newItem.y = Math.round((current.y || 100) + 30);
+
+        let newList = [];
+        if (list && list.length > 0) {
+            for (let i = 0; i < list.length; i++) newList.push(list[i]);
+        } else {
+            newList.push({
+                id: "ci_base",
+                x: root.x,
+                y: root.y,
+                z: root.z,
+                size: root.widgetSize,
+                shape: root.shapeName,
+                division: root.division,
+                gap: root.gap,
+                images: (root.imagesList || []).slice(),
+                path: root.imagePath
+            });
+        }
+        newList.push(newItem);
+        Config.options.background.widgets.customImage.instances = newList;
     }
 
     Item {
@@ -177,11 +279,65 @@ AbstractBackgroundWidget {
             animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
         }
 
+        // On-widget mini controls
+        Row {
+            anchors {
+                horizontalCenter: parent.horizontalCenter
+                bottom: parent.top
+                bottomMargin: 6
+            }
+            spacing: 6
+            z: 10
+            visible: root.containsMouse && !Config.options.background.widgetsLocked
+
+            Rectangle {
+                width: 24
+                height: 24
+                radius: 12
+                color: Appearance.colors.colLayer0
+                opacity: 0.9
+
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    iconSize: 14
+                    text: "content_copy"
+                    color: Appearance.colors.colOnLayer0
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.duplicateInstance()
+                }
+            }
+
+            Rectangle {
+                width: 24
+                height: 24
+                radius: 12
+                color: Appearance.colors.colErrorContainer
+                opacity: 0.9
+
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    iconSize: 14
+                    text: "delete"
+                    color: Appearance.colors.colOnErrorContainer
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.requestDelete()
+                }
+            }
+        }
+
         MaterialShape {
             id: shadowShape
             anchors.fill: parent
             color: Appearance.colors.colPrimaryContainer
-            shape: getShape(Config.options.background.widgets.customImage.shape ?? "Cookie4Sided")
+            shape: getShape(root.shapeName)
             visible: false
         }
 
@@ -196,14 +352,14 @@ AbstractBackgroundWidget {
             anchors.fill: parent
             z: 0
             color: Appearance.colors.colPrimaryContainer
-            shape: getShape(Config.options.background.widgets.customImage.shape ?? "Cookie4Sided")
+            shape: getShape(root.shapeName)
 
             layer.enabled: true
             layer.effect: OpacityMask {
                 maskSource: MaterialShape {
                     width: imageShape.width
                     height: imageShape.height
-                    shape: getShape(Config.options.background.widgets.customImage.shape ?? "Cookie4Sided")
+                    shape: getShape(root.shapeName)
                 }
             }
 
@@ -341,7 +497,11 @@ AbstractBackgroundWidget {
                 root.widgetSize = Math.max(80, newValue)
             }
             onResizeFinished: {
-                Config.options.background.widgets.customImage.size = root.widgetSize
+                if (root.instanceIndex >= 0) {
+                    root.updateInstanceProperty({ size: root.widgetSize });
+                } else {
+                    Config.options.background.widgets.customImage.size = root.widgetSize;
+                }
             }
         }
     }

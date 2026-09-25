@@ -968,9 +968,94 @@ ContentPage {
         }
 
         ContentSection {
+            id: customImageSection
             icon: "panorama"
             shape: MaterialShape.Shape.SoftBoom 
             title: Translation.tr("Custom Image")
+
+            property var instances: Config.options.background.widgets.customImage.instances ?? []
+            property int instanceTab: 0
+            property int selectedInstanceIndex: Math.min(Math.max(0, instanceTab), Math.max(0, (instances?.length ?? 1) - 1))
+
+            readonly property var currentTarget: {
+                if (instances && instances.length > 0) {
+                    return instances[selectedInstanceIndex] || null;
+                }
+                return Config.options.background.widgets.customImage;
+            }
+
+            function updateCurrentTarget(props) {
+                if (instances && instances.length > 0) {
+                    let newList = [];
+                    for (let i = 0; i < instances.length; i++) {
+                        if (i === selectedInstanceIndex) {
+                            let item = Object.assign({}, instances[i]);
+                            for (let k in props) item[k] = props[k];
+                            newList.push(item);
+                        } else {
+                            newList.push(instances[i]);
+                        }
+                    }
+                    Config.options.background.widgets.customImage.instances = newList;
+                } else {
+                    for (let k in props) {
+                        Config.options.background.widgets.customImage[k] = props[k];
+                    }
+                }
+            }
+
+            function addInstance() {
+                let current = Config.options.background.widgets.customImage;
+                let newList = [];
+                if (instances && instances.length > 0) {
+                    for (let i = 0; i < instances.length; i++) newList.push(instances[i]);
+                } else {
+                    newList.push({
+                        id: "ci_1",
+                        x: current.x ?? 100,
+                        y: current.y ?? 100,
+                        z: current.z ?? 0,
+                        size: current.size ?? 200,
+                        shape: current.shape ?? "Cookie4Sided",
+                        division: current.division ?? "1x1",
+                        gap: current.gap ?? 4,
+                        images: (current.images ?? []).slice(),
+                        path: current.path ?? ""
+                    });
+                }
+                let lastItem = newList[newList.length - 1];
+                newList.push({
+                    id: "ci_" + Date.now(),
+                    x: Math.round((lastItem.x || 100) + 40),
+                    y: Math.round((lastItem.y || 100) + 40),
+                    z: (lastItem.z || 0) + 1,
+                    size: 200,
+                    shape: "Circle",
+                    division: "1x1",
+                    gap: 4,
+                    images: [],
+                    path: ""
+                });
+                Config.options.background.widgets.customImage.instances = newList;
+                Config.options.background.widgets.customImage.enable = true;
+                customImageSection.instanceTab = newList.length - 1;
+            }
+
+            function deleteCurrentInstance() {
+                if (!instances || instances.length === 0) return;
+                let newList = [];
+                for (let i = 0; i < instances.length; i++) {
+                    if (i !== selectedInstanceIndex) newList.push(instances[i]);
+                }
+                if (newList.length === 0) {
+                    Config.options.background.widgets.customImage.instances = [];
+                    Config.options.background.widgets.customImage.enable = false;
+                } else {
+                    Config.options.background.widgets.customImage.instances = newList;
+                    customImageSection.instanceTab = Math.max(0, selectedInstanceIndex - 1);
+                }
+            }
+
             GroupedList {
                 ConfigSwitch {
                     Layout.fillWidth: true
@@ -981,8 +1066,48 @@ ContentPage {
                         Config.options.background.widgets.customImage.enable = checked;
                     }
                 }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 8
+                    Layout.rightMargin: 8
+                    spacing: 8
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        visible: (customImageSection.instances?.length ?? 0) > 0
+
+                        Repeater {
+                            model: customImageSection.instances ?? []
+                            delegate: SelectionGroupButton {
+                                required property var modelData
+                                required property int index
+
+                                buttonText: `${Translation.tr("Widget")} ${index + 1}`
+                                toggled: customImageSection.selectedInstanceIndex === index
+                                onClicked: customImageSection.instanceTab = index
+                            }
+                        }
+                    }
+
+                    RippleButtonWithIcon {
+                        materialIcon: "add"
+                        mainText: Translation.tr("Add Widget")
+                        onClicked: customImageSection.addInstance()
+                    }
+
+                    RippleButtonWithIcon {
+                        visible: (customImageSection.instances?.length ?? 0) > 0
+                        materialIcon: "delete"
+                        mainText: Translation.tr("Delete")
+                        colBackground: Appearance.colors.colErrorContainer
+                        onClicked: customImageSection.deleteCurrentInstance()
+                    }
+                }
+
                 ConfigSelectionShapeArray {
-                    currentValue: Config.options.background.widgets.customImage.shape
+                    currentValue: customImageSection.currentTarget?.shape ?? "Cookie4Sided"
                     shapeColor: Appearance.colors.colPrimary
                     backgroundColor: Appearance.colors.colPrimaryContainer
                     options: [
@@ -993,15 +1118,15 @@ ContentPage {
                         "Puffy", "PuffyDiamond", "PixelCircle", "Bun", "Heart"
                     ]
                     onSelected: newValue => {
-                        Config.options.background.widgets.customImage.shape = newValue
+                        customImageSection.updateCurrentTarget({ shape: newValue })
                     }
                 }
                 ConfigSelectionArray {
                     text: Translation.tr("Division")
                     icon: "dashboard"
-                    currentValue: Config.options.background.widgets.customImage.division ?? "1x1"
+                    currentValue: customImageSection.currentTarget?.division ?? "1x1"
                     onSelected: newValue => {
-                        Config.options.background.widgets.customImage.division = newValue;
+                        customImageSection.updateCurrentTarget({ division: newValue });
                     }
                     options: [
                         {
@@ -1044,13 +1169,13 @@ ContentPage {
                 ConfigSlider {
                     Layout.fillWidth: true
                     text: Translation.tr("Border Gap")
-                    value: Config.options.background.widgets.customImage.gap ?? 4
+                    value: customImageSection.currentTarget?.gap ?? 4
                     usePercentTooltip: false
                     buttonIcon: "border_inner"
                     from: 0
                     to: 24
                     stopIndicatorValues: [0, 4, 8]
-                    onValueChanged: Config.options.background.widgets.customImage.gap = Math.round(value)
+                    onValueChanged: customImageSection.updateCurrentTarget({ gap: Math.round(value) })
                 }
             }
         }

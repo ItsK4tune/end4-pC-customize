@@ -160,13 +160,35 @@ Item {
     }
     Component {
         id: customImageComp
-        CustomImage {
-            screenWidth: root.screen.width
-            screenHeight: root.screen.height
-            scaledScreenWidth: root.screen.width
-            scaledScreenHeight: root.screen.height
-            wallpaperScale: 1
-            wallpaperItem: root.wallpaperItem
+        Item {
+            id: customImagesWrapper
+            width: root.screen.width
+            height: root.screen.height
+            z: Config.options.background.widgets.customImage.z ?? 0
+
+            Repeater {
+                model: {
+                    let insts = Config.options.background.widgets.customImage.instances;
+                    if (insts && insts.length > 0) {
+                        return insts;
+                    }
+                    return [ null ];
+                }
+                delegate: CustomImage {
+                    required property var modelData
+                    required property int index
+
+                    instanceIndex: modelData !== null ? index : -1
+                    instanceConfig: modelData
+
+                    screenWidth: root.screen.width
+                    screenHeight: root.screen.height
+                    scaledScreenWidth: root.screen.width
+                    scaledScreenHeight: root.screen.height
+                    wallpaperScale: 1
+                    wallpaperItem: root.wallpaperItem
+                }
+            }
         }
     }
     Component {
