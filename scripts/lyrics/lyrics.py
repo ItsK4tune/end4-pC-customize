@@ -11,6 +11,65 @@ import unicodedata
 
 CACHE_DIR = os.path.expanduser("~/.cache/quickshell/lyrics")
 
+NON_MUSIC_DOMAINS = [
+    "facebook.com", "fb.watch", "fb.com",
+    "twitter.com", "x.com",
+    "instagram.com",
+    "reddit.com",
+    "tiktok.com",
+    "threads.net",
+    "discord.com",
+    "github.com", "gitlab.com",
+    "twitch.tv",
+    "linkedin.com",
+    "google.com", "bing.com",
+    "wikipedia.org"
+]
+
+GENERIC_TITLES = {
+    "facebook", "twitter", "instagram", "reddit", "tiktok", "discord", "telegram", "whatsapp",
+    "new tab", "trang moi", "trang mới", "home", "trang chu", "trang chủ", "inbox", "notifications",
+    "thong bao", "thông báo", "settings", "cài đặt", "cai dat", "feed", "watch", "reels", "shorts",
+    "messenger", "mozilla firefox", "google chrome", "chromium", "brave", "vivaldi", "microsoft edge",
+    "youtube", "video", "videos"
+}
+
+DISTRIBUTOR_CHANNELS = {
+    "pops", "pops music", "pops kids", "zing mp3", "nhacpro", "nhacpro tube",
+    "yeah1", "yeah1 music", "warner music", "sony music", "universal music",
+    "metub", "metub network", "vevo", "audio", "video", "entertainment",
+    "records", "record", "channel", "official channel"
+}
+
+def strip_accents(text: str) -> str:
+    if not text:
+        return ""
+    text = re.sub(r"[đĐ]", lambda m: "d" if m.group(0) == "đ" else "D", text)
+    decomposed = unicodedata.normalize("NFD", text)
+    return "".join(c for c in decomposed if unicodedata.category(c) != "Mn").strip()
+
+def is_non_music(title: str, artist: str, url: str) -> bool:
+    """Intelligently detect whether the current media source is non-music (social media, browser tabs, etc.)."""
+    if url:
+        u_low = url.lower()
+        for domain in NON_MUSIC_DOMAINS:
+            if domain in u_low:
+                return True
+
+    t_clean = re.sub(r"^\(\d+\)\s*", "", (title or "").lower().strip())
+    t_clean = re.sub(r"\s*[-–—:|]?\s*(mozilla firefox|google chrome|chromium|brave|vivaldi|microsoft edge)$", "", t_clean).strip()
+
+    if t_clean in GENERIC_TITLES:
+        return True
+
+    # If title is a single short generic word and there's no artist
+    if not artist:
+        words = t_clean.split()
+        if len(words) <= 1 and (t_clean in GENERIC_TITLES or len(t_clean) < 3):
+            return True
+
+    return False
+
 def get_mpris_url(dbus_name: str = None) -> str:
     """Attempt to retrieve xesam:url from playerctl."""
     cmd = ["playerctl"]
@@ -85,6 +144,11 @@ def clean_artist(raw_artist: str) -> str:
     if not raw_artist:
         return ""
     artist = raw_artist.strip()
+
+    # Filter out distribution labels / generic channel names
+    if artist.lower() in DISTRIBUTOR_CHANNELS:
+        return ""
+
     junk_artist_patterns = [
         r"\s*-\s*Topic$",
         r"\s+(Official(\s*(Channel|Music|Audio|Video))?|VEVO|Records?|Entertainment|Music|Studio|Media)$",
@@ -92,6 +156,10 @@ def clean_artist(raw_artist: str) -> str:
     ]
     for pat in junk_artist_patterns:
         artist = re.sub(pat, "", artist, flags=re.IGNORECASE).strip()
+
+    if artist.lower() in DISTRIBUTOR_CHANNELS:
+        return ""
+
     # Strip parenthesized foreign names if main name exists, e.g. NewJeans (뉴진스) -> NewJeans
     m = re.match(r"^([^(]+)\s*\([^)]+\)$", artist)
     if m and m.group(1).strip():
@@ -136,6 +204,8 @@ def clean_song_info(raw_title: str, raw_artist: str = ""):
     quote_match = re.search(r"['\"‘“]([^'\"’”]{2,})['\"’”]", title)
     quoted_title = quote_match.group(1).strip() if quote_match else None
 
+    extra_candidates = []
+
     if jp_title:
         title = jp_title
     elif quoted_title:
@@ -163,17 +233,25 @@ def clean_song_info(raw_title: str, raw_artist: str = ""):
                 elif artist and (a_low in p1_low or p1_low in a_low):
                     title = part0
                 elif not artist:
-                    artist = clean_artist(part0)
-                    title = part1
+                    # In videos like "Chiếc Khăn Gió Ấm | Khánh Phương"
+                    # part0 is usually Song, part1 is Artist (or vice versa)
+                    title = part0
+                    artist = clean_artist(part1)
+                    # Offer both permutations
+                    extra_candidates.append((part1, clean_artist(part0)))
                 else:
                     title = part0
+                    # If existing artist was from channel, part1 might be the actual artist
+                    p1_clean = clean_artist(part1)
+                    if p1_clean and p1_clean.lower() != artist.lower():
+                        extra_candidates.append((part0, p1_clean))
 
     # Clean leftover feat/ft/vocal from title itself
     title = re.sub(r"\s*[\(\[]?(feat\.?|ft\.?|vocal\.?)\s+[^()\[\]]+[\)\]]?", "", title, flags=re.IGNORECASE).strip()
     title = re.sub(r"\s*[/／]\s*(feat\.?|ft\.?|vocal\.?).*$", "", title, flags=re.IGNORECASE).strip()
 
     title = title.strip("\"' \u201c\u201d\u300c\u300d\u300e\u300f\u3010\u3011\u3014\u3015")
-    return title.strip(), artist.strip()
+    return title.strip(), artist.strip(), extra_candidates
 
 def parse_lrc(lrc_text: str) -> list:
     lines = []
@@ -222,7 +300,7 @@ def fetch_json(url: str):
 
 def get_cache_path(title: str, artist: str) -> str:
     os.makedirs(CACHE_DIR, exist_ok=True)
-    key = f"{title.lower()}___{artist.lower()}"
+    key = f"{strip_accents(title).lower()}___{strip_accents(artist).lower()}"
     h = hashlib.sha256(key.encode("utf-8")).hexdigest()
     return os.path.join(CACHE_DIR, f"{h}.json")
 
@@ -247,18 +325,27 @@ def save_to_cache(title: str, artist: str, lines: list):
 def similarity(s1: str, s2: str) -> float:
     if not s1 or not s2:
         return 0.0
-    w1 = set(re.findall(r"\w+", s1.lower()))
-    w2 = set(re.findall(r"\w+", s2.lower()))
+
+    # Compare both exact and unaccented versions
+    s1_norm = strip_accents(s1).lower()
+    s2_norm = strip_accents(s2).lower()
+    if s1_norm == s2_norm:
+        return 1.0
+
+    w1 = set(re.findall(r"\w+", s1_norm))
+    w2 = set(re.findall(r"\w+", s2_norm))
     if not w1 or not w2:
-        return 1.0 if s1.lower().strip() == s2.lower().strip() else 0.0
+        return 1.0 if s1_norm == s2_norm else 0.0
     if w1 == w2:
         return 1.0
-    s1_clean = re.sub(r"\W+", "", s1.lower())
-    s2_clean = re.sub(r"\W+", "", s2.lower())
+
+    s1_clean = re.sub(r"\W+", "", s1_norm)
+    s2_clean = re.sub(r"\W+", "", s2_norm)
     if s1_clean == s2_clean:
         return 1.0
     if s1_clean in s2_clean or s2_clean in s1_clean:
         return 0.85
+
     overlap = len(w1 & w2) / len(w1 | w2)
     return overlap
 
@@ -304,9 +391,14 @@ def score_item(item: dict, target_title: str, target_artist: str, target_dur: fl
     return score
 
 def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: str = "") -> list:
-    # 0. Check YouTube oEmbed for original title and author
-    oembed_title, oembed_author = None, None
     mpris_url = get_mpris_url(dbus_name)
+
+    # 1. Non-music filter: reject social media, browser tabs, generic non-music sites
+    if is_non_music(raw_title, raw_artist, mpris_url):
+        return []
+
+    # 2. Check YouTube oEmbed for original title and author
+    oembed_title, oembed_author = None, None
     if mpris_url:
         oe_t, oe_a = fetch_youtube_oembed(mpris_url)
         if oe_t:
@@ -319,25 +411,42 @@ def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: st
     # Prepare search candidates: list of (title, artist)
     candidates = []
 
+    def add_candidate(t, a):
+        t_str = (t or "").strip()
+        a_str = (a or "").strip()
+        if not t_str:
+            return
+        # Reject generic titles as candidates when artist is empty
+        if not a_str and t_str.lower() in GENERIC_TITLES:
+            return
+        cand = (t_str, a_str)
+        if cand not in candidates:
+            candidates.append(cand)
+        # Also add unaccented variant for Vietnamese / Latin songs
+        t_unacc = strip_accents(t_str)
+        a_unacc = strip_accents(a_str)
+        if (t_unacc, a_unacc) not in candidates and (t_unacc != t_str or a_unacc != a_str):
+            candidates.append((t_unacc, a_unacc))
+
     if oembed_title:
-        ot, oa = clean_song_info(oembed_title, oembed_author or raw_artist)
-        if ot:
-            candidates.append((ot, oa))
-            # Also romanize CJK if present
-            for alt_title in get_romanized_and_english(ot):
-                candidates.append((alt_title, oa))
+        ot, oa, o_extras = clean_song_info(oembed_title, oembed_author or raw_artist)
+        add_candidate(ot, oa)
+        for ext_t, ext_a in o_extras:
+            add_candidate(ext_t, ext_a)
+        for alt_title in get_romanized_and_english(ot):
+            add_candidate(alt_title, oa)
 
     # Clean raw title & artist
-    ct, ca = clean_song_info(raw_title, raw_artist)
-    if ct and (ct, ca) not in candidates:
-        candidates.append((ct, ca))
-        for alt_title in get_romanized_and_english(ct):
-            if (alt_title, ca) not in candidates:
-                candidates.append((alt_title, ca))
+    ct, ca, c_extras = clean_song_info(raw_title, raw_artist)
+    add_candidate(ct, ca)
+    for ext_t, ext_a in c_extras:
+        add_candidate(ext_t, ext_a)
+    for alt_title in get_romanized_and_english(ct):
+        add_candidate(alt_title, ca)
 
     # Add inverted (artist as title, title as artist) if artist is not empty
-    if ct and ca and (ca, ct) not in candidates:
-        candidates.append((ca, ct))
+    if ct and ca:
+        add_candidate(ca, ct)
 
     if not candidates:
         return []
@@ -378,7 +487,7 @@ def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: st
 
         # 3. Search query string
         q = f"{t_cand} {a_cand}".strip()
-        if q:
+        if q and len(q) >= 3:
             url = f"https://lrclib.net/api/search?q={urllib.parse.quote(q)}"
             data = fetch_json(url)
             if isinstance(data, list):
@@ -392,14 +501,17 @@ def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: st
             break
 
     # 4. Search by title only as last resort with strict artist verification
+    # ONLY do this if primary_artist is given OR primary_title has multiple words and is clearly a song
     if not pool and primary_title:
-        url = f"https://lrclib.net/api/search?q={urllib.parse.quote(primary_title)}"
-        data = fetch_json(url)
-        if isinstance(data, list):
-            for item in data:
-                score = score_item(item, primary_title, primary_artist, duration)
-                if score > 0:
-                    pool.append((score, item))
+        title_words = primary_title.split()
+        if primary_artist or len(title_words) >= 2:
+            url = f"https://lrclib.net/api/search?q={urllib.parse.quote(primary_title)}"
+            data = fetch_json(url)
+            if isinstance(data, list):
+                for item in data:
+                    score = score_item(item, primary_title, primary_artist, duration)
+                    if score > 0:
+                        pool.append((score, item))
 
     if not pool:
         return []
@@ -444,6 +556,11 @@ def main():
     dbus_name = sys.argv[4].strip() if len(sys.argv) > 4 else ""
 
     if not raw_title:
+        print("no_info", flush=True)
+        sys.exit(0)
+
+    mpris_url = get_mpris_url(dbus_name)
+    if is_non_music(raw_title, raw_artist, mpris_url):
         print("no_info", flush=True)
         sys.exit(0)
 
