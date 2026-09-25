@@ -19,9 +19,27 @@ Item {
 
     property bool isDetached: false
     property bool showControls: true
+    property bool showManualSearch: false
 
     implicitWidth: 200
     implicitHeight: 200
+
+    function openManualSearch() {
+        const rawTitle = MprisController.activePlayer?.trackTitle ?? ""
+        const cleanT = StringUtils.cleanMusicTitle(rawTitle) || rawTitle
+        titleField.text = cleanT
+        artistField.text = MprisController.activePlayer?.trackArtist ?? ""
+        root.showManualSearch = true
+        titleField.forceActiveFocus()
+        titleField.selectAll()
+    }
+
+    function executeManualSearch() {
+        if (!titleField.text.trim()) return
+        LyricsService.searchManual(titleField.text.trim(), artistField.text.trim())
+        root.showManualSearch = false
+        root.reattachAndScroll()
+    }
 
     function reattachAndScroll() {
         root.isDetached = false
@@ -73,7 +91,7 @@ Item {
     // ── Placeholder / Not OK state ──
     Item {
         anchors.fill: parent
-        visible: LyricsService.status !== "ok"
+        visible: LyricsService.status !== "ok" && !root.showManualSearch
 
         ColumnLayout {
             anchors.centerIn: parent
@@ -109,6 +127,226 @@ Item {
                     if (LyricsService.status === "no_info") return Translation.tr("No track playing");
                     if (LyricsService.status === "not_found") return Translation.tr("No lyrics found");
                     return "";
+                }
+            }
+
+            // Manual Search Button
+            Rectangle {
+                id: manualSearchBtn
+                Layout.alignment: Qt.AlignHCenter
+                Layout.topMargin: 4
+                visible: LyricsService.status !== "loading"
+                implicitWidth: manualSearchBtnLayout.implicitWidth + 20
+                implicitHeight: 28
+                radius: Appearance.rounding.full
+                color: manualBtnMouse.containsMouse
+                    ? ColorUtils.transparentize(root.activeColor, 0.85)
+                    : "transparent"
+                border.color: ColorUtils.transparentize(root.dimColor, manualBtnMouse.containsMouse ? 0.3 : 0.6)
+                border.width: 1
+
+                RowLayout {
+                    id: manualSearchBtnLayout
+                    anchors.centerIn: parent
+                    spacing: 4
+
+                    MaterialSymbol {
+                        text: "manage_search"
+                        iconSize: 15
+                        color: root.dimColor
+                    }
+
+                    StyledText {
+                        text: Translation.tr("Manual search")
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: root.dimColor
+                    }
+                }
+
+                MouseArea {
+                    id: manualBtnMouse
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.openManualSearch()
+                }
+            }
+        }
+    }
+
+    // ── Manual Search Overlay ──
+    Rectangle {
+        id: manualSearchOverlay
+        anchors.centerIn: parent
+        width: Math.min(parent.width - 16, 320)
+        implicitHeight: manualSearchLayout.implicitHeight + 24
+        visible: root.showManualSearch
+        radius: Appearance.rounding.large
+        color: Appearance.colors.colLayer1
+        border.color: ColorUtils.transparentize(root.activeColor, 0.4)
+        border.width: 1
+        z: 60
+        clip: true
+
+        ColumnLayout {
+            id: manualSearchLayout
+            anchors {
+                fill: parent
+                margins: 14
+            }
+            spacing: 10
+
+            // Header
+            RowLayout {
+                Layout.fillWidth: true
+                MaterialSymbol {
+                    text: "manage_search"
+                    iconSize: 20
+                    color: root.activeColor
+                }
+                StyledText {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Manual Lyrics Search")
+                    font.pixelSize: Appearance.font.pixelSize.small
+                    font.weight: Font.Bold
+                    color: root.textColor
+                }
+                RippleButton {
+                    implicitWidth: 24
+                    implicitHeight: 24
+                    buttonRadius: Appearance.rounding.full
+                    colBackground: "transparent"
+                    colBackgroundHover: ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4)
+                    colRipple: ColorUtils.transparentize(Appearance.colors.colLayer2, 0.2)
+                    downAction: () => { root.showManualSearch = false }
+                    contentItem: MaterialSymbol {
+                        text: "close"
+                        iconSize: 16
+                        color: root.dimColor
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                }
+            }
+
+            // Song Title Input
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 3
+                StyledText {
+                    text: Translation.tr("Song Title")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: root.dimColor
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 32
+                    radius: Appearance.rounding.small
+                    color: titleField.activeFocus
+                        ? ColorUtils.transparentize(root.activeColor, 0.88)
+                        : ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
+                    border.color: titleField.activeFocus
+                        ? root.activeColor
+                        : ColorUtils.transparentize(root.dimColor, 0.6)
+                    border.width: 1
+
+                    TextInput {
+                        id: titleField
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: root.textColor
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        selectByMouse: true
+                        clip: true
+                        onAccepted: root.executeManualSearch()
+                        Keys.onEscapePressed: root.showManualSearch = false
+                    }
+                }
+            }
+
+            // Artist Input
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 3
+                StyledText {
+                    text: Translation.tr("Artist (Optional)")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: root.dimColor
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 32
+                    radius: Appearance.rounding.small
+                    color: artistField.activeFocus
+                        ? ColorUtils.transparentize(root.activeColor, 0.88)
+                        : ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
+                    border.color: artistField.activeFocus
+                        ? root.activeColor
+                        : ColorUtils.transparentize(root.dimColor, 0.6)
+                    border.width: 1
+
+                    TextInput {
+                        id: artistField
+                        anchors.fill: parent
+                        anchors.leftMargin: 8
+                        anchors.rightMargin: 8
+                        verticalAlignment: TextInput.AlignVCenter
+                        color: root.textColor
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        selectByMouse: true
+                        clip: true
+                        onAccepted: root.executeManualSearch()
+                        Keys.onEscapePressed: root.showManualSearch = false
+                    }
+                }
+            }
+
+            // Actions: Search & Cancel
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.topMargin: 4
+                spacing: 8
+
+                RippleButton {
+                    Layout.fillWidth: true
+                    implicitHeight: 32
+                    buttonRadius: Appearance.rounding.small
+                    colBackground: ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
+                    colBackgroundHover: Appearance.colors.colLayer2Hover
+                    colRipple: Appearance.colors.colLayer2Active
+                    downAction: () => { root.showManualSearch = false }
+                    contentItem: StyledText {
+                        text: Translation.tr("Cancel")
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        color: root.dimColor
+                        horizontalAlignment: Text.AlignHCenter
+                    }
+                }
+
+                RippleButton {
+                    Layout.fillWidth: true
+                    implicitHeight: 32
+                    buttonRadius: Appearance.rounding.small
+                    colBackground: root.activeColor
+                    colBackgroundHover: ColorUtils.transparentize(root.activeColor, 0.15)
+                    colRipple: ColorUtils.transparentize(root.activeColor, 0.3)
+                    downAction: () => root.executeManualSearch()
+                    contentItem: RowLayout {
+                        anchors.centerIn: parent
+                        spacing: 4
+                        MaterialSymbol {
+                            text: "search"
+                            iconSize: 16
+                            color: Appearance.colors.colOnPrimary
+                        }
+                        StyledText {
+                            text: Translation.tr("Search")
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            font.weight: Font.Bold
+                            color: Appearance.colors.colOnPrimary
+                        }
+                    }
                 }
             }
         }
@@ -328,6 +566,31 @@ Item {
                 id: offsetRow
                 anchors.fill: parent
                 spacing: 4
+
+                // Manual search button (opens manual search dialog anytime)
+                Rectangle {
+                    implicitWidth: 22
+                    implicitHeight: 22
+                    radius: Appearance.rounding.small
+                    color: searchIconMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4) : ColorUtils.transparentize(Appearance.colors.colLayer1, 0.6)
+                    border.color: ColorUtils.transparentize(root.activeColor, searchIconMouse.containsMouse ? 0.4 : 0.15)
+                    border.width: 1
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        text: "search"
+                        iconSize: 14
+                        color: root.dimColor
+                    }
+
+                    MouseArea {
+                        id: searchIconMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.openManualSearch()
+                    }
+                }
 
                 // Minus 0.5s button
                 Rectangle {
