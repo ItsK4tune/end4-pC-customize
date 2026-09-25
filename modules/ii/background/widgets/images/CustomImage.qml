@@ -228,21 +228,17 @@ AbstractBackgroundWidget {
 
     property int pickingSlotIndex: -1
     property bool pickingFrameBg: false
+    readonly property string dialogTitle: root.pickingFrameBg ? Translation.tr("Choose Frame Background") : Translation.tr("Choose Image")
 
     Process {
         id: imagePickerProc
         command: [
             "bash", "-c",
-            `
-            START_DIR="$HOME/Pictures"
-            [ ! -d "$START_DIR" ] && START_DIR="$HOME"
-            TITLE="${root.pickingFrameBg ? Translation.tr("Choose Frame Background") : Translation.tr("Choose Image")}"
-            if command -v kdialog >/dev/null 2>&1; then
-                kdialog --getopenfilename "$START_DIR" "image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff" --title "$TITLE"
-            elif command -v zenity >/dev/null 2>&1; then
-                zenity --file-selection --file-filter="Images | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff" --title="$TITLE"
-            fi
-            `
+            "START_DIR=\"$HOME/Pictures\"; [ ! -d \"$START_DIR\" ] && START_DIR=\"$HOME\"; " +
+            "if command -v kdialog >/dev/null 2>&1; then " +
+            "kdialog --getopenfilename \"$START_DIR\" \"image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff\" --title \"" + root.dialogTitle + "\"; " +
+            "elif command -v zenity >/dev/null 2>&1; then " +
+            "zenity --file-selection --file-filter=\"Images | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff\" --title=\"" + root.dialogTitle + "\"; fi"
         ]
         stdout: StdioCollector {
             id: pickerStdout
@@ -488,106 +484,6 @@ AbstractBackgroundWidget {
 
         // On-widget mini controls
         Item {
-            id: controlBarWrapper
-            anchors {
-                horizontalCenter: parent.horizontalCenter
-                bottom: parent.top
-                bottomMargin: 2
-            }
-            height: 36
-            width: controlButtonsRow.implicitWidth + 16
-            z: 100
-            visible: (root.controlBarVisible || controlBarHoverArea.containsMouse || root.showSettingsPopup) && !Config.options.background.widgetsLocked
-
-            MouseArea {
-                id: controlBarHoverArea
-                anchors.fill: parent
-                hoverEnabled: true
-                onEntered: {
-                    hideControlBarTimer.stop();
-                    root.controlBarVisible = true;
-                }
-                onExited: {
-                    if (!root.containsMouse && !root.showSettingsPopup) {
-                        hideControlBarTimer.restart();
-                    }
-                }
-            }
-
-            Row {
-                id: controlButtonsRow
-                anchors.centerIn: parent
-                spacing: 6
-
-                // 1. Duplicate
-                Rectangle {
-                    width: 26
-                    height: 26
-                    radius: 13
-                    color: Appearance.colors.colLayer0
-                    opacity: 0.95
-
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        iconSize: 15
-                        text: "content_copy"
-                        color: Appearance.colors.colOnLayer0
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.duplicateInstance()
-                    }
-                }
-
-                // 2. Setting (per instance)
-                Rectangle {
-                    width: 26
-                    height: 26
-                    radius: 13
-                    color: root.showSettingsPopup ? Appearance.colors.colPrimary : Appearance.colors.colLayer0
-                    opacity: 0.95
-
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        iconSize: 15
-                        text: "settings"
-                        color: root.showSettingsPopup ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.showSettingsPopup = !root.showSettingsPopup;
-                        }
-                    }
-                }
-
-                // 3. Delete
-                Rectangle {
-                    width: 26
-                    height: 26
-                    radius: 13
-                    color: Appearance.colors.colErrorContainer
-                    opacity: 0.95
-
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        iconSize: 15
-                        text: "delete"
-                        color: Appearance.colors.colOnErrorContainer
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.requestDelete()
-                    }
-                }
-            }
-        }
 
         MaterialShape {
             id: shadowShape
@@ -793,13 +689,124 @@ AbstractBackgroundWidget {
         }
     }
 
+    // On-widget mini controls (upright, not rotated)
+    Item {
+        id: controlBarWrapper
+        anchors {
+            horizontalCenter: contentItem.horizontalCenter
+            bottom: contentItem.top
+            bottomMargin: {
+                let rad = Math.abs(root.widgetRotation * Math.PI / 180);
+                let extraH = ((Math.abs(Math.sin(rad)) + Math.abs(Math.cos(rad)) - 1) * root.widgetSize) / 2;
+                return Math.max(2, extraH + 2);
+            }
+        }
+        height: 36
+        width: controlButtonsRow.implicitWidth + 16
+        z: 100
+        visible: (root.controlBarVisible || controlBarHoverArea.containsMouse || root.showSettingsPopup) && !Config.options.background.widgetsLocked
+
+            MouseArea {
+                id: controlBarHoverArea
+                anchors.fill: parent
+                hoverEnabled: true
+                onEntered: {
+                    hideControlBarTimer.stop();
+                    root.controlBarVisible = true;
+                }
+                onExited: {
+                    if (!root.containsMouse && !root.showSettingsPopup) {
+                        hideControlBarTimer.restart();
+                    }
+                }
+            }
+
+            Row {
+                id: controlButtonsRow
+                anchors.centerIn: parent
+                spacing: 6
+
+                // 1. Duplicate
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: Appearance.colors.colLayer0
+                    opacity: 0.95
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "content_copy"
+                        color: Appearance.colors.colOnLayer0
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.duplicateInstance()
+                    }
+                }
+
+                // 2. Setting (per instance)
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: root.showSettingsPopup ? Appearance.colors.colPrimary : Appearance.colors.colLayer0
+                    opacity: 0.95
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "settings"
+                        color: root.showSettingsPopup ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.showSettingsPopup = !root.showSettingsPopup;
+                        }
+                    }
+                }
+
+                // 3. Delete
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: Appearance.colors.colErrorContainer
+                    opacity: 0.95
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "delete"
+                        color: Appearance.colors.colOnErrorContainer
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.requestDelete()
+                    }
+                }
+            }
+        }
+
     Item {
         id: quickSettingsPopup
         visible: root.showSettingsPopup
         z: 200
         anchors {
             top: contentItem.bottom
-            topMargin: 8
+            topMargin: {
+                let rad = Math.abs(root.widgetRotation * Math.PI / 180);
+                let extraH = ((Math.abs(Math.sin(rad)) + Math.abs(Math.cos(rad)) - 1) * root.widgetSize) / 2;
+                return Math.max(8, extraH + 8);
+            }
             horizontalCenter: contentItem.horizontalCenter
         }
         width: 290

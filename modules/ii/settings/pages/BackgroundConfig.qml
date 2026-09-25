@@ -1235,16 +1235,12 @@ ContentPage {
                 id: bgPickerProc
                 command: [
                     "bash", "-c",
-                    `
-                    START_DIR="$HOME/Pictures"
-                    [ ! -d "$START_DIR" ] && START_DIR="$HOME"
-                    TITLE="${Translation.tr("Choose Frame Background")}"
-                    if command -v kdialog >/dev/null 2>&1; then
-                        kdialog --getopenfilename "$START_DIR" "image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff" --title "$TITLE"
-                    elif command -v zenity >/dev/null 2>&1; then
-                        zenity --file-selection --file-filter="Images | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff" --title="$TITLE"
-                    fi
-                    `
+                    "START_DIR=\"$HOME/Pictures\"; [ ! -d \"$START_DIR\" ] && START_DIR=\"$HOME\"; " +
+                    "TITLE=\"" + Translation.tr("Choose Frame Background") + "\"; " +
+                    "if command -v kdialog >/dev/null 2>&1; then " +
+                    "kdialog --getopenfilename \"$START_DIR\" \"image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff\" --title \"$TITLE\"; " +
+                    "elif command -v zenity >/dev/null 2>&1; then " +
+                    "zenity --file-selection --file-filter=\"Images | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff\" --title=\"$TITLE\"; fi"
                 ]
                 stdout: StdioCollector {
                     id: bgPickerStdout
