@@ -15,7 +15,7 @@ import Quickshell.Services.Mpris
 
 Item {
     id: root
-    property var player: Mpris.players.values[root.currentPlayerIndex] ?? Mpris.players.values[0]
+    property var player: MprisController.activePlayer ?? Mpris.players.values[0]
     property var artUrl: player?.trackArtUrl ?? ""
     property string artDownloadLocation: Directories.coverArt
     property bool showLyrics: Config.options.sidebar.media.showLyrics ?? true
@@ -38,7 +38,11 @@ Item {
     property bool shapeArt: Config.options.sidebar.media.shapeArt ?? false
     readonly property var artShapeOptions: ["Circle", "Square", "Pill", "Bun", "Cookie12Sided", "Clover4Leaf", "Heart", "Slanted", "Arch", "Arrow", "SemiCircle", "Oval", "Triangle", "Diamond", "ClamShell", "Pentagon", "Gem", "Sunny", "VerySunny", "Cookie4Sided", "Cookie6Sided", "Cookie7Sided", "Cookie9Sided", "Ghostish", "Clover8Leaf", "Burst", "SoftBurst", "Boom", "SoftBoom", "Flower", "Puffy", "PuffyDiamond"]
 
-    property string displayedArtFilePath: root.downloaded ? Qt.resolvedUrl(artFilePath) : ""
+    property string displayedArtFilePath: {
+        if (!root.artUrl || root.artUrl.length === 0) return ""
+        if (String(root.artUrl).startsWith("file://")) return root.artUrl
+        return root.downloaded ? Qt.resolvedUrl(artFilePath) : ""
+    }
 
     Timer {
         running: root.player?.playbackState == MprisPlaybackState.Playing
@@ -50,6 +54,11 @@ Item {
     onArtFilePathChanged: {
         if (!root.artUrl || root.artUrl.length == 0) {
             root.artDominantColor = Appearance.m3colors.m3secondaryContainer
+            root.downloaded = false
+            return
+        }
+        if (String(root.artUrl).startsWith("file://")) {
+            root.downloaded = true
             return
         }
         coverArtDownloader.targetFile = root.artUrl
