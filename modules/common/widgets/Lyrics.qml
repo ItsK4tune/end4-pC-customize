@@ -9,93 +9,340 @@ import QtQuick.Layouts
 Item {
     id: root
 
-    property color textColor: "white"
-    property color activeColor: "white"
-    property color dimColor: Qt.rgba(1, 1, 1, 0.35)
+    property color textColor: Appearance.colors.colOnLayer0
+    property color activeColor: Appearance.colors.colPrimary
+    property color dimColor: Appearance.colors.colSubtext
     property color indicatorColor: Appearance.colors.colPrimaryContainer
     property color indicatorShapeColor: Appearance.colors.colOnPrimaryContainer
-    property int textAlignment: Text.AlignLeft
+    property int textAlignment: Text.AlignHCenter
+
+    property bool isDetached: false
+    property bool showControls: true
 
     implicitWidth: 200
     implicitHeight: 200
 
-    ColumnLayout {
+    function reattachAndScroll() {
+        root.isDetached = false
+        if (LyricsService.activeIndex >= 0) {
+            root.scrollToIndex(LyricsService.activeIndex, true)
+        }
+    }
+
+    function restartLyrics(force = false) {
+        LyricsService.restartLyrics(force)
+        root.reattachAndScroll()
+    }
+
+    function scrollToIndex(idx, smooth = true) {
+        if (idx < 0 || idx >= LyricsService.lyricsLines.length) return
+        listView.positionViewAtIndex(idx, ListView.Contain)
+        const item = listView.itemAtIndex(idx)
+        if (item) {
+            const targetY = item.y - (listView.height - item.height) / 2
+            const minY = -listView.topMargin
+            const maxY = Math.max(minY, listView.contentHeight - listView.height + listView.bottomMargin)
+            const boundedY = Math.max(minY, Math.min(targetY, maxY))
+            if (smooth) {
+                smoothScrollAnim.stop()
+                smoothScrollAnim.to = boundedY
+                smoothScrollAnim.restart()
+            } else {
+                listView.contentY = boundedY
+            }
+        } else {
+            listView.positionViewAtIndex(idx, ListView.Center)
+        }
+    }
+
+    // Reset detached state when lyrics are reloaded or track changes
+    Connections {
+        target: LyricsService
+        function onLyricsLinesChanged() {
+            root.isDetached = false
+            listView.contentY = -listView.topMargin
+        }
+        function onActiveIndexChanged() {
+            if (!root.isDetached && LyricsService.activeIndex >= 0) {
+                root.scrollToIndex(LyricsService.activeIndex, true)
+            }
+        }
+    }
+
+    // ── Placeholder / Not OK state ──
+    Item {
         anchors.fill: parent
-        spacing: 4
+        visible: LyricsService.status !== "ok"
 
-        Item {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            visible: LyricsService.status !== "ok"
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: 8
 
-            ColumnLayout {
-                anchors.centerIn: parent
-                spacing: 8
+            Item {
+                Layout.alignment: Qt.AlignHCenter
+                implicitWidth: 40
+                implicitHeight: 40
 
-                Item {
-                    Layout.alignment: Qt.AlignHCenter
-                    implicitWidth: 40
-                    implicitHeight: 40
-
-                    MaterialLoadingIndicator {
-                        anchors.fill: parent
-                        loading: LyricsService.status === "loading"
-                        colBg: root.indicatorColor
-                        colShape: root.indicatorShapeColor
-                        implicitSize: 40
-                    }
-
-                    MouseArea {
-                        anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: LyricsService.restartLyrics()
-                    }
+                MaterialLoadingIndicator {
+                    anchors.fill: parent
+                    loading: LyricsService.status === "loading"
+                    colBg: root.indicatorColor
+                    colShape: root.indicatorShapeColor
+                    implicitSize: 40
                 }
 
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: LyricsService.restartLyrics(true)
+                }
+            }
+
+            StyledText {
+                Layout.alignment: Qt.AlignHCenter
+                color: root.dimColor
+                font.pixelSize: Appearance.font.pixelSize.small
+                horizontalAlignment: Text.AlignHCenter
+                text: {
+                    if (LyricsService.status === "loading") return Translation.tr("Searching lyrics...");
+                    if (LyricsService.status === "no_info") return Translation.tr("No track playing");
+                    if (LyricsService.status === "not_found") return Translation.tr("No lyrics found");
+                    return "";
+                }
+            }
+        }
+    }
+
+    // ── Active Lyrics View ──
+    Item {
+        anchors.fill: parent
+        visible: LyricsService.status === "ok"
+        clip: true
+
+        NumberAnimation {
+            id: smoothScrollAnim
+            target: listView
+            property: "contentY"
+            duration: 350
+            easing.type: Easing.OutCubic
+        }
+
+        ListView {
+            id: listView
+            anchors.fill: parent
+            model: LyricsService.lyricsLines
+            spacing: 14
+            boundsBehavior: Flickable.StopAtBounds
+            cacheBuffer: 600
+            interactive: true
+
+            topMargin: Math.max(10, height * 0.4)
+            bottomMargin: Math.max(10, height * 0.4)
+
+            // Detect user scrolling to detach / re-attach
+            onContentYChanged: {
+                if (!listView.movingVertically && !listView.flicking && !listView.dragging) return
+                if (LyricsService.activeIndex < 0) return
+
+                const activeItem = listView.itemAtIndex(LyricsService.activeIndex)
+                if (!activeItem) {
+                    root.isDetached = true
+                    return
+                }
+
+                const itemCenterY = activeItem.mapToItem(listView, 0, activeItem.height / 2).y
+                const viewportCenter = listView.height / 2
+                const distFromCenter = Math.abs(itemCenterY - viewportCenter)
+
+                // If user scrolled away beyond threshold, mark detached
+                if (distFromCenter > listView.height * 0.42) {
+                    root.isDetached = true
+                } else if (distFromCenter <= listView.height * 0.28) {
+                    // Automatically re-attach when user scrolls back to the current playing line
+                    root.isDetached = false
+                }
+            }
+
+            delegate: Item {
+                id: lyricDelegate
+                required property int index
+                required property var modelData
+
+                readonly property bool isActive: index === LyricsService.activeIndex
+                readonly property int dist: Math.abs(index - LyricsService.activeIndex)
+
+                width: listView.width
+                implicitHeight: lyricText.implicitHeight + 10
+
                 StyledText {
-                    Layout.alignment: Qt.AlignHCenter
-                    color: root.dimColor
-                    font.pixelSize: Appearance.font.pixelSize.small
-                    horizontalAlignment: Text.AlignHCenter
-                    text: {
-                        if (LyricsService.status === "loading") return Translation.tr("Searching lyrics...");
-                        if (LyricsService.status === "no_info") return Translation.tr("No track playing");
-                        if (LyricsService.status === "not_found") return Translation.tr("No lyrics found");
-                        return "";
+                    id: lyricText
+                    anchors.centerIn: parent
+                    width: parent.width - 20
+                    horizontalAlignment: root.textAlignment
+                    wrapMode: Text.WordWrap
+                    text: lyricDelegate.modelData?.text || "♪"
+
+                    font.pixelSize: {
+                        if (lyricDelegate.isActive) return Appearance.font.pixelSize.large
+                        if (lyricDelegate.dist === 1) return Appearance.font.pixelSize.normal
+                        return Appearance.font.pixelSize.small
+                    }
+                    font.weight: lyricDelegate.isActive ? Font.Bold : Font.Normal
+                    color: lyricDelegate.isActive ? root.activeColor : (lyricDelegate.dist <= 2 ? root.textColor : root.dimColor)
+                    opacity: {
+                        if (lyricDelegate.isActive) return 1.0
+                        if (lyricDelegate.dist === 1) return 0.65
+                        if (lyricDelegate.dist === 2) return 0.38
+                        return 0.18
+                    }
+                    scale: lyricDelegate.isActive ? 1.04 : 1.0
+
+                    Behavior on font.pixelSize { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on color { ColorAnimation { duration: 250 } }
+                    Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    hoverEnabled: true
+                    onClicked: {
+                        LyricsService.seekToLine(lyricDelegate.index)
+                        root.isDetached = false
+                        root.scrollToIndex(lyricDelegate.index, true)
                     }
                 }
             }
         }
 
-        ColumnLayout {
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            visible: LyricsService.status === "ok"
-            spacing: 6
+        // ── Floating Re-attach Button (appears when user is detached) ──
+        Rectangle {
+            id: reattachButton
+            anchors {
+                bottom: parent.bottom
+                horizontalCenter: parent.horizontalCenter
+                bottomMargin: 8
+            }
+            visible: root.isDetached && LyricsService.status === "ok" && LyricsService.activeIndex >= 0
+            implicitWidth: reattachLayout.implicitWidth + 24
+            implicitHeight: 30
+            radius: Appearance.rounding.full
+            color: ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 0.15)
+            border.color: Appearance.colors.colPrimary
+            border.width: 1
 
-            Repeater {
-                model: 7
-                delegate: StyledText {
-                    id: lyricSlot
-                    required property int index
-                    Layout.fillWidth: true
-                    horizontalAlignment: root.textAlignment
-                    wrapMode: Text.WordWrap
-                    text: LyricsService.slots[index] ?? ""
-                    readonly property int dist: Math.abs(index - LyricsService.before)
-                    font.pixelSize: {
-                        if (dist === 0) return Appearance.font.pixelSize.normal
-                        if (dist === 1) return Appearance.font.pixelSize.small
-                        return Appearance.font.pixelSize.smaller
+            opacity: visible ? 1 : 0
+            Behavior on opacity { NumberAnimation { duration: 200 } }
+
+            RowLayout {
+                id: reattachLayout
+                anchors.centerIn: parent
+                spacing: 6
+
+                MaterialSymbol {
+                    iconSize: 16
+                    text: "my_location"
+                    color: Appearance.colors.colOnPrimaryContainer
+                }
+
+                StyledText {
+                    text: Translation.tr("Sync to current")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colOnPrimaryContainer
+                }
+            }
+
+            MouseArea {
+                anchors.fill: parent
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.reattachAndScroll()
+            }
+        }
+
+        // ── Subtle Offset Adjustment Controls (±0.5s for long intro / desynced songs) ──
+        Item {
+            anchors {
+                top: parent.top
+                right: parent.right
+                margins: 4
+            }
+            width: offsetRow.implicitWidth
+            height: 24
+            visible: root.showControls && LyricsService.status === "ok"
+
+            RowLayout {
+                id: offsetRow
+                anchors.fill: parent
+                spacing: 4
+
+                // Minus 0.5s button
+                Rectangle {
+                    implicitWidth: 22
+                    implicitHeight: 22
+                    radius: Appearance.rounding.small
+                    color: minusMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4) : ColorUtils.transparentize(Appearance.colors.colLayer1, 0.6)
+
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: "-"
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        color: root.dimColor
                     }
-                    opacity: {
-                        if (dist === 0) return 1.0
-                        if (dist === 1) return 0.6
-                        if (dist === 2) return 0.35
-                        return 0.15
+
+                    MouseArea {
+                        id: minusMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: LyricsService.adjustOffset(-0.5)
                     }
-                    color: dist === 0 ? root.activeColor : root.textColor
-                    Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                }
+
+                // Current offset display / reset button
+                Rectangle {
+                    visible: Math.abs(LyricsService.manualOffset) > 0.05
+                    implicitWidth: offsetText.implicitWidth + 8
+                    implicitHeight: 22
+                    radius: Appearance.rounding.small
+                    color: ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 0.5)
+
+                    StyledText {
+                        id: offsetText
+                        anchors.centerIn: parent
+                        text: (LyricsService.manualOffset > 0 ? "+" : "") + LyricsService.manualOffset.toFixed(1) + "s"
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colPrimary
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: LyricsService.resetOffset()
+                    }
+                }
+
+                // Plus 0.5s button
+                Rectangle {
+                    implicitWidth: 22
+                    implicitHeight: 22
+                    radius: Appearance.rounding.small
+                    color: plusMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4) : ColorUtils.transparentize(Appearance.colors.colLayer1, 0.6)
+
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: "+"
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        color: root.dimColor
+                    }
+
+                    MouseArea {
+                        id: plusMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: LyricsService.adjustOffset(0.5)
+                    }
                 }
             }
         }
