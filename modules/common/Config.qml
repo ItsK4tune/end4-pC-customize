@@ -415,6 +415,7 @@ Singleton {
                         property string division: "1x1"
                         property real gap: 4
                         property list<string> images: []
+                        property list<var> instances: []
                     }
 
                     property JsonObject sticker: JsonObject {
