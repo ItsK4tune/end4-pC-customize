@@ -1086,9 +1086,14 @@ ContentPage {
                     text: Translation.tr("Enable")
                     checked: Config.options.background.widgets.customImage.enable
                     onCheckedChanged: {
-                        Config.options.background.widgets.customImage.enable = checked;
-                        if (checked && (!customImageSection.instances || customImageSection.instances.length === 0)) {
-                            customImageSection.addInstance();
+                        if (checked) {
+                            if (!customImageSection.instances || customImageSection.instances.length === 0) {
+                                customImageSection.addInstance();
+                            } else {
+                                Config.options.background.widgets.customImage.enable = true;
+                            }
+                        } else {
+                            Config.options.background.widgets.customImage.enable = false;
                         }
                     }
                 }

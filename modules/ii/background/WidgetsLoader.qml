@@ -168,18 +168,75 @@ Item {
             visible: Config.options.background.widgets.customImage.enable
 
             readonly property var currentInstances: Config.options.background.widgets.customImage.instances
-            readonly property bool hasInstances: currentInstances && currentInstances.length > 0
-            readonly property int activeCount: {
-                if (!Config.options.background.widgets.customImage.enable) {
-                    return 0;
+            readonly property int activeCount: Config.options.background.widgets.customImage.enable
+                ? (currentInstances?.length ?? 0)
+                : 0
+
+            Connections {
+                target: Config.options.background.widgets.customImage
+                function onEnableChanged() {
+                    let enable = Config.options.background.widgets.customImage.enable;
+                    let insts = Config.options.background.widgets.customImage.instances;
+                    if (enable && (!insts || insts.length === 0)) {
+                        let current = Config.options.background.widgets.customImage;
+                        Config.options.background.widgets.customImage.instances = [{
+                            id: "ci_1",
+                            x: current.x ?? 100,
+                            y: current.y ?? 100,
+                            z: current.z ?? 0,
+                            size: current.size ?? 200,
+                            shape: current.shape ?? "Cookie4Sided",
+                            division: current.division ?? "1x1",
+                            margin: current.margin ?? 0,
+                            padding: current.padding ?? (current.gap ?? 4),
+                            gap: current.padding ?? (current.gap ?? 4),
+                            images: (current.images ?? []).slice(),
+                            path: current.path ?? "",
+                            bgPath: current.bgPath ?? "",
+                            bgOpacity: current.bgOpacity ?? 1.0,
+                            bgDim: current.bgDim ?? 0.0,
+                            bgBlur: current.bgBlur ?? 0.0,
+                            rotation: current.rotation ?? 0,
+                            loopMode: current.loopMode ?? "end to front"
+                        }];
+                    }
                 }
-                if (hasInstances) {
-                    return currentInstances.length;
+                function onInstancesChanged() {
+                    let insts = Config.options.background.widgets.customImage.instances;
+                    if (!insts || insts.length === 0) {
+                        if (Config.options.background.widgets.customImage.enable) {
+                            Config.options.background.widgets.customImage.enable = false;
+                        }
+                    }
                 }
-                if (Config.options.background.widgets.customImage.path !== "") {
-                    return 1;
+            }
+
+            Component.onCompleted: {
+                let enable = Config.options.background.widgets.customImage.enable;
+                let insts = Config.options.background.widgets.customImage.instances;
+                if (enable && (!insts || insts.length === 0)) {
+                    let current = Config.options.background.widgets.customImage;
+                    Config.options.background.widgets.customImage.instances = [{
+                        id: "ci_1",
+                        x: current.x ?? 100,
+                        y: current.y ?? 100,
+                        z: current.z ?? 0,
+                        size: current.size ?? 200,
+                        shape: current.shape ?? "Cookie4Sided",
+                        division: current.division ?? "1x1",
+                        margin: current.margin ?? 0,
+                        padding: current.padding ?? (current.gap ?? 4),
+                        gap: current.padding ?? (current.gap ?? 4),
+                        images: (current.images ?? []).slice(),
+                        path: current.path ?? "",
+                        bgPath: current.bgPath ?? "",
+                        bgOpacity: current.bgOpacity ?? 1.0,
+                        bgDim: current.bgDim ?? 0.0,
+                        bgBlur: current.bgBlur ?? 0.0,
+                        rotation: current.rotation ?? 0,
+                        loopMode: current.loopMode ?? "end to front"
+                    }];
                 }
-                return 0;
             }
 
             Repeater {
@@ -187,12 +244,10 @@ Item {
                 delegate: CustomImage {
                     required property int index
 
-                    instanceIndex: customImagesWrapper.hasInstances ? index : -1
-                    instanceConfig: customImagesWrapper.hasInstances
-                        ? ((customImagesWrapper.currentInstances && index < customImagesWrapper.currentInstances.length)
-                            ? customImagesWrapper.currentInstances[index]
-                            : null)
-                        : Config.options.background.widgets.customImage
+                    instanceIndex: index
+                    instanceConfig: (customImagesWrapper.currentInstances && index < customImagesWrapper.currentInstances.length)
+                        ? customImagesWrapper.currentInstances[index]
+                        : null
 
                     screenWidth: root.screen.width
                     screenHeight: root.screen.height

@@ -70,6 +70,9 @@ AbstractBackgroundWidget {
     onDeleteRequested: {
         if (root.instanceIndex >= 0) {
             root.removeInstance(root.instanceIndex);
+        } else {
+            Config.options.background.widgets.customImage.instances = [];
+            Config.options.background.widgets.customImage.enable = false;
         }
     }
 
