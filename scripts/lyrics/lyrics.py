@@ -82,7 +82,8 @@ def get_mpris_url(dbus_name: str = None) -> str:
         base = cleaned.split(".")[0]
         if base and base not in targets:
             targets.append(base)
-    targets.append(None)  # fallback to any active player
+    else:
+        targets.append(None)  # fallback to any active player only if no dbus_name was passed
 
     for target in targets:
         cmd = ["playerctl"]
@@ -371,9 +372,10 @@ def score_item(item: dict, target_title: str, target_artist: str, target_dur: fl
     sim_artist = similarity(target_artist, artist_name) if target_artist else 0.5
     sim_title = similarity(target_title, track_name)
 
-    # Disqualify completely mismatching artist if target artist was provided
+    # Disqualify completely mismatching artist if target artist was provided (unless title is a strong match)
     if target_artist and len(target_artist) >= 3 and sim_artist < 0.2:
-        return -999.0
+        if sim_title < 0.85:
+            return -999.0
 
     # Disqualify completely mismatching title
     if sim_title < 0.2:
@@ -409,22 +411,22 @@ def score_item(item: dict, target_title: str, target_artist: str, target_dur: fl
 
     return score
 
-def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: str = "") -> list:
-    mpris_url = get_mpris_url(dbus_name)
+def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: str = "", is_manual: bool = False) -> list:
+    mpris_url = get_mpris_url(dbus_name) if not is_manual else None
 
     # 1. Non-music filter: reject social media, browser tabs, generic non-music sites
-    if is_non_music(raw_title, raw_artist, mpris_url):
+    if not is_manual and is_non_music(raw_title, raw_artist, mpris_url):
         return []
 
     # 2. Check YouTube oEmbed for original title and author
     oembed_title, oembed_author = None, None
-    if mpris_url:
+    if mpris_url and not is_manual:
         oe_t, oe_a = fetch_youtube_oembed(mpris_url)
         if oe_t:
             sim_a = similarity(raw_artist, oe_a) if (raw_artist and oe_a) else 0.0
             sim_t = similarity(raw_title, oe_t) if (raw_title and oe_t) else 0.0
             # Only use oembed if artist matches or title is similar, or if raw fields are sparse
-            if sim_a >= 0.3 or sim_t >= 0.25 or (not raw_artist and sim_t > 0):
+            if sim_a >= 0.3 or sim_t >= 0.25 or (not raw_artist and sim_t >= 0.25):
                 oembed_title, oembed_author = oe_t, oe_a
 
     # Prepare search candidates: list of (title, artist)
@@ -435,8 +437,8 @@ def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: st
         a_str = (a or "").strip()
         if not t_str:
             return
-        # Reject generic titles as candidates when artist is empty
-        if not a_str and t_str.lower() in GENERIC_TITLES:
+        # Reject generic titles as candidates when artist is empty (unless manual)
+        if not is_manual and not a_str and t_str.lower() in GENERIC_TITLES:
             return
         cand = (t_str, a_str)
         if cand not in candidates:
@@ -447,25 +449,35 @@ def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: st
         if (t_unacc, a_unacc) not in candidates and (t_unacc != t_str or a_unacc != a_str):
             candidates.append((t_unacc, a_unacc))
 
-    if oembed_title:
-        ot, oa, o_extras = clean_song_info(oembed_title, oembed_author or raw_artist)
-        add_candidate(ot, oa)
-        for ext_t, ext_a in o_extras:
+    if is_manual:
+        # Give absolute priority to the user's manual input
+        add_candidate(raw_title, raw_artist)
+        ct, ca, c_extras = clean_song_info(raw_title, raw_artist)
+        add_candidate(ct, ca)
+        for ext_t, ext_a in c_extras:
             add_candidate(ext_t, ext_a)
-        for alt_title in get_romanized_and_english(ot):
-            add_candidate(alt_title, oa)
+        if raw_title and raw_artist:
+            add_candidate(raw_artist, raw_title)
+    else:
+        if oembed_title:
+            ot, oa, o_extras = clean_song_info(oembed_title, oembed_author or raw_artist)
+            add_candidate(ot, oa)
+            for ext_t, ext_a in o_extras:
+                add_candidate(ext_t, ext_a)
+            for alt_title in get_romanized_and_english(ot):
+                add_candidate(alt_title, oa)
 
-    # Clean raw title & artist
-    ct, ca, c_extras = clean_song_info(raw_title, raw_artist)
-    add_candidate(ct, ca)
-    for ext_t, ext_a in c_extras:
-        add_candidate(ext_t, ext_a)
-    for alt_title in get_romanized_and_english(ct):
-        add_candidate(alt_title, ca)
+        # Clean raw title & artist
+        ct, ca, c_extras = clean_song_info(raw_title, raw_artist)
+        add_candidate(ct, ca)
+        for ext_t, ext_a in c_extras:
+            add_candidate(ext_t, ext_a)
+        for alt_title in get_romanized_and_english(ct):
+            add_candidate(alt_title, ca)
 
-    # Add inverted (artist as title, title as artist) if artist is not empty
-    if ct and ca:
-        add_candidate(ca, ct)
+        # Add inverted (artist as title, title as artist) if artist is not empty
+        if ct and ca:
+            add_candidate(ca, ct)
 
     if not candidates:
         return []
@@ -484,46 +496,38 @@ def fetch_lyrics(raw_title: str, raw_artist: str, duration: float, dbus_name: st
     # Collect and score results from LRCLIB
     pool = []
 
-    for t_cand, a_cand in candidates:
-        # 1. Exact get
-        if t_cand and a_cand:
-            url = f"https://lrclib.net/api/get?track_name={urllib.parse.quote(t_cand)}&artist_name={urllib.parse.quote(a_cand)}"
-            data = fetch_json(url)
-            if isinstance(data, dict) and data.get("id"):
-                score = score_item(data, t_cand, a_cand, duration)
-                if score > 0:
-                    pool.append((score, data))
+    # 1. Exact get on primary title & artist
+    if primary_title and primary_artist:
+        url = f"https://lrclib.net/api/get?track_name={urllib.parse.quote(primary_title)}&artist_name={urllib.parse.quote(primary_artist)}"
+        data = fetch_json(url)
+        if isinstance(data, dict) and data.get("id"):
+            score = score_item(data, primary_title, primary_artist, duration)
+            if score > 0:
+                pool.append((score, data))
 
-        # 2. Search track_name & artist_name
-        if t_cand and a_cand:
-            url = f"https://lrclib.net/api/search?track_name={urllib.parse.quote(t_cand)}&artist_name={urllib.parse.quote(a_cand)}"
-            data = fetch_json(url)
-            if isinstance(data, list):
-                for item in data:
-                    score = score_item(item, t_cand, a_cand, duration)
-                    if score > 0:
-                        pool.append((score, item))
-
-        # 3. Search query string
-        q = f"{t_cand} {a_cand}".strip()
-        if q and len(q) >= 3:
-            url = f"https://lrclib.net/api/search?q={urllib.parse.quote(q)}"
-            data = fetch_json(url)
-            if isinstance(data, list):
-                for item in data:
-                    score = score_item(item, t_cand, a_cand, duration)
-                    if score > 0:
-                        pool.append((score, item))
-
-        # If we already have high scoring candidates (> 90 with syncedLyrics), we can stop
-        if any(sc >= 90 and item.get("syncedLyrics") for sc, item in pool):
+    # 2. Search queries (up to 4 unique queries, stopping early on high confidence match)
+    searched_queries = set()
+    for t_cand, a_cand in candidates[:5]:
+        if any(sc >= 85 and item.get("syncedLyrics") for sc, item in pool):
             break
 
-    # 4. Search by title only as last resort with strict artist verification
-    # ONLY do this if primary_artist is given OR primary_title has multiple words and is clearly a song
+        q = f"{t_cand} {a_cand}".strip() if (t_cand and a_cand) else (t_cand or a_cand)
+        if not q or len(q) < 3 or q.lower() in searched_queries:
+            continue
+        searched_queries.add(q.lower())
+
+        url = f"https://lrclib.net/api/search?q={urllib.parse.quote(q)}"
+        data = fetch_json(url)
+        if isinstance(data, list):
+            for item in data:
+                score = score_item(item, t_cand, a_cand, duration)
+                if score > 0:
+                    pool.append((score, item))
+
+    # 3. Fallback search by title only if no results yet
     if not pool and primary_title:
         title_words = primary_title.split()
-        if primary_artist or len(title_words) >= 2:
+        if (primary_artist or len(title_words) >= 2) and primary_title.lower() not in searched_queries:
             url = f"https://lrclib.net/api/search?q={urllib.parse.quote(primary_title)}"
             data = fetch_json(url)
             if isinstance(data, list):
@@ -563,27 +567,31 @@ def main():
         print("no_info", flush=True)
         sys.exit(0)
 
-    raw_title = sys.argv[1].strip()
-    raw_artist = sys.argv[2].strip() if len(sys.argv) > 2 else ""
+    is_manual = "--manual" in sys.argv
+    args = [a for a in sys.argv[1:] if a != "--manual"]
+
+    raw_title = args[0].strip() if len(args) > 0 else ""
+    raw_artist = args[1].strip() if len(args) > 1 else ""
     duration = 0.0
-    if len(sys.argv) > 3:
+    if len(args) > 2:
         try:
-            duration = float(sys.argv[3])
+            duration = float(args[2])
         except ValueError:
             duration = 0.0
 
-    dbus_name = sys.argv[4].strip() if len(sys.argv) > 4 else ""
+    dbus_name = args[3].strip() if len(args) > 3 else ""
 
     if not raw_title:
         print("no_info", flush=True)
         sys.exit(0)
 
-    mpris_url = get_mpris_url(dbus_name)
-    if is_non_music(raw_title, raw_artist, mpris_url):
-        print("no_info", flush=True)
-        sys.exit(0)
+    if not is_manual:
+        mpris_url = get_mpris_url(dbus_name)
+        if is_non_music(raw_title, raw_artist, mpris_url):
+            print("no_info", flush=True)
+            sys.exit(0)
 
-    lines = fetch_lyrics(raw_title, raw_artist, duration, dbus_name)
+    lines = fetch_lyrics(raw_title, raw_artist, duration, dbus_name, is_manual=is_manual)
     if not lines:
         print("not_found", flush=True)
         sys.exit(0)

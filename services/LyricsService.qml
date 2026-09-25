@@ -54,6 +54,33 @@ Singleton {
         }
     }
 
+    property var manualOverrides: ({})
+    readonly property string manualOverridesFilePath: FileUtils.trimFileProtocol(`${Directories.cache}/lyrics_manual_overrides.json`)
+
+    FileView {
+        id: manualOverridesFileView
+        path: root.manualOverridesFilePath
+        onLoaded: {
+            try {
+                const parsed = JSON.parse(manualOverridesFileView.text())
+                root.manualOverrides = (parsed && typeof parsed === "object") ? parsed : {}
+            } catch(e) {
+                root.manualOverrides = {}
+            }
+        }
+        onLoadFailed: (error) => {
+            root.manualOverrides = {}
+        }
+    }
+
+    function saveManualOverrides() {
+        try {
+            manualOverridesFileView.setText(JSON.stringify(root.manualOverrides, null, 2))
+        } catch(e) {
+            console.warn("Failed to write lyrics manual overrides:", e)
+        }
+    }
+
     function saveCurrentOffset() {
         if (!root.lastTrackKey) return
         root.savedOffsets[root.lastTrackKey] = root.manualOffset
@@ -121,7 +148,7 @@ Singleton {
     property int currentReqId: 0
 
     function handleLyricsOutput(rawText, reqId) {
-        if (reqId !== root.currentReqId) return
+        if (!reqId || reqId !== root.currentReqId) return
 
         const trimmed = (rawText || "").trim()
         if (!trimmed || trimmed === "not_found") {
@@ -157,6 +184,17 @@ Singleton {
         root.status = "ok"
     }
 
+    Timer {
+        id: exitCheckTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            if (root.status === "loading") {
+                root.status = "not_found"
+            }
+        }
+    }
+
     Process {
         id: lyricsProc
         running: false
@@ -169,27 +207,85 @@ Singleton {
             }
         }
         stdout: StdioCollector {
+            id: lyricsStdout
             onStreamFinished: {
                 root.handleLyricsOutput(this.text, lyricsProc.reqId)
+            }
+        }
+        onExited: (exitCode, exitStatus) => {
+            if (lyricsProc.reqId === root.currentReqId && root.status === "loading") {
+                exitCheckTimer.start()
             }
         }
     }
 
     property string lastTrackKey: ""
 
-    function restartLyrics(force = false) {
-        const title    = root.activePlayer?.trackTitle  ?? ""
-        const artist   = root.activePlayer?.trackArtist ?? ""
-        const duration = root.activePlayer?.length       ?? 0
-        const durSec   = (duration && !isNaN(duration) && duration > 0) ? String(Math.floor(duration)) : "0"
-        const trackKey = title + ":::" + artist
+    function searchManual(title, artist) {
+        title = (title || "").trim()
+        artist = (artist || "").trim()
+        if (!title) return
 
-        if (!force && trackKey === root.lastTrackKey && (root.status === "ok" || root.status === "not_found")) {
-            return
+        const origTitle  = root.activePlayer?.trackTitle  ?? ""
+        const origArtist = root.activePlayer?.trackArtist ?? ""
+        const trackKey   = origTitle + ":::" + origArtist
+
+        if (trackKey !== ":::") {
+            root.manualOverrides[trackKey] = { title: title, artist: artist }
+            root.saveManualOverrides()
         }
 
         root.lastTrackKey = trackKey
         root.currentReqId++
+        const thisReqId = root.currentReqId
+        lyricsProc.reqId = 0
+        lyricsProc.running = false
+        root.lyricsLines = []
+        root.activeIndex = -1
+        root.slots = ["", "", "", "", "", "", ""]
+        root.status = "loading"
+        root.manualOffset = root.savedOffsets[trackKey] ?? 0.0
+
+        const duration = root.activePlayer?.length ?? 0
+        const durSec = (duration && !isNaN(duration) && duration > 0) ? String(Math.floor(duration)) : "0"
+        const dbusName = root.activePlayer?.dbusName ?? ""
+        const scriptFile = FileUtils.trimFileProtocol(`${Directories.scriptPath}/lyrics/lyrics.py`)
+
+        lyricsProc.reqId = thisReqId
+        lyricsProc.command = [
+            "python3",
+            scriptFile,
+            title, artist, durSec, dbusName, "--manual"
+        ]
+        lyricsProc.running = true
+    }
+
+    function restartLyrics(force = false) {
+        let title    = root.activePlayer?.trackTitle  ?? ""
+        let artist   = root.activePlayer?.trackArtist ?? ""
+        const duration = root.activePlayer?.length       ?? 0
+        const durSec   = (duration && !isNaN(duration) && duration > 0) ? String(Math.floor(duration)) : "0"
+        const trackKey = title + ":::" + artist
+
+        if (!force && trackKey === root.lastTrackKey && (root.status === "ok" || root.status === "not_found" || root.status === "loading")) {
+            return
+        }
+
+        root.lastTrackKey = trackKey
+
+        let isManual = false
+        if (root.manualOverrides && root.manualOverrides[trackKey]) {
+            const override = root.manualOverrides[trackKey]
+            if (override && override.title) {
+                title = override.title
+                artist = override.artist || ""
+                isManual = true
+            }
+        }
+
+        root.currentReqId++
+        const thisReqId = root.currentReqId
+        lyricsProc.reqId = 0
         lyricsProc.running = false
         root.lyricsLines = []
         root.activeIndex = -1
@@ -204,47 +300,51 @@ Singleton {
 
         const dbusName = root.activePlayer?.dbusName ?? ""
         const scriptFile = FileUtils.trimFileProtocol(`${Directories.scriptPath}/lyrics/lyrics.py`)
-        lyricsProc.reqId = root.currentReqId
-        lyricsProc.command = [
+        lyricsProc.reqId = thisReqId
+        let cmd = [
             "python3",
             scriptFile,
             title, artist, durSec, dbusName
         ]
+        if (isManual) {
+            cmd.push("--manual")
+        }
+        lyricsProc.command = cmd
         lyricsProc.running = true
+    }
+
+    Timer {
+        id: triggerDebounceTimer
+        interval: 150
+        repeat: false
+        onTriggered: root.restartLyrics(false)
+    }
+
+    function queueRestart() {
+        triggerDebounceTimer.restart()
     }
 
     property string trackTitle: root.activePlayer?.trackTitle ?? ""
     property string trackArtist: root.activePlayer?.trackArtist ?? ""
 
-    onTrackTitleChanged: root.restartLyrics(false)
-    onTrackArtistChanged: root.restartLyrics(false)
+    onTrackTitleChanged: root.queueRestart()
+    onTrackArtistChanged: root.queueRestart()
 
     Connections {
         target: MprisController
-        function onTrackChanged() { root.restartLyrics(false) }
-        function onActivePlayerChanged() { root.restartLyrics(false) }
+        function onTrackChanged() { root.queueRestart() }
+        function onActivePlayerChanged() { root.queueRestart() }
     }
 
     IpcHandler {
         target: "lyrics"
-        function restart() {
-            root.restartLyrics(true)
-        }
-        function setOffset(val) {
-            root.setOffset(val)
-        }
-        function adjustOffset(delta) {
-            root.adjustOffset(delta)
-        }
-        function resetOffset() {
-            root.resetOffset()
-        }
-        function seekToLine(idx) {
-            root.seekToLine(idx)
-        }
-        function syncLineToCurrentTime(idx) {
-            root.syncLineToCurrentTime(idx)
-        }
+        function restart(): void { root.restartLyrics(true); }
+        function searchManual(title: string, artist: string): void { root.searchManual(title, artist); }
+        function setOffset(val: real): void { root.setOffset(val); }
+        function adjustOffset(delta: real): void { root.adjustOffset(delta); }
+        function resetOffset(): void { root.resetOffset(); }
+        function seekToLine(idx: int): void { root.seekToLine(idx); }
+        function syncLineToCurrentTime(idx: int): void { root.syncLineToCurrentTime(idx); }
         property real manualOffset: root.manualOffset
         property string status: root.status
         property int linesCount: root.lyricsLines.length
