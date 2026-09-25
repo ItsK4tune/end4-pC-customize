@@ -256,7 +256,7 @@ AbstractBackgroundWidget {
                                 spacing: 6
                                 MaterialSymbol {
                                     iconSize: 16
-                                    text: "rainy"
+                                    text: "cloud"
                                     color: Appearance.colors.colPrimary
                                 }
                                 StyledText {
@@ -400,14 +400,14 @@ AbstractBackgroundWidget {
 
                             MaterialSymbol {
                                 iconSize: 16
-                                text: "rainy"
+                                text: "cloud"
                                 color: Appearance.colors.colPrimary
                             }
                             ColumnLayout {
                                 Layout.fillWidth: true
                                 spacing: 0
                                 StyledText {
-                                    text: "Rain"
+                                    text: "Clouds"
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
                                     opacity: 0.6
@@ -842,7 +842,7 @@ AbstractBackgroundWidget {
 
                             MaterialSymbol {
                                 iconSize: 20
-                                text: "rainy"
+                                text: "cloud"
                                 color: Appearance.colors.colPrimary
                             }
 
@@ -850,7 +850,7 @@ AbstractBackgroundWidget {
                                 spacing: 0
                                 Layout.fillWidth: true
                                 StyledText {
-                                    text: "Rain Chance"
+                                    text: "Cloud Cover"
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
                                     opacity: 0.6
