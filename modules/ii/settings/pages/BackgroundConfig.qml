@@ -1034,7 +1034,8 @@ ContentPage {
                         bgOpacity: 1.0,
                         bgDim: 0.0,
                         bgBlur: 0.0,
-                        rotation: 0
+                        rotation: 0,
+                        loopMode: "end to front"
                     });
                 } else {
                     newList.push({
@@ -1054,7 +1055,8 @@ ContentPage {
                         bgOpacity: current.bgOpacity ?? 1.0,
                         bgDim: current.bgDim ?? 0.0,
                         bgBlur: current.bgBlur ?? 0.0,
-                        rotation: current.rotation ?? 0
+                        rotation: current.rotation ?? 0,
+                        loopMode: current.loopMode ?? "end to front"
                     });
                 }
                 Config.options.background.widgets.customImage.instances = newList;
@@ -1229,6 +1231,49 @@ ContentPage {
                     stopIndicatorValues: [-180, -90, 0, 90, 180]
                     onValueChanged: customImageSection.updateCurrentTarget({ rotation: Math.round(value) })
                 }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    RowLayout {
+                        spacing: 8
+                        MaterialSymbol {
+                            text: "repeat"
+                            iconSize: 18
+                            color: Appearance.colors.colOnSecondaryContainer
+                        }
+                        StyledText {
+                            text: Translation.tr("Loop Mode")
+                            color: Appearance.colors.colOnSecondaryContainer
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                        }
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        Repeater {
+                            model: [
+                                { displayName: Translation.tr("End to Front"), icon: "repeat",     value: "end to front" },
+                                { displayName: Translation.tr("Boomerang"),   icon: "sync_alt",   value: "boomerang" },
+                                { displayName: Translation.tr("None"),        icon: "play_arrow", value: "none" },
+                            ]
+                            delegate: SelectionGroupButton {
+                                required property var modelData
+                                required property int index
+
+                                buttonIcon: modelData.icon
+                                buttonText: modelData.displayName
+                                toggled: (customImageSection.currentTarget?.loopMode ?? "end to front") === modelData.value
+                                onClicked: {
+                                    customImageSection.updateCurrentTarget({ loopMode: modelData.value });
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             Process {
@@ -1238,9 +1283,9 @@ ContentPage {
                     "START_DIR=\"$HOME/Pictures\"; [ ! -d \"$START_DIR\" ] && START_DIR=\"$HOME\"; " +
                     "TITLE=\"" + Translation.tr("Choose Frame Background") + "\"; " +
                     "if command -v kdialog >/dev/null 2>&1; then " +
-                    "kdialog --getopenfilename \"$START_DIR\" \"image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff\" --title \"$TITLE\"; " +
+                    "kdialog --getopenfilename \"$START_DIR\" \"image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff video/mp4 video/webm video/x-matroska video/quicktime video/x-msvideo\" --title \"$TITLE\"; " +
                     "elif command -v zenity >/dev/null 2>&1; then " +
-                    "zenity --file-selection --file-filter=\"Images | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff\" --title=\"$TITLE\"; fi"
+                    "zenity --file-selection --file-filter=\"Media | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff *.mp4 *.webm *.mkv *.avi *.mov\" --title=\"$TITLE\"; fi"
                 ]
                 stdout: StdioCollector {
                     id: bgPickerStdout

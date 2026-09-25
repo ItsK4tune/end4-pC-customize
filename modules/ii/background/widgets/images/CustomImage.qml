@@ -35,6 +35,7 @@ AbstractBackgroundWidget {
     property real bgDim: (instanceConfig?.bgDim ?? Config.options.background.widgets.customImage.bgDim) ?? 0.0
     property real bgBlur: (instanceConfig?.bgBlur ?? Config.options.background.widgets.customImage.bgBlur) ?? 0.0
     property real widgetRotation: (instanceConfig?.rotation ?? Config.options.background.widgets.customImage.rotation) ?? 0
+    property string loopMode: (instanceConfig?.loopMode ?? Config.options.background.widgets.customImage.loopMode) ?? "end to front"
 
     implicitWidth: contentItem.implicitWidth
     implicitHeight: contentItem.implicitHeight
@@ -236,9 +237,9 @@ AbstractBackgroundWidget {
             "bash", "-c",
             "START_DIR=\"$HOME/Pictures\"; [ ! -d \"$START_DIR\" ] && START_DIR=\"$HOME\"; " +
             "if command -v kdialog >/dev/null 2>&1; then " +
-            "kdialog --getopenfilename \"$START_DIR\" \"image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff\" --title \"" + root.dialogTitle + "\"; " +
+            "kdialog --getopenfilename \"$START_DIR\" \"image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff video/mp4 video/webm video/x-matroska video/quicktime video/x-msvideo\" --title \"" + root.dialogTitle + "\"; " +
             "elif command -v zenity >/dev/null 2>&1; then " +
-            "zenity --file-selection --file-filter=\"Images | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff\" --title=\"" + root.dialogTitle + "\"; fi"
+            "zenity --file-selection --file-filter=\"Media | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff *.mp4 *.webm *.mkv *.avi *.mov\" --title=\"" + root.dialogTitle + "\"; fi"
         ]
         stdout: StdioCollector {
             id: pickerStdout
@@ -341,6 +342,7 @@ AbstractBackgroundWidget {
                     padding: root.padding,
                     gap: root.padding,
                     rotation: root.widgetRotation,
+                    loopMode: root.loopMode,
                     bgPath: root.bgPath,
                     bgOpacity: root.bgOpacity,
                     bgDim: root.bgDim,
@@ -353,6 +355,7 @@ AbstractBackgroundWidget {
                 Config.options.background.widgets.customImage.padding = root.padding;
                 Config.options.background.widgets.customImage.gap = root.padding;
                 Config.options.background.widgets.customImage.rotation = root.widgetRotation;
+                Config.options.background.widgets.customImage.loopMode = root.loopMode;
                 Config.options.background.widgets.customImage.bgPath = root.bgPath;
                 Config.options.background.widgets.customImage.bgOpacity = root.bgOpacity;
                 Config.options.background.widgets.customImage.bgDim = root.bgDim;
@@ -380,6 +383,7 @@ AbstractBackgroundWidget {
             root.padding = props.gap;
         }
         if (props.rotation !== undefined) root.widgetRotation = props.rotation;
+        if (props.loopMode !== undefined) root.loopMode = props.loopMode;
         if (props.bgPath !== undefined) root.bgPath = props.bgPath;
         if (props.bgOpacity !== undefined) root.bgOpacity = props.bgOpacity;
         if (props.bgDim !== undefined) root.bgDim = props.bgDim;
@@ -405,7 +409,8 @@ AbstractBackgroundWidget {
             bgOpacity: root.bgOpacity,
             bgDim: root.bgDim,
             bgBlur: root.bgBlur,
-            rotation: root.widgetRotation
+            rotation: root.widgetRotation,
+            loopMode: root.loopMode
         };
         let newItem = Object.assign({}, current);
         newItem.id = "ci_" + Date.now();
@@ -433,7 +438,8 @@ AbstractBackgroundWidget {
                 bgOpacity: root.bgOpacity,
                 bgDim: root.bgDim,
                 bgBlur: root.bgBlur,
-                rotation: root.widgetRotation
+                rotation: root.widgetRotation,
+                loopMode: root.loopMode
             });
         }
         newList.push(newItem);
@@ -526,6 +532,7 @@ AbstractBackgroundWidget {
                     anchors.fill: parent
                     source: root.bgPath
                     fillMode: Image.PreserveAspectCrop
+                    loopMode: root.loopMode
                     opacity: root.bgOpacity
                     visible: root.bgPath !== ""
 
@@ -573,6 +580,7 @@ AbstractBackgroundWidget {
                         anchors.fill: parent
                         source: slotRoot.slotPath !== "" ? slotRoot.slotPath : ""
                         fillMode: Image.PreserveAspectCrop
+                        loopMode: root.loopMode
                         sourceWidth: parent.width
                         sourceHeight: parent.height
                         visible: slotRoot.slotPath !== ""
@@ -654,7 +662,7 @@ AbstractBackgroundWidget {
                             if (drop.hasUrls && drop.urls.length > 0) {
                                 var cleanPath = decodeURIComponent(drop.urls[0].toString().replace(/^file:\/\//, ""))
                                 var ext = cleanPath.split(".").pop().toLowerCase()
-                                var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"]
+                                var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif","mp4","webm","mkv","avi","mov","ogv","m4v","flv"]
                                 if (accepted.indexOf(ext) !== -1) {
                                     root.setSlotImage(slotRoot.index, cleanPath)
                                 }
@@ -1049,7 +1057,7 @@ AbstractBackgroundWidget {
                             if (drop.hasUrls && drop.urls.length > 0) {
                                 var cleanPath = decodeURIComponent(drop.urls[0].toString().replace(/^file:\/\//, ""));
                                 var ext = cleanPath.split(".").pop().toLowerCase();
-                                var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif"];
+                                var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif","mp4","webm","mkv","avi","mov","ogv","m4v","flv"];
                                 if (accepted.indexOf(ext) !== -1) {
                                     root.updateInstanceSetting({ bgPath: cleanPath });
                                 }
@@ -1150,6 +1158,53 @@ AbstractBackgroundWidget {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.updateInstanceSetting({ rotation: 0 })
+                    }
+                }
+            }
+
+            // Loop Mode selector
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                MaterialSymbol {
+                    text: "repeat"
+                    iconSize: 16
+                    color: Appearance.colors.colSubtext
+                }
+                StyledText {
+                    text: Translation.tr("Loop Mode")
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colSubtext
+                }
+                Item { Layout.fillWidth: true }
+                RowLayout {
+                    spacing: 4
+                    Repeater {
+                        model: [
+                            { val: "end to front", icon: "repeat", tip: Translation.tr("End to Front") },
+                            { val: "boomerang",   icon: "sync_alt", tip: Translation.tr("Boomerang") },
+                            { val: "none",        icon: "play_arrow", tip: Translation.tr("None") },
+                        ]
+                        delegate: Rectangle {
+                            required property var modelData
+                            implicitWidth: 32
+                            implicitHeight: 22
+                            radius: Appearance.rounding.small
+                            color: root.loopMode === modelData.val ? Appearance.colors.colPrimary : Appearance.colors.colLayer1
+
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                iconSize: 14
+                                text: modelData.icon
+                                color: root.loopMode === modelData.val ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.updateInstanceSetting({ loopMode: modelData.val })
+                            }
+                        }
                     }
                 }
             }

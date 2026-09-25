@@ -499,5 +499,9 @@
   "Blur": "Độ mờ",
   "Open Detailed Settings": "Mở cài đặt chi tiết",
   "Choose Image": "Chọn ảnh",
-  "Choose Frame Background": "Chọn ảnh nền khung"
+  "Choose Frame Background": "Chọn ảnh nền khung",
+  "Loop Mode": "Chế độ lặp",
+  "End to Front": "Lặp liên tục",
+  "Boomerang": "Boomerang",
+  "None": "Không lặp"
 }

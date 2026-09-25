@@ -423,6 +423,7 @@ Singleton {
                         property real bgDim: 0.0
                         property real bgBlur: 0.0
                         property real rotation: 0
+                        property string loopMode: "end to front"
                     }
 
                     property JsonObject sticker: JsonObject {
