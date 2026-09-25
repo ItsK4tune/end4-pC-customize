@@ -412,6 +412,9 @@ Singleton {
                         property string path: ""
                         property string shape: "Cookie4Sided"
                         property real size: 200
+                        property string division: "1x1"
+                        property real gap: 4
+                        property list<string> images: []
                     }
 
                     property JsonObject sticker: JsonObject {
