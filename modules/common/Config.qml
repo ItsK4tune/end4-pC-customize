@@ -421,6 +421,7 @@ Singleton {
                         property string bgPath: ""
                         property real bgOpacity: 1.0
                         property real bgDim: 0.0
+                        property real bgBlur: 0.0
                         property real rotation: 0
                     }
 

@@ -32,6 +32,7 @@ AbstractBackgroundWidget {
     property string bgPath: (instanceConfig?.bgPath ?? Config.options.background.widgets.customImage.bgPath) ?? ""
     property real bgOpacity: (instanceConfig?.bgOpacity ?? Config.options.background.widgets.customImage.bgOpacity) ?? 1.0
     property real bgDim: (instanceConfig?.bgDim ?? Config.options.background.widgets.customImage.bgDim) ?? 0.0
+    property real bgBlur: (instanceConfig?.bgBlur ?? Config.options.background.widgets.customImage.bgBlur) ?? 0.0
     property real widgetRotation: (instanceConfig?.rotation ?? Config.options.background.widgets.customImage.rotation) ?? 0
 
     implicitWidth: contentItem.implicitWidth
@@ -274,6 +275,7 @@ AbstractBackgroundWidget {
                     bgPath: root.bgPath,
                     bgOpacity: root.bgOpacity,
                     bgDim: root.bgDim,
+                    bgBlur: root.bgBlur,
                     showSettings: root.showSettingsPopup
                 });
             } else {
@@ -285,6 +287,7 @@ AbstractBackgroundWidget {
                 Config.options.background.widgets.customImage.bgPath = root.bgPath;
                 Config.options.background.widgets.customImage.bgOpacity = root.bgOpacity;
                 Config.options.background.widgets.customImage.bgDim = root.bgDim;
+                Config.options.background.widgets.customImage.bgBlur = root.bgBlur;
             }
         }
     }
@@ -311,6 +314,7 @@ AbstractBackgroundWidget {
         if (props.bgPath !== undefined) root.bgPath = props.bgPath;
         if (props.bgOpacity !== undefined) root.bgOpacity = props.bgOpacity;
         if (props.bgDim !== undefined) root.bgDim = props.bgDim;
+        if (props.bgBlur !== undefined) root.bgBlur = props.bgBlur;
         saveInstanceSettingsTimer.restart();
     }
 
@@ -331,6 +335,7 @@ AbstractBackgroundWidget {
             bgPath: root.bgPath,
             bgOpacity: root.bgOpacity,
             bgDim: root.bgDim,
+            bgBlur: root.bgBlur,
             rotation: root.widgetRotation
         };
         let newItem = Object.assign({}, current);
@@ -358,6 +363,7 @@ AbstractBackgroundWidget {
                 bgPath: root.bgPath,
                 bgOpacity: root.bgOpacity,
                 bgDim: root.bgDim,
+                bgBlur: root.bgBlur,
                 rotation: root.widgetRotation
             });
         }
@@ -547,11 +553,19 @@ AbstractBackgroundWidget {
                 visible: (root.margin > 0) || (root.division !== "1x1" && root.padding > 0)
 
                 SmartImage {
+                    id: frameBgImage
                     anchors.fill: parent
                     source: root.bgPath
                     fillMode: Image.PreserveAspectCrop
                     opacity: root.bgOpacity
                     visible: root.bgPath !== ""
+
+                    layer.enabled: root.bgBlur > 0
+                    layer.effect: MultiEffect {
+                        blurEnabled: true
+                        blur: root.bgBlur
+                        blurMax: 64
+                    }
                 }
 
                 Rectangle {
@@ -778,7 +792,10 @@ AbstractBackgroundWidget {
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
                             root.showSettingsPopup = false;
-                            GlobalStates.settingsPage = "Background:Custom Image";
+                            let targetPage = root.instanceIndex >= 0
+                                ? `Desktop:Custom Image:${root.instanceIndex}`
+                                : "Desktop:Custom Image";
+                            GlobalStates.settingsPage = targetPage;
                             GlobalStates.settingsOpen = true;
                         }
                     }
@@ -981,6 +998,32 @@ AbstractBackgroundWidget {
                 }
             }
 
+            // Frame Background Blur slider (when bgPath is set)
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: ((root.margin > 0) || (root.division !== "1x1" && root.padding > 0)) && root.bgPath !== ""
+
+                MaterialSymbol {
+                    text: "blur_on"
+                    iconSize: 16
+                    color: Appearance.colors.colSubtext
+                }
+                StyledText {
+                    text: `${Translation.tr("Blur")}: ${Math.round(root.bgBlur * 100)}%`
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colSubtext
+                }
+                StyledSlider {
+                    Layout.fillWidth: true
+                    configuration: StyledSlider.Configuration.XS
+                    from: 0
+                    to: 1
+                    value: root.bgBlur
+                    onMoved: root.updateInstanceSetting({ bgBlur: value })
+                }
+            }
+
             // Rotation slider (-180 to +180 deg)
             RowLayout {
                 Layout.fillWidth: true
@@ -1020,6 +1063,49 @@ AbstractBackgroundWidget {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: root.updateInstanceSetting({ rotation: 0 })
+                    }
+                }
+            }
+
+            // Link to full settings
+            Rectangle {
+                Layout.fillWidth: true
+                implicitHeight: 28
+                radius: Appearance.rounding.small
+                color: moreSettingsHover.containsMouse ? Appearance.colors.colLayer2 : Appearance.colors.colLayer1
+
+                RowLayout {
+                    anchors.centerIn: parent
+                    spacing: 6
+                    MaterialSymbol {
+                        text: "tune"
+                        iconSize: 15
+                        color: Appearance.colors.colPrimary
+                    }
+                    StyledText {
+                        text: Translation.tr("Open Detailed Settings")
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colOnLayer0
+                    }
+                    MaterialSymbol {
+                        text: "arrow_forward"
+                        iconSize: 13
+                        color: Appearance.colors.colSubtext
+                    }
+                }
+
+                MouseArea {
+                    id: moreSettingsHover
+                    anchors.fill: parent
+                    hoverEnabled: true
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: {
+                        root.showSettingsPopup = false;
+                        let targetPage = root.instanceIndex >= 0
+                            ? `Desktop:Custom Image:${root.instanceIndex}`
+                            : "Desktop:Custom Image";
+                        GlobalStates.settingsPage = targetPage;
+                        GlobalStates.settingsOpen = true;
                     }
                 }
             }

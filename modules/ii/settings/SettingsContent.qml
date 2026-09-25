@@ -25,9 +25,18 @@ Item {
             
             let parts = GlobalStates.settingsPage.split(":");
             let pageName = parts[0];
-            let searchTerm = parts.length > 1 ? parts[1] : "";
+            let searchTerm = parts.length > 1 ? parts.slice(1).join(":") : "";
 
-            const idx = root.pages.findIndex(p => p.name.toLowerCase() === pageName.toLowerCase());
+            const idx = root.pages.findIndex(p => {
+                let pName = (p.name || "").toLowerCase();
+                let compUrl = (p.component ? p.component.toString() : "").toLowerCase();
+                let target = pageName.toLowerCase();
+                return pName === target ||
+                       pName === Translation.tr(pageName).toLowerCase() ||
+                       (target === "desktop" && compUrl.includes("background")) ||
+                       (target === "background" && compUrl.includes("background")) ||
+                       compUrl.includes(target);
+            });
             
             if (idx >= 0) {
                 root.currentPage = idx;

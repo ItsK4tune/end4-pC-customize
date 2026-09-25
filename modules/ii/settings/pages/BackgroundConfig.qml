@@ -13,27 +13,33 @@ ContentPage {
     forceWidth: true
 
     function goTo(term) {
-        const t = term.toLowerCase().trim()
+        let parts = term.split(":");
+        const t = parts[0].toLowerCase().trim();
+        const subIndex = parts.length > 1 ? parseInt(parts[1]) : -1;
 
         function findTarget(rootItem) {
+            let trTerm = Translation.tr(parts[0]).toLowerCase().trim();
             for (let i = 0; i < rootItem.children.length; i++) {
-                let child = rootItem.children[i]
-                if (child.title && child.title.toLowerCase().includes(t)) {
-                    return child
+                let child = rootItem.children[i];
+                if (child.title && (child.title.toLowerCase().includes(t) || child.title.toLowerCase().includes(trTerm))) {
+                    return child;
                 }
             }
 
             for (let i = 0; i < rootItem.children.length; i++) {
-                let found = findTarget(rootItem.children[i])
-                if (found) return found
+                let found = findTarget(rootItem.children[i]);
+                if (found) return found;
             }
-            return null
+            return null;
         }
 
-        let target = findTarget(mainLayout)
+        let target = findTarget(mainLayout);
         if (target) {
-            let pos = target.mapToItem(mainLayout, 0, 0)
-            page.contentY = Math.max(0, pos.y - 0)
+            let pos = target.mapToItem(mainLayout, 0, 0);
+            page.contentY = Math.max(0, pos.y - 0);
+            if (target === customImageSection && subIndex >= 0) {
+                customImageSection.instanceTab = subIndex;
+            }
         }
     }
 
@@ -1026,6 +1032,7 @@ ContentPage {
                         bgPath: "",
                         bgOpacity: 1.0,
                         bgDim: 0.0,
+                        bgBlur: 0.0,
                         rotation: 0
                     });
                 } else {
@@ -1045,6 +1052,7 @@ ContentPage {
                         bgPath: current.bgPath ?? "",
                         bgOpacity: current.bgOpacity ?? 1.0,
                         bgDim: current.bgDim ?? 0.0,
+                        bgBlur: current.bgBlur ?? 0.0,
                         rotation: current.rotation ?? 0
                     });
                 }
@@ -1315,6 +1323,19 @@ ContentPage {
                         to: 100
                         stopIndicatorValues: [0, 50, 100]
                         onValueChanged: customImageSection.updateCurrentTarget({ bgDim: value / 100 })
+                    }
+
+                    ConfigSlider {
+                        Layout.fillWidth: true
+                        visible: (customImageSection.currentTarget?.bgPath ?? "") !== ""
+                        text: Translation.tr("Background Blur")
+                        value: Math.round((customImageSection.currentTarget?.bgBlur ?? 0) * 100)
+                        usePercentTooltip: true
+                        buttonIcon: "blur_on"
+                        from: 0
+                        to: 100
+                        stopIndicatorValues: [0, 50, 100]
+                        onValueChanged: customImageSection.updateCurrentTarget({ bgBlur: value / 100 })
                     }
                 }
             }

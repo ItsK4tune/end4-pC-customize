@@ -494,5 +494,8 @@
   "Clear": "Xóa",
   "Margin": "Lề viền ngoài",
   "Padding": "Khoảng cách giữa các ô",
-  "Frame Background": "Nền khung ảnh"
+  "Frame Background": "Nền khung ảnh",
+  "Background Blur": "Độ mờ nền khung",
+  "Blur": "Độ mờ",
+  "Open Detailed Settings": "Mở cài đặt chi tiết"
 }
