@@ -18,6 +18,7 @@ AbstractBackgroundWidget {
     configEntryName: "customImage"
     hoverEnabled: true
     visible: (Config.options.background.widgets.customImage.enable ?? false)
+    scale: 1
 
     property int instanceIndex: -1
     property var instanceConfig: null
@@ -37,6 +38,19 @@ AbstractBackgroundWidget {
     property real bgBlur: (instanceConfig?.bgBlur ?? Config.options.background.widgets.customImage.bgBlur) ?? 0.0
     property real widgetRotation: (instanceConfig?.rotation ?? Config.options.background.widgets.customImage.rotation) ?? 0
     property string loopMode: (instanceConfig?.loopMode ?? Config.options.background.widgets.customImage.loopMode) ?? "end to front"
+    property var slotCrops: {
+        let raw = (instanceConfig?.crops ?? Config.options.background.widgets.customImage.crops);
+        if (Array.isArray(raw)) return raw;
+        return [];
+    }
+    property int selectedCropSlot: 0
+    property bool cropModeActive: false
+    onDivisionChanged: {
+        let maxSlots = root.getSlotCount(root.division);
+        if (root.selectedCropSlot >= maxSlots) {
+            root.selectedCropSlot = 0;
+        }
+    }
 
     implicitWidth: contentItem.implicitWidth
     implicitHeight: contentItem.implicitHeight
@@ -68,7 +82,33 @@ AbstractBackgroundWidget {
         }
     }
 
-    onDeleteRequested: {
+    onInstanceConfigChanged: {
+        root.restorePropertyBindings();
+    }
+
+    function restorePropertyBindings() {
+        root.widgetSize = Qt.binding(() => (instanceConfig?.size ?? Config.options.background.widgets.customImage.size) ?? 200);
+        root.shapeName = Qt.binding(() => (instanceConfig?.shape ?? Config.options.background.widgets.customImage.shape) ?? "Cookie4Sided");
+        root.division = Qt.binding(() => (instanceConfig?.division ?? Config.options.background.widgets.customImage.division) ?? "1x1");
+        root.margin = Qt.binding(() => (instanceConfig?.margin ?? Config.options.background.widgets.customImage.margin) ?? 0);
+        root.padding = Qt.binding(() => (instanceConfig?.padding ?? (instanceConfig?.gap ?? Config.options.background.widgets.customImage.padding ?? Config.options.background.widgets.customImage.gap)) ?? 4);
+        root.gap = Qt.binding(() => root.padding);
+        root.imagePath = Qt.binding(() => (instanceConfig?.path ?? Config.options.background.widgets.customImage.path) ?? "");
+        root.imagesList = Qt.binding(() => (instanceConfig?.images ?? Config.options.background.widgets.customImage.images) ?? []);
+        root.bgPath = Qt.binding(() => (instanceConfig?.bgPath ?? Config.options.background.widgets.customImage.bgPath) ?? "");
+        root.bgOpacity = Qt.binding(() => (instanceConfig?.bgOpacity ?? Config.options.background.widgets.customImage.bgOpacity) ?? 1.0);
+        root.bgDim = Qt.binding(() => (instanceConfig?.bgDim ?? Config.options.background.widgets.customImage.bgDim) ?? 0.0);
+        root.bgBlur = Qt.binding(() => (instanceConfig?.bgBlur ?? Config.options.background.widgets.customImage.bgBlur) ?? 0.0);
+        root.widgetRotation = Qt.binding(() => (instanceConfig?.rotation ?? Config.options.background.widgets.customImage.rotation) ?? 0);
+        root.loopMode = Qt.binding(() => (instanceConfig?.loopMode ?? Config.options.background.widgets.customImage.loopMode) ?? "end to front");
+        root.slotCrops = Qt.binding(() => {
+            let raw = (instanceConfig?.crops ?? Config.options.background.widgets.customImage.crops);
+            return Array.isArray(raw) ? raw : [];
+        });
+        root.restoreXYBinding();
+    }
+
+    function requestDelete() {
         if (root.instanceIndex >= 0) {
             root.removeInstance(root.instanceIndex);
         } else {
@@ -345,6 +385,52 @@ AbstractBackgroundWidget {
         }
     }
 
+    function getSlotCrop(idx) {
+        if (root.slotCrops && root.slotCrops.length > idx && root.slotCrops[idx]) {
+            let c = root.slotCrops[idx];
+            return {
+                x: (c && typeof c.x === "number") ? c.x : 0.5,
+                y: (c && typeof c.y === "number") ? c.y : 0.5,
+                zoom: (c && typeof c.zoom === "number") ? c.zoom : 1.0
+            };
+        }
+        return { x: 0.5, y: 0.5, zoom: 1.0 };
+    }
+
+    function setSlotCrop(idx, px, py, pz) {
+        let currentCrops = [];
+        if (root.slotCrops && Array.isArray(root.slotCrops)) {
+            for (let i = 0; i < root.slotCrops.length; i++) {
+                let item = root.slotCrops[i];
+                currentCrops.push({
+                    x: (item && typeof item.x === "number") ? item.x : 0.5,
+                    y: (item && typeof item.y === "number") ? item.y : 0.5,
+                    zoom: (item && typeof item.zoom === "number") ? item.zoom : 1.0
+                });
+            }
+        }
+        while (currentCrops.length <= idx) {
+            currentCrops.push({ x: 0.5, y: 0.5, zoom: 1.0 });
+        }
+        let cur = currentCrops[idx];
+        currentCrops[idx] = {
+            x: px !== undefined && px !== null ? Math.max(0.0, Math.min(1.0, px)) : cur.x,
+            y: py !== undefined && py !== null ? Math.max(0.0, Math.min(1.0, py)) : cur.y,
+            zoom: pz !== undefined && pz !== null ? Math.max(1.0, Math.min(3.0, pz)) : cur.zoom
+        };
+        root.slotCrops = currentCrops;
+
+        if (root.instanceIndex >= 0) {
+            if (root.instanceConfig) {
+                root.instanceConfig.crops = currentCrops;
+            }
+            saveInstanceSettingsTimer.restart();
+        } else {
+            Config.options.background.widgets.customImage.crops = currentCrops;
+            saveInstanceSettingsTimer.restart();
+        }
+    }
+
     property int pickingSlotIndex: -1
     property bool pickingFrameBg: false
     readonly property string dialogTitle: root.pickingFrameBg ? Translation.tr("Choose Frame Background") : Translation.tr("Choose Image")
@@ -397,12 +483,12 @@ AbstractBackgroundWidget {
         target: root
         function onClicked(mouse) {
             if (mouse.button !== Qt.LeftButton || (mouse.modifiers & Qt.ControlModifier)) return;
-            if (root.dragging) return;
+            if (root.dragging || root.cropModeActive) return;
 
-            let pt = root.mapToItem(imageShape, mouse.x, mouse.y);
-            if (pt.x < 0 || pt.x > imageShape.width || pt.y < 0 || pt.y > imageShape.height) return;
+            let pt = root.mapToItem(innerContentArea, mouse.x, mouse.y);
+            if (pt.x < 0 || pt.x > innerContentArea.width || pt.y < 0 || pt.y > innerContentArea.height) return;
 
-            let slots = root.getSlotLayouts(root.division, imageShape.width, imageShape.height, root.padding, root.margin);
+            let slots = root.getSlotLayouts(root.division, innerContentArea.width, innerContentArea.height, root.padding, 0);
             for (let i = 0; i < slots.length; i++) {
                 let s = slots[i];
                 if (pt.x >= s.x && pt.x <= s.x + s.width && pt.y >= s.y && pt.y <= s.y + s.height) {
@@ -433,7 +519,7 @@ AbstractBackgroundWidget {
 
     function removeInstance(idx) {
         let list = Config.options.background.widgets.customImage.instances;
-        if (!list) return;
+        if (!list || idx < 0 || idx >= list.length) return;
         let newList = [];
         for (let i = 0; i < list.length; i++) {
             if (i !== idx) {
@@ -466,6 +552,7 @@ AbstractBackgroundWidget {
                     bgOpacity: root.bgOpacity,
                     bgDim: root.bgDim,
                     bgBlur: root.bgBlur,
+                    crops: root.slotCrops,
                     showSettings: root.showSettingsPopup
                 });
             } else {
@@ -480,6 +567,7 @@ AbstractBackgroundWidget {
                 Config.options.background.widgets.customImage.bgOpacity = root.bgOpacity;
                 Config.options.background.widgets.customImage.bgDim = root.bgDim;
                 Config.options.background.widgets.customImage.bgBlur = root.bgBlur;
+                Config.options.background.widgets.customImage.crops = root.slotCrops;
             }
         }
     }
@@ -509,6 +597,7 @@ AbstractBackgroundWidget {
         if (props.bgOpacity !== undefined) root.bgOpacity = props.bgOpacity;
         if (props.bgDim !== undefined) root.bgDim = props.bgDim;
         if (props.bgBlur !== undefined) root.bgBlur = props.bgBlur;
+        if (props.crops !== undefined) root.slotCrops = props.crops;
         saveInstanceSettingsTimer.restart();
     }
 
@@ -531,7 +620,8 @@ AbstractBackgroundWidget {
             bgDim: root.bgDim,
             bgBlur: root.bgBlur,
             rotation: root.widgetRotation,
-            loopMode: root.loopMode
+            loopMode: root.loopMode,
+            crops: (root.slotCrops || []).map(c => Object.assign({}, c))
         };
         let newItem = Object.assign({}, current);
         newItem.id = "ci_" + Date.now();
@@ -560,11 +650,13 @@ AbstractBackgroundWidget {
                 bgDim: root.bgDim,
                 bgBlur: root.bgBlur,
                 rotation: root.widgetRotation,
-                loopMode: root.loopMode
+                loopMode: root.loopMode,
+                crops: (root.slotCrops || []).map(c => Object.assign({}, c))
             });
         }
         newList.push(newItem);
         Config.options.background.widgets.customImage.instances = newList;
+        Config.options.background.widgets.customImage.enable = true;
     }
 
     property bool controlBarVisible: false
@@ -615,28 +707,54 @@ AbstractBackgroundWidget {
             color: Appearance.colors.colPrimaryContainer
             shape: getShape(root.shapeName)
             visible: false
+            layer.enabled: true
         }
 
         StyledDropShadow {
             target: shadowShape
             z: -1
-            visible: Config.options.background.widgets.shadow
+            visible: Config.options.background.widgets.shadow && root.shapeName !== "Square"
+        }
+
+        StyledRectangularShadow {
+            target: contentItem
+            z: -1
+            visible: Config.options.background.widgets.shadow && root.shapeName === "Square"
         }
 
         MaterialShape {
+            id: outerMaskShape
+            anchors.fill: parent
+            shape: getShape(root.shapeName)
+            color: "#ffffff"
+            visible: false
+            layer.enabled: true
+        }
+
+        MaterialShape {
+            id: innerMaskShape
+            width: innerContentArea.width
+            height: innerContentArea.height
+            shape: getShape(root.shapeName)
+            color: "#ffffff"
+            visible: false
+            layer.enabled: true
+        }
+
+        Item {
             id: imageShape
             anchors.fill: parent
             z: 0
-            color: Appearance.colors.colPrimaryContainer
-            shape: getShape(root.shapeName)
 
-            layer.enabled: true
+            layer.enabled: root.shapeName !== "Square"
             layer.effect: OpacityMask {
-                maskSource: MaterialShape {
-                    width: imageShape.width
-                    height: imageShape.height
-                    shape: getShape(root.shapeName)
-                }
+                maskSource: outerMaskShape
+                cached: true
+            }
+
+            Rectangle {
+                anchors.fill: parent
+                color: Appearance.colors.colPrimaryContainer
             }
 
             // Background frame layer (visible when margin > 0 or inner padding > 0 in split view)
@@ -670,147 +788,222 @@ AbstractBackgroundWidget {
                 }
             }
 
-            Repeater {
-                id: slotsRepeater
-                model: root.getSlotCount(root.division)
+            Item {
+                id: innerContentArea
+                x: Math.round(root.margin)
+                y: Math.round(root.margin)
+                width: Math.max(1, Math.round(imageShape.width - root.margin * 2))
+                height: Math.max(1, Math.round(imageShape.height - root.margin * 2))
 
-                delegate: Item {
-                    id: slotRoot
-                    required property int index
+                layer.enabled: root.margin > 0 && root.shapeName !== "Square"
+                layer.effect: OpacityMask {
+                    maskSource: innerMaskShape
+                    cached: true
+                }
 
-                    readonly property var slotLayout: root.getSlotLayout(root.division, index, imageShape.width, imageShape.height, root.padding, root.margin)
+                Repeater {
+                    id: slotsRepeater
+                    model: root.getSlotCount(root.division)
 
-                    x: slotLayout.x
-                    y: slotLayout.y
-                    width: slotLayout.width
-                    height: slotLayout.height
+                    delegate: Item {
+                        id: slotRoot
+                        required property int index
 
-                    property bool slotHover: false
-                    property string slotPath: root.getSlotPath(index)
+                        readonly property var slotLayout: root.getSlotLayout(root.division, index, innerContentArea.width, innerContentArea.height, root.padding, 0)
 
-                    layer.enabled: true
-                    layer.effect: OpacityMask {
-                        maskSource: Item {
+                        x: slotLayout.x
+                        y: slotLayout.y
+                        width: slotLayout.width
+                        height: slotLayout.height
+
+                        property bool slotHover: false
+                        property string slotPath: root.getSlotPath(index)
+
+                        Rectangle {
+                            id: slotCornerMask
                             width: slotRoot.width
                             height: slotRoot.height
-
-                            MaterialShape {
-                                anchors.fill: parent
-                                shape: getShape(root.shapeName)
-                                visible: root.division === "1x1"
-                            }
-
-                            Rectangle {
-                                anchors.fill: parent
-                                readonly property var radii: root.getSlotRadii(root.division, slotRoot.index, root.shapeName, root.widgetSize, root.margin, root.padding)
-                                topLeftRadius: radii.tl
-                                topRightRadius: radii.tr
-                                bottomLeftRadius: radii.bl
-                                bottomRightRadius: radii.br
-                                visible: root.division !== "1x1"
-                            }
+                            radius: Math.min(10, Math.max(3, Math.round(root.padding * 0.75)))
+                            visible: false
+                            layer.enabled: true
                         }
-                    }
 
-                    Rectangle {
-                        anchors.fill: parent
-                        color: Appearance.colors.colLayer1
-                        opacity: slotRoot.slotPath === "" ? 0.35 : 0
-                    }
-
-                    SmartImage {
-                        anchors.fill: parent
-                        source: slotRoot.slotPath !== "" ? slotRoot.slotPath : ""
-                        fillMode: Image.PreserveAspectCrop
-                        loopMode: root.loopMode
-                        sourceWidth: parent.width
-                        sourceHeight: parent.height
-                        visible: slotRoot.slotPath !== ""
-                    }
-
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        iconSize: Math.max(16, Math.min(parent.width, parent.height) / 3)
-                        text: slotRoot.slotHover ? "download" : "image"
-                        fill: slotRoot.slotHover ? 1 : 0
-                        color: slotRoot.slotHover
-                            ? Appearance.colors.colPrimary
-                            : Appearance.colors.colOnPrimaryContainer
-                        visible: slotRoot.slotPath === ""
-                        Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        color: Appearance.colors.colPrimary
-                        opacity: slotRoot.slotHover ? 0.25 : 0
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
-                    }
-
-                    // Hover delete/clear button
-                    Item {
-                        anchors {
-                            top: parent.top
-                            right: parent.right
-                            margins: (root.division === "1x1" && (root.shapeName === "Circle" || root.shapeName === "Cookie4Sided" || root.shapeName === "Heart" || root.shapeName === "Diamond")) ? Math.round(parent.width * 0.12) : 4
+                        layer.enabled: root.division !== "1x1" && root.padding > 2
+                        layer.effect: OpacityMask {
+                            maskSource: slotCornerMask
+                            cached: true
                         }
-                        width: 22
-                        height: 22
-                        visible: slotRoot.slotPath !== "" && slotMouseArea.containsMouse
-                        z: 10
 
                         Rectangle {
                             anchors.fill: parent
-                            radius: width / 2
-                            color: Appearance.colors.colLayer0
-                            opacity: 0.85
+                            color: Appearance.colors.colLayer1
+                            opacity: slotRoot.slotPath === "" ? 0.35 : 0
+                        }
+
+                        SmartImage {
+                            id: slotImage
+                            anchors.fill: parent
+                            source: slotRoot.slotPath !== "" ? slotRoot.slotPath : ""
+                            fillMode: Image.PreserveAspectCrop
+                            loopMode: root.loopMode
+                            panX: {
+                                let dummy = root.slotCrops;
+                                return root.getSlotCrop(slotRoot.index).x;
+                            }
+                            panY: {
+                                let dummy = root.slotCrops;
+                                return root.getSlotCrop(slotRoot.index).y;
+                            }
+                            zoom: {
+                                let dummy = root.slotCrops;
+                                return root.getSlotCrop(slotRoot.index).zoom;
+                            }
+                            sourceWidth: parent.width
+                            sourceHeight: parent.height
+                            visible: slotRoot.slotPath !== ""
                         }
 
                         MaterialSymbol {
                             anchors.centerIn: parent
-                            iconSize: 14
-                            text: "close"
-                            color: Appearance.colors.colOnLayer0
+                            iconSize: Math.max(16, Math.min(parent.width, parent.height) / 3)
+                            text: slotRoot.slotHover ? "download" : "image"
+                            fill: slotRoot.slotHover ? 1 : 0
+                            color: slotRoot.slotHover
+                                ? Appearance.colors.colPrimary
+                                : Appearance.colors.colOnPrimaryContainer
+                            visible: slotRoot.slotPath === ""
+                            Behavior on color { animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this) }
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            color: Appearance.colors.colPrimary
+                            opacity: slotRoot.slotHover ? 0.25 : 0
+                            Behavior on opacity { NumberAnimation { duration: 150 } }
+                        }
+
+                        // Hover delete/clear button
+                        Item {
+                            anchors {
+                                top: parent.top
+                                right: parent.right
+                                margins: (root.division === "1x1" && (root.shapeName === "Circle" || root.shapeName === "Cookie4Sided" || root.shapeName === "Heart" || root.shapeName === "Diamond" || root.shapeName === "Flower")) ? Math.round(parent.width * 0.12) : 4
+                            }
+                            width: 22
+                            height: 22
+                            visible: slotRoot.slotPath !== "" && slotMouseArea.containsMouse
+                            z: 10
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: width / 2
+                                color: Appearance.colors.colLayer0
+                                opacity: 0.85
+                            }
+
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                iconSize: 14
+                                text: "close"
+                                color: Appearance.colors.colOnLayer0
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    root.setSlotImage(slotRoot.index, "")
+                                }
+                            }
                         }
 
                         MouseArea {
+                            id: slotMouseArea
                             anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.setSlotImage(slotRoot.index, "")
+                            hoverEnabled: true
+                            acceptedButtons: root.cropModeActive ? (Qt.LeftButton | Qt.RightButton) : Qt.RightButton
+                            cursorShape: slotCropDragging ? Qt.ClosedHandCursor : (root.cropModeActive && slotRoot.slotPath !== "" ? Qt.OpenHandCursor : (slotRoot.slotPath !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor))
+
+                            property bool slotCropDragging: false
+                            property real startMouseX: 0
+                            property real startMouseY: 0
+                            property real startPanX: 0.5
+                            property real startPanY: 0.5
+
+                            onEntered: slotRoot.slotHover = true
+                            onExited: {
+                                if (!slotCropDragging) slotRoot.slotHover = false;
                             }
-                        }
-                    }
 
-                    MouseArea {
-                        id: slotMouseArea
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        acceptedButtons: Qt.NoButton
-                        onEntered: slotRoot.slotHover = true
-                        onExited: slotRoot.slotHover = false
-                    }
-
-                    DropArea {
-                        anchors.fill: parent
-                        keys: ["text/uri-list"]
-                        onEntered: (drag) => {
-                            drag.accept(Qt.CopyAction)
-                            slotRoot.slotHover = true
-                        }
-                        onExited: {
-                            slotRoot.slotHover = false
-                        }
-                        onDropped: (drop) => {
-                            if (drop.hasUrls && drop.urls.length > 0) {
-                                var cleanPath = decodeURIComponent(drop.urls[0].toString().replace(/^file:\/\//, ""))
-                                var ext = cleanPath.split(".").pop().toLowerCase()
-                                var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif","mp4","webm","mkv","avi","mov","ogv","m4v","flv"]
-                                if (accepted.indexOf(ext) !== -1) {
-                                    root.setSlotImage(slotRoot.index, cleanPath)
+                            onWheel: (wheel) => {
+                                if (slotRoot.slotPath !== "") {
+                                    let currentCrop = root.getSlotCrop(slotRoot.index);
+                                    let zoomDelta = wheel.angleDelta.y > 0 ? 0.1 : -0.1;
+                                    let newZoom = Math.max(1.0, Math.min(3.0, currentCrop.zoom + zoomDelta));
+                                    root.setSlotCrop(slotRoot.index, currentCrop.x, currentCrop.y, newZoom);
                                 }
                             }
-                            slotRoot.slotHover = false
+
+                            onPressed: (mouse) => {
+                                if ((mouse.button === Qt.RightButton || (root.cropModeActive && mouse.button === Qt.LeftButton)) && slotRoot.slotPath !== "") {
+                                    slotCropDragging = true;
+                                    startMouseX = mouse.x;
+                                    startMouseY = mouse.y;
+                                    let crop = root.getSlotCrop(slotRoot.index);
+                                    startPanX = crop.x;
+                                    startPanY = crop.y;
+                                    mouse.accepted = true;
+                                }
+                            }
+
+                            onPositionChanged: (mouse) => {
+                                if (slotCropDragging) {
+                                    let dx = mouse.x - startMouseX;
+                                    let dy = mouse.y - startMouseY;
+                                    let ox = slotImage.overflowX;
+                                    let oy = slotImage.overflowY;
+                                    let newPx = startPanX;
+                                    let newPy = startPanY;
+                                    if (ox > 1) {
+                                        newPx = Math.max(0.0, Math.min(1.0, startPanX - dx / ox));
+                                    }
+                                    if (oy > 1) {
+                                        newPy = Math.max(0.0, Math.min(1.0, startPanY - dy / oy));
+                                    }
+                                    let currentCrop = root.getSlotCrop(slotRoot.index);
+                                    root.setSlotCrop(slotRoot.index, newPx, newPy, currentCrop.zoom);
+                                }
+                            }
+
+                            onReleased: (mouse) => {
+                                if (slotCropDragging) {
+                                    slotCropDragging = false;
+                                    if (!containsMouse) slotRoot.slotHover = false;
+                                }
+                            }
+                        }
+
+                        DropArea {
+                            anchors.fill: parent
+                            keys: ["text/uri-list"]
+                            onEntered: (drag) => {
+                                drag.accept(Qt.CopyAction)
+                                slotRoot.slotHover = true
+                            }
+                            onExited: {
+                                slotRoot.slotHover = false
+                            }
+                            onDropped: (drop) => {
+                                if (drop.hasUrls && drop.urls.length > 0) {
+                                    var cleanPath = decodeURIComponent(drop.urls[0].toString().replace(/^file:\/\//, ""))
+                                    var ext = cleanPath.split(".").pop().toLowerCase()
+                                    var accepted = ["png","jpg","jpeg","webp","avif","bmp","gif","tiff","tif","mp4","webm","mkv","avi","mov","ogv","m4v","flv"]
+                                    if (accepted.indexOf(ext) !== -1) {
+                                        root.setSlotImage(slotRoot.index, cleanPath)
+                                    }
+                                }
+                                slotRoot.slotHover = false
+                            }
                         }
                     }
                 }
@@ -819,8 +1012,8 @@ AbstractBackgroundWidget {
 
         ResizeHandler {
             anchorItem: imageShape
-            hoverActive: root.containsMouse
-            locked: Config.options.background.widgetsLocked
+            hoverActive: root.containsMouse && !root.dragging
+            locked: Config.options.background.widgetsLocked || root.dragging
             currentWidth: root.widgetSize
             resizeMode: "diagonal"
             z: 1
@@ -851,7 +1044,7 @@ AbstractBackgroundWidget {
         height: 36
         width: controlButtonsRow.implicitWidth + 16
         z: 100
-        visible: (root.controlBarVisible || controlBarHoverArea.containsMouse || root.showSettingsPopup) && !Config.options.background.widgetsLocked
+        visible: (root.controlBarVisible || controlBarHoverArea.containsMouse || root.showSettingsPopup || root.selected || root.cropModeActive) && !Config.options.background.widgetsLocked && !root.dragging
 
             MouseArea {
                 id: controlBarHoverArea
@@ -862,7 +1055,7 @@ AbstractBackgroundWidget {
                     root.controlBarVisible = true;
                 }
                 onExited: {
-                    if (!root.containsMouse && !root.showSettingsPopup) {
+                    if (!root.containsMouse && !root.showSettingsPopup && !root.selected && !root.cropModeActive) {
                         hideControlBarTimer.restart();
                     }
                 }
@@ -895,7 +1088,31 @@ AbstractBackgroundWidget {
                     }
                 }
 
-                // 2. Setting (per instance)
+                // 2. Crop / Pan Mode
+                Rectangle {
+                    width: 26
+                    height: 26
+                    radius: 13
+                    color: root.cropModeActive ? Appearance.colors.colPrimary : Appearance.colors.colLayer0
+                    opacity: 0.95
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "crop"
+                        color: root.cropModeActive ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
+                    }
+
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            root.cropModeActive = !root.cropModeActive;
+                        }
+                    }
+                }
+
+                // 3. Setting (per instance popup)
                 Rectangle {
                     width: 26
                     height: 26
@@ -919,7 +1136,7 @@ AbstractBackgroundWidget {
                     }
                 }
 
-                // 3. Delete
+                // 4. Delete
                 Rectangle {
                     width: 26
                     height: 26
@@ -943,9 +1160,47 @@ AbstractBackgroundWidget {
             }
         }
 
+    // Crop mode indicator banner
     Item {
-        id: quickSettingsPopup
-        visible: root.showSettingsPopup
+        anchors {
+            horizontalCenter: controlBarWrapper.horizontalCenter
+            bottom: controlBarWrapper.top
+            bottomMargin: 4
+        }
+        visible: root.cropModeActive && !Config.options.background.widgetsLocked
+        width: cropHintRow.implicitWidth + 16
+        height: 22
+        z: 101
+
+        Rectangle {
+            anchors.fill: parent
+            radius: Appearance.rounding.small
+            color: Appearance.colors.colPrimary
+            opacity: 0.95
+        }
+
+        RowLayout {
+            id: cropHintRow
+            anchors.centerIn: parent
+            spacing: 4
+            MaterialSymbol {
+                iconSize: 13
+                text: "pan_tool"
+                color: Appearance.colors.colOnPrimary
+            }
+            StyledText {
+                text: Translation.tr("Drag to pan, scroll to zoom")
+                font.pixelSize: Appearance.font.pixelSize.smaller - 1
+                font.weight: Font.Medium
+                color: Appearance.colors.colOnPrimary
+            }
+        }
+    }
+
+    Loader {
+        id: quickSettingsPopupLoader
+        active: root.showSettingsPopup
+        visible: active
         z: 200
         anchors {
             horizontalCenter: contentItem.horizontalCenter
@@ -953,7 +1208,15 @@ AbstractBackgroundWidget {
             topMargin: Math.round((root.widgetSize * 1.4142) / 2 + 8)
         }
         width: 290
-        height: settingsCardCol.implicitHeight + 20
+        height: item ? item.implicitHeight : 0
+
+        sourceComponent: Component {
+            Item {
+                id: quickSettingsPopup
+                implicitWidth: 290
+                implicitHeight: settingsCardCol.implicitHeight + 20
+                width: implicitWidth
+                height: implicitHeight
 
         Rectangle {
             anchors.fill: parent
@@ -997,34 +1260,6 @@ AbstractBackgroundWidget {
                     font.pixelSize: Appearance.font.pixelSize.small
                     font.weight: Font.DemiBold
                     color: Appearance.colors.colOnLayer0
-                }
-                // Full settings button
-                Rectangle {
-                    width: 24
-                    height: 24
-                    radius: 12
-                    color: fullSettingsHover.containsMouse ? Appearance.colors.colLayer2 : Appearance.colors.colLayer1
-
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        iconSize: 15
-                        text: "tune"
-                        color: fullSettingsHover.containsMouse ? Appearance.colors.colPrimary : Appearance.colors.colOnLayer0
-                    }
-                    MouseArea {
-                        id: fullSettingsHover
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            root.showSettingsPopup = false;
-                            let targetPage = root.instanceIndex >= 0
-                                ? `Desktop:Custom Image:${root.instanceIndex}`
-                                : "Desktop:Custom Image";
-                            GlobalStates.settingsOpen = true;
-                            GlobalStates.settingsPage = targetPage;
-                        }
-                    }
                 }
                 // Close button
                 Rectangle {
@@ -1268,6 +1503,199 @@ AbstractBackgroundWidget {
                 }
             }
 
+            // Image Crop / Pan controls (visible when at least one slot has an image)
+            ColumnLayout {
+                Layout.fillWidth: true
+                spacing: 4
+                visible: {
+                    let count = root.getSlotCount(root.division);
+                    for (let i = 0; i < count; i++) {
+                        if (root.getSlotPath(i) !== "") return true;
+                    }
+                    return false;
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    MaterialSymbol {
+                        text: "crop"
+                        iconSize: 14
+                        color: Appearance.colors.colSubtext
+                    }
+                    StyledText {
+                        Layout.fillWidth: true
+                        text: Translation.tr("Crop / Pan")
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
+                    }
+                    StyledText {
+                        text: `${Math.round(root.getSlotCrop(root.selectedCropSlot).x * 100)}%, ${Math.round(root.getSlotCrop(root.selectedCropSlot).y * 100)}%`
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        font.weight: Font.Medium
+                        color: Appearance.colors.colPrimary
+                    }
+                }
+
+                // Slot selector tabs if division has more than 1 slot
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+                    visible: root.getSlotCount(root.division) > 1
+
+                    Repeater {
+                        model: root.getSlotCount(root.division)
+                        delegate: Rectangle {
+                            required property int index
+                            Layout.fillWidth: true
+                            implicitHeight: 22
+                            radius: Appearance.rounding.small
+                            color: root.selectedCropSlot === index ? Appearance.colors.colPrimary : Appearance.colors.colLayer1
+
+                            StyledText {
+                                anchors.centerIn: parent
+                                text: `${Translation.tr("Slot")} ${index + 1}`
+                                font.pixelSize: Appearance.font.pixelSize.smaller - 1
+                                font.weight: root.selectedCropSlot === index ? Font.Medium : Font.Normal
+                                color: root.selectedCropSlot === index ? Appearance.colors.colOnPrimary : Appearance.colors.colOnLayer0
+                            }
+
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.selectedCropSlot = index
+                            }
+                        }
+                    }
+                }
+
+                // Zoom slider
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    MaterialSymbol {
+                        text: "zoom_in"
+                        iconSize: 16
+                        color: Appearance.colors.colSubtext
+                    }
+                    StyledText {
+                        text: `${Translation.tr("Zoom")}: ${Math.round(root.getSlotCrop(root.selectedCropSlot).zoom * 100)}%`
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
+                    }
+                    StyledSlider {
+                        Layout.fillWidth: true
+                        configuration: StyledSlider.Configuration.XS
+                        from: 1.0
+                        to: 3.0
+                        value: root.getSlotCrop(root.selectedCropSlot).zoom
+                        onMoved: root.setSlotCrop(root.selectedCropSlot, root.getSlotCrop(root.selectedCropSlot).x, root.getSlotCrop(root.selectedCropSlot).y, value)
+                    }
+                    Rectangle {
+                        width: 18
+                        height: 18
+                        radius: 9
+                        color: Appearance.colors.colLayer1
+                        visible: Math.abs(root.getSlotCrop(root.selectedCropSlot).zoom - 1.0) > 0.05
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            iconSize: 12
+                            text: "restart_alt"
+                            color: Appearance.colors.colOnLayer0
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.setSlotCrop(root.selectedCropSlot, root.getSlotCrop(root.selectedCropSlot).x, root.getSlotCrop(root.selectedCropSlot).y, 1.0)
+                        }
+                    }
+                }
+
+                // Horizontal pan slider
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    MaterialSymbol {
+                        text: "swap_horiz"
+                        iconSize: 16
+                        color: Appearance.colors.colSubtext
+                    }
+                    StyledText {
+                        text: `${Translation.tr("X")}: ${Math.round(root.getSlotCrop(root.selectedCropSlot).x * 100)}%`
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
+                    }
+                    StyledSlider {
+                        Layout.fillWidth: true
+                        configuration: StyledSlider.Configuration.XS
+                        from: 0
+                        to: 1
+                        value: root.getSlotCrop(root.selectedCropSlot).x
+                        onMoved: root.setSlotCrop(root.selectedCropSlot, value, root.getSlotCrop(root.selectedCropSlot).y, root.getSlotCrop(root.selectedCropSlot).zoom)
+                    }
+                    Rectangle {
+                        width: 18
+                        height: 18
+                        radius: 9
+                        color: Appearance.colors.colLayer1
+                        visible: Math.abs(root.getSlotCrop(root.selectedCropSlot).x - 0.5) > 0.01
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            iconSize: 12
+                            text: "restart_alt"
+                            color: Appearance.colors.colOnLayer0
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.setSlotCrop(root.selectedCropSlot, 0.5, root.getSlotCrop(root.selectedCropSlot).y, root.getSlotCrop(root.selectedCropSlot).zoom)
+                        }
+                    }
+                }
+
+                // Vertical pan slider
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 6
+                    MaterialSymbol {
+                        text: "swap_vert"
+                        iconSize: 16
+                        color: Appearance.colors.colSubtext
+                    }
+                    StyledText {
+                        text: `${Translation.tr("Y")}: ${Math.round(root.getSlotCrop(root.selectedCropSlot).y * 100)}%`
+                        font.pixelSize: Appearance.font.pixelSize.smaller
+                        color: Appearance.colors.colSubtext
+                    }
+                    StyledSlider {
+                        Layout.fillWidth: true
+                        configuration: StyledSlider.Configuration.XS
+                        from: 0
+                        to: 1
+                        value: root.getSlotCrop(root.selectedCropSlot).y
+                        onMoved: root.setSlotCrop(root.selectedCropSlot, root.getSlotCrop(root.selectedCropSlot).x, value, root.getSlotCrop(root.selectedCropSlot).zoom)
+                    }
+                    Rectangle {
+                        width: 18
+                        height: 18
+                        radius: 9
+                        color: Appearance.colors.colLayer1
+                        visible: Math.abs(root.getSlotCrop(root.selectedCropSlot).y - 0.5) > 0.01
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            iconSize: 12
+                            text: "restart_alt"
+                            color: Appearance.colors.colOnLayer0
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.setSlotCrop(root.selectedCropSlot, root.getSlotCrop(root.selectedCropSlot).x, 0.5, root.getSlotCrop(root.selectedCropSlot).zoom)
+                        }
+                    }
+                }
+            }
+
             // Frame Background drop area (when margin > 0 or (padding > 0 and not 1x1))
             RowLayout {
                 Layout.fillWidth: true
@@ -1393,6 +1821,8 @@ AbstractBackgroundWidget {
                 }
             }
 
+                }
+            }
         }
     }
 }

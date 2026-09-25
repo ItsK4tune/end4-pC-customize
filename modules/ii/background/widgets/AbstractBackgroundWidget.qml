@@ -33,8 +33,9 @@ AbstractWidget {
     Behavior on opacity {
         animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
     }
-    scale: (draggable && containsPress) ? 1.05 : 1
+    scale: (draggable && containsPress && !root.dragging) ? 1.05 : 1
     Behavior on scale {
+        enabled: !root.dragging
         animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
     }
 

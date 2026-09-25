@@ -44,8 +44,8 @@ MouseArea {
     }
 
     function setCenterActive(xActive, yActive) {
-        root.centerXActive = xActive
-        root.centerYActive = yActive
+        if (root.centerXActive !== xActive) root.centerXActive = xActive
+        if (root.centerYActive !== yActive) root.centerYActive = yActive
     }
 
     function registerWidget(widget) {
@@ -143,36 +143,37 @@ MouseArea {
         root.selecting = false
     }
 
-    Repeater {
-        id: crossRepeater
-        readonly property int cols: Math.ceil(root.width / root.gridSize) + 1
-        readonly property int rows: Math.ceil(root.height / root.gridSize) + 1
-        model: root.gridVisible ? cols * rows : 0
-        delegate: Item {
-            id: crossPoint
-            required property int index
-            readonly property int col: index % crossRepeater.cols
-            readonly property int row: Math.floor(index / crossRepeater.cols)
-            readonly property int crossSize: 5
+    Canvas {
+        id: gridCanvas
+        anchors.fill: parent
+        visible: root.gridVisible
+        renderTarget: Canvas.Image
+        renderStrategy: Canvas.Cooperative
 
-            x: col * root.gridSize - crossSize / 2
-            y: row * root.gridSize - crossSize / 2
-            width: crossSize
-            height: crossSize
+        onPaint: {
+            var ctx = getContext("2d");
+            ctx.clearRect(0, 0, width, height);
+            if (width <= 0 || height <= 0) return;
 
-            Rectangle {
-                anchors.centerIn: parent
-                width: crossPoint.crossSize
-                height: 1
-                color: Appearance.colors.colLayer0Border
-            }
-            Rectangle {
-                anchors.centerIn: parent
-                width: 1
-                height: crossPoint.crossSize
-                color: Appearance.colors.colLayer0Border
+            ctx.fillStyle = Appearance.colors.colLayer0Border;
+            var gs = root.gridSize;
+            var crossSize = 5;
+            var halfCross = 2;
+
+            for (var x = 0; x <= width; x += gs) {
+                for (var y = 0; y <= height; y += gs) {
+                    ctx.fillRect(x - halfCross, y, crossSize, 1);
+                    ctx.fillRect(x, y - halfCross, 1, crossSize);
+                }
             }
         }
+
+        Connections {
+            target: Appearance.colors
+            function onColLayer0BorderChanged() { gridCanvas.requestPaint(); }
+        }
+        onWidthChanged: if (width > 0 && height > 0) gridCanvas.requestPaint()
+        onHeightChanged: if (width > 0 && height > 0) gridCanvas.requestPaint()
     }
 
     Rectangle {
@@ -186,9 +187,6 @@ MouseArea {
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-        Behavior on width {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
         Behavior on opacity {
             animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
@@ -206,9 +204,6 @@ MouseArea {
 
         Behavior on color {
             animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-        Behavior on height {
-            animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)
         }
         Behavior on opacity {
             animation: Appearance.animation.elementMoveFast.numberAnimation.createObject(this)

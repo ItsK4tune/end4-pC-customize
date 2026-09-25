@@ -10,4 +10,5 @@ DropShadow {
     samples: radius * 2 + 1
     color: Appearance.colors.colShadow
     transparentBorder: true
+    cached: true
 }

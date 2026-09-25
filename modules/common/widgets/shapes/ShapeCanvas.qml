@@ -61,6 +61,8 @@ Canvas {
     onDebugChanged: requestPaint()
     onXOffsetChanged: requestPaint()
     onYOffsetChanged: requestPaint()
+    onWidthChanged: if (width > 0 && height > 0) requestPaint()
+    onHeightChanged: if (width > 0 && height > 0) requestPaint()
 
     onPaint: {
         var ctx = getContext("2d");

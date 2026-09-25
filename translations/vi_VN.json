@@ -503,5 +503,17 @@
   "Loop Mode": "Chế độ lặp",
   "End to Front": "Lặp liên tục",
   "Boomerang": "Boomerang",
-  "None": "Không lặp"
+  "None": "Không lặp",
+  "Crop / Pan": "Cắt / Di chuyển ảnh",
+  "Slot": "Ô",
+  "Drag to pan, scroll to zoom": "Kéo chuột để di chuyển, cuộn chuột để phóng to",
+  "Crop Mode": "Chế độ căn chỉnh",
+  "Zoom": "Phóng to",
+  "Pan X": "Di chuyển ngang (X)",
+  "Pan Y": "Di chuyển dọc (Y)",
+  "Image Crop & Pan": "Căn chỉnh / Phóng to ô ảnh",
+  "Reset Crop": "Đặt lại căn chỉnh",
+  "Detailed Settings": "Cài đặt chi tiết",
+  "X": "Ngang (X)",
+  "Y": "Dọc (Y)"
 }

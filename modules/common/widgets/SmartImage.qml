@@ -18,6 +18,8 @@ Item {
     property string loopMode: "end to front" // "none" | "boomerang" | "end to front"
     property real panX: 0.5
     property real panY: 0.5
+    property real zoom: 1.0
+    property bool gifReversing: false
     readonly property real overflowX: cropContainer.overflowX
     readonly property real overflowY: cropContainer.overflowY
 
@@ -58,80 +60,6 @@ Item {
         return cleanSource;
     }
 
-    // Video playback
-    MediaPlayer {
-        id: mediaPlayer
-        audioOutput: AudioOutput {
-            muted: true
-            volume: 0.0
-        }
-        videoOutput: videoOutput
-        source: root.isVideo ? root.mediaUrl : ""
-        loops: root.loopMode === "end to front" ? MediaPlayer.Infinite : 1
-
-        onMediaStatusChanged: {
-            if (mediaStatus === MediaPlayer.LoadedMedia) {
-                if (!root.paused) {
-                    mediaPlayer.play();
-                }
-            } else if (mediaStatus === MediaPlayer.EndOfMedia) {
-                if (root.loopMode === "boomerang") {
-                    boomerangReverseTimer.running = true;
-                } else if (root.loopMode === "none") {
-                    mediaPlayer.pause();
-                }
-            }
-        }
-
-        Component.onCompleted: {
-            if (root.isVideo && !root.paused) {
-                mediaPlayer.play();
-            }
-        }
-    }
-
-    Timer {
-        id: boomerangReverseTimer
-        interval: 33
-        repeat: true
-        running: false
-        onTriggered: {
-            if (root.paused) return;
-            if (mediaPlayer.position > 80) {
-                mediaPlayer.position = Math.max(0, mediaPlayer.position - 66);
-            } else {
-                boomerangReverseTimer.running = false;
-                mediaPlayer.position = 0;
-                mediaPlayer.play();
-            }
-        }
-    }
-
-    Connections {
-        target: root
-        function onPausedChanged() {
-            if (root.isVideo) {
-                if (root.paused) {
-                    mediaPlayer.pause();
-                } else {
-                    if (!boomerangReverseTimer.running) {
-                        mediaPlayer.play();
-                    }
-                }
-            }
-        }
-        function onLoopModeChanged() {
-            if (root.loopMode !== "boomerang") {
-                boomerangReverseTimer.running = false;
-            }
-            if (root.isVideo && !root.paused) {
-                if (mediaPlayer.playbackState !== MediaPlayer.PlayingState) {
-                    mediaPlayer.play();
-                }
-            }
-        }
-    }
-
     Item {
         id: cropContainer
         anchors.fill: parent
@@ -140,68 +68,145 @@ Item {
         readonly property real containerW: cropContainer.width
         readonly property real containerH: cropContainer.height
         readonly property real rawW: root.isVideo
-            ? (videoOutput.implicitWidth > 0 ? videoOutput.implicitWidth : containerW)
+            ? (videoLoader.item?.implicitWidth > 0 ? videoLoader.item.implicitWidth : containerW)
             : (root.isAnimated
-                ? (animImage.implicitWidth > 0 ? animImage.implicitWidth : containerW)
+                ? (animLoader.item?.implicitWidth > 0 ? animLoader.item.implicitWidth : containerW)
                 : (staticImage.implicitWidth > 0 ? staticImage.implicitWidth : containerW))
         readonly property real rawH: root.isVideo
-            ? (videoOutput.implicitHeight > 0 ? videoOutput.implicitHeight : containerH)
+            ? (videoLoader.item?.implicitHeight > 0 ? videoLoader.item.implicitHeight : containerH)
             : (root.isAnimated
-                ? (animImage.implicitHeight > 0 ? animImage.implicitHeight : containerH)
+                ? (animLoader.item?.implicitHeight > 0 ? animLoader.item.implicitHeight : containerH)
                 : (staticImage.implicitHeight > 0 ? staticImage.implicitHeight : containerH))
-        readonly property real scaleFactor: Math.max(containerW / Math.max(1, rawW), containerH / Math.max(1, rawH))
+        readonly property real baseScaleFactor: Math.max(containerW / Math.max(1, rawW), containerH / Math.max(1, rawH))
+        readonly property real scaleFactor: baseScaleFactor * Math.max(1.0, root.zoom)
         readonly property real actualW: rawW * scaleFactor
         readonly property real actualH: rawH * scaleFactor
         readonly property real overflowX: Math.max(0, actualW - containerW)
         readonly property real overflowY: Math.max(0, actualH - containerH)
-        readonly property real targetX: -overflowX * Math.max(0.0, Math.min(1.0, root.panX))
-        readonly property real targetY: -overflowY * Math.max(0.0, Math.min(1.0, root.panY))
+        readonly property real targetX: Math.round(-overflowX * Math.max(0.0, Math.min(1.0, root.panX)))
+        readonly property real targetY: Math.round(-overflowY * Math.max(0.0, Math.min(1.0, root.panY)))
 
-        VideoOutput {
-            id: videoOutput
+        Loader {
+            id: videoLoader
+            active: root.isVideo && root.cleanSource !== ""
+            visible: active
             width: cropContainer.actualW
             height: cropContainer.actualH
             x: cropContainer.targetX
             y: cropContainer.targetY
-            fillMode: VideoOutput.Stretch
-            visible: root.isVideo && root.cleanSource !== ""
-        }
 
-        AnimatedImage {
-            id: animImage
-            width: cropContainer.actualW
-            height: cropContainer.actualH
-            x: cropContainer.targetX
-            y: cropContainer.targetY
-            source: root.isAnimated && root.cleanSource !== "" ? root.cleanSource : ""
-            fillMode: Image.Stretch
-            playing: !root.paused && (root.loopMode !== "boomerang" || !root.gifReversing)
-            paused: root.paused || (root.loopMode === "none" && currentFrame >= frameCount - 1 && frameCount > 1)
-            cache: false
-            visible: root.isAnimated && root.cleanSource !== "" && status === Image.Ready
+            sourceComponent: VideoOutput {
+                id: videoOutput
+                fillMode: VideoOutput.Stretch
 
-            onCurrentFrameChanged: {
-                if (root.loopMode === "boomerang" && frameCount > 1) {
-                    if (currentFrame >= frameCount - 1 && !root.gifReversing) {
-                        root.gifReversing = true;
-                        gifReverseTimer.running = true;
+                MediaPlayer {
+                    id: mediaPlayer
+                    audioOutput: AudioOutput {
+                        muted: true
+                        volume: 0.0
+                    }
+                    videoOutput: videoOutput
+                    source: root.mediaUrl
+                    loops: root.loopMode === "end to front" ? MediaPlayer.Infinite : 1
+
+                    onMediaStatusChanged: {
+                        if (mediaStatus === MediaPlayer.LoadedMedia) {
+                            if (!root.paused) mediaPlayer.play();
+                        } else if (mediaStatus === MediaPlayer.EndOfMedia) {
+                            if (root.loopMode === "boomerang") {
+                                boomerangReverseTimer.running = true;
+                            } else if (root.loopMode === "none") {
+                                mediaPlayer.pause();
+                            }
+                        }
+                    }
+
+                    Component.onCompleted: {
+                        if (!root.paused) mediaPlayer.play();
+                    }
+                }
+
+                Timer {
+                    id: boomerangReverseTimer
+                    interval: 33
+                    repeat: true
+                    running: false
+                    onTriggered: {
+                        if (root.paused) return;
+                        if (mediaPlayer.position > 80) {
+                            mediaPlayer.position = Math.max(0, mediaPlayer.position - 66);
+                        } else {
+                            boomerangReverseTimer.running = false;
+                            mediaPlayer.position = 0;
+                            mediaPlayer.play();
+                        }
+                    }
+                }
+
+                Connections {
+                    target: root
+                    function onPausedChanged() {
+                        if (root.paused) {
+                            mediaPlayer.pause();
+                        } else {
+                            if (!boomerangReverseTimer.running) {
+                                mediaPlayer.play();
+                            }
+                        }
+                    }
+                    function onLoopModeChanged() {
+                        if (root.loopMode !== "boomerang") {
+                            boomerangReverseTimer.running = false;
+                        }
+                        if (!root.paused && mediaPlayer.playbackState !== MediaPlayer.PlayingState) {
+                            mediaPlayer.play();
+                        }
                     }
                 }
             }
         }
 
-        Timer {
-            id: gifReverseTimer
-            interval: 60
-            repeat: true
-            running: false
-            onTriggered: {
-                if (root.paused) return;
-                if (animImage.currentFrame > 0) {
-                    animImage.currentFrame = animImage.currentFrame - 1;
-                } else {
-                    gifReverseTimer.running = false;
-                    root.gifReversing = false;
+        Loader {
+            id: animLoader
+            active: root.isAnimated && root.cleanSource !== ""
+            visible: active
+            width: cropContainer.actualW
+            height: cropContainer.actualH
+            x: cropContainer.targetX
+            y: cropContainer.targetY
+
+            sourceComponent: AnimatedImage {
+                id: animImage
+                fillMode: Image.Stretch
+                source: root.cleanSource
+                playing: !root.paused && (root.loopMode !== "boomerang" || !root.gifReversing)
+                paused: root.paused || (root.loopMode === "none" && currentFrame >= frameCount - 1 && frameCount > 1)
+                cache: false
+                visible: status === Image.Ready
+
+                onCurrentFrameChanged: {
+                    if (root.loopMode === "boomerang" && frameCount > 1) {
+                        if (currentFrame >= frameCount - 1 && !root.gifReversing) {
+                            root.gifReversing = true;
+                            gifReverseTimer.running = true;
+                        }
+                    }
+                }
+
+                Timer {
+                    id: gifReverseTimer
+                    interval: 60
+                    repeat: true
+                    running: false
+                    onTriggered: {
+                        if (root.paused) return;
+                        if (animImage.currentFrame > 0) {
+                            animImage.currentFrame = animImage.currentFrame - 1;
+                        } else {
+                            gifReverseTimer.running = false;
+                            root.gifReversing = false;
+                        }
+                    }
                 }
             }
         }
@@ -214,7 +219,7 @@ Item {
             y: cropContainer.targetY
             source: root.isStatic ? root.cleanSource : ""
             fillMode: Image.Stretch
-            cache: false
+            cache: true
             antialiasing: true
             visible: root.isStatic
         }

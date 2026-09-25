@@ -65,10 +65,16 @@ MouseArea {
         return Math.round(value / root.gridSize) * root.gridSize
     }
 
+    property var canvasInstance: null
+
     function findCanvas(item) {
+        if (root.canvasInstance) return root.canvasInstance
         var p = item
         while (p) {
-            if (p.isWidgetCanvas === true) return p
+            if (p.isWidgetCanvas === true) {
+                root.canvasInstance = p
+                return p
+            }
             p = p.parent
         }
         return null
@@ -124,12 +130,12 @@ MouseArea {
     }
 
     onXChanged: {
-        if (!root.dragging) return
+        if (!root.dragging || !root.selected) return
         var canvas = findCanvas(root.parent)
         if (canvas) canvas.updateGroupDrag(root)
     }
     onYChanged: {
-        if (!root.dragging) return
+        if (!root.dragging || !root.selected) return
         var canvas = findCanvas(root.parent)
         if (canvas) canvas.updateGroupDrag(root)
     }

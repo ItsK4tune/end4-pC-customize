@@ -983,12 +983,53 @@ ContentPage {
             property var instances: Config.options.background.widgets.customImage.instances ?? []
             property int instanceTab: 0
             property int selectedInstanceIndex: Math.min(Math.max(0, instanceTab), Math.max(0, (instances?.length ?? 1) - 1))
+            property int selectedCropSlot: 0
+            readonly property int activeCropSlot: Math.min(selectedCropSlot, Math.max(0, getSlotCount(currentTarget?.division ?? "1x1") - 1))
 
             readonly property var currentTarget: {
                 if (instances && instances.length > 0) {
                     return instances[selectedInstanceIndex] || null;
                 }
                 return Config.options.background.widgets.customImage;
+            }
+
+            function getSlotCount(div) {
+                switch (div) {
+                    case "1x2":
+                    case "2x1":
+                        return 2;
+                    case "1x3":
+                    case "1L-2R":
+                    case "1T-2B":
+                        return 3;
+                    case "2x2":
+                        return 4;
+                    case "1x1":
+                    default:
+                        return 1;
+                }
+            }
+
+            function getSlotCrop(idx) {
+                let crops = customImageSection.currentTarget?.crops;
+                if (Array.isArray(crops) && crops[idx]) {
+                    return crops[idx];
+                }
+                return { x: 0.5, y: 0.5, zoom: 1.0 };
+            }
+
+            function setSlotCrop(idx, px, py, pz) {
+                let crops = (customImageSection.currentTarget?.crops ?? []).slice();
+                while (crops.length <= idx) {
+                    crops.push({ x: 0.5, y: 0.5, zoom: 1.0 });
+                }
+                let cur = crops[idx] || { x: 0.5, y: 0.5, zoom: 1.0 };
+                crops[idx] = {
+                    x: px !== undefined && px !== null ? px : (cur.x ?? 0.5),
+                    y: py !== undefined && py !== null ? py : (cur.y ?? 0.5),
+                    zoom: pz !== undefined && pz !== null ? pz : (cur.zoom ?? 1.0)
+                };
+                customImageSection.updateCurrentTarget({ crops: crops });
             }
 
             function updateCurrentTarget(props) {
@@ -1035,7 +1076,8 @@ ContentPage {
                         bgDim: 0.0,
                         bgBlur: 0.0,
                         rotation: 0,
-                        loopMode: "end to front"
+                        loopMode: "end to front",
+                        crops: []
                     });
                 } else {
                     newList.push({
@@ -1056,7 +1098,8 @@ ContentPage {
                         bgDim: current.bgDim ?? 0.0,
                         bgBlur: current.bgBlur ?? 0.0,
                         rotation: current.rotation ?? 0,
-                        loopMode: current.loopMode ?? "end to front"
+                        loopMode: current.loopMode ?? "end to front",
+                        crops: (current.crops ?? []).slice()
                     });
                 }
                 Config.options.background.widgets.customImage.instances = newList;
@@ -1267,6 +1310,96 @@ ContentPage {
                                 }
                             }
                         }
+                    }
+                }
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+                        MaterialSymbol {
+                            text: "crop"
+                            iconSize: 18
+                            color: Appearance.colors.colOnSecondaryContainer
+                        }
+                        StyledText {
+                            text: Translation.tr("Image Crop & Pan")
+                            color: Appearance.colors.colOnSecondaryContainer
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                        }
+                        Item { Layout.fillWidth: true }
+                        RippleButtonWithIcon {
+                            materialIcon: "restart_alt"
+                            mainText: Translation.tr("Reset Crop")
+                            onClicked: {
+                                customImageSection.setSlotCrop(customImageSection.activeCropSlot, 0.5, 0.5, 1.0);
+                            }
+                        }
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 4
+                        visible: customImageSection.getSlotCount(customImageSection.currentTarget?.division ?? "1x1") > 1
+
+                        Repeater {
+                            model: customImageSection.getSlotCount(customImageSection.currentTarget?.division ?? "1x1")
+                            delegate: SelectionGroupButton {
+                                required property int index
+
+                                buttonIcon: "crop_free"
+                                buttonText: `${Translation.tr("Slot")} ${index + 1}`
+                                toggled: customImageSection.activeCropSlot === index
+                                onClicked: {
+                                    customImageSection.selectedCropSlot = index;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Zoom")
+                    value: Math.round((customImageSection.getSlotCrop(customImageSection.activeCropSlot).zoom ?? 1.0) * 100)
+                    usePercentTooltip: true
+                    buttonIcon: "zoom_in"
+                    from: 100
+                    to: 300
+                    stopIndicatorValues: [100, 150, 200, 300]
+                    onValueChanged: {
+                        customImageSection.setSlotCrop(customImageSection.activeCropSlot, undefined, undefined, value / 100);
+                    }
+                }
+
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Pan X")
+                    value: Math.round((customImageSection.getSlotCrop(customImageSection.activeCropSlot).x ?? 0.5) * 100)
+                    usePercentTooltip: true
+                    buttonIcon: "swap_horiz"
+                    from: 0
+                    to: 100
+                    stopIndicatorValues: [0, 50, 100]
+                    onValueChanged: {
+                        customImageSection.setSlotCrop(customImageSection.activeCropSlot, value / 100, undefined, undefined);
+                    }
+                }
+
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Pan Y")
+                    value: Math.round((customImageSection.getSlotCrop(customImageSection.activeCropSlot).y ?? 0.5) * 100)
+                    usePercentTooltip: true
+                    buttonIcon: "swap_vert"
+                    from: 0
+                    to: 100
+                    stopIndicatorValues: [0, 50, 100]
+                    onValueChanged: {
+                        customImageSection.setSlotCrop(customImageSection.activeCropSlot, undefined, value / 100, undefined);
                     }
                 }
             }
