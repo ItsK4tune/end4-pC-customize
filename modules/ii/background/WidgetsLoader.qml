@@ -172,7 +172,10 @@ Item {
                     if (insts && insts.length > 0) {
                         return insts;
                     }
-                    return [ null ];
+                    if (Config.options.background.widgets.customImage.enable && Config.options.background.widgets.customImage.path !== "") {
+                        return [ Config.options.background.widgets.customImage ];
+                    }
+                    return [];
                 }
                 delegate: CustomImage {
                     required property var modelData

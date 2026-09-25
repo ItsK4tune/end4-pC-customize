@@ -1064,6 +1064,9 @@ ContentPage {
                     checked: Config.options.background.widgets.customImage.enable
                     onCheckedChanged: {
                         Config.options.background.widgets.customImage.enable = checked;
+                        if (checked && (!customImageSection.instances || customImageSection.instances.length === 0)) {
+                            customImageSection.addInstance();
+                        }
                     }
                 }
 
@@ -1121,50 +1124,54 @@ ContentPage {
                         customImageSection.updateCurrentTarget({ shape: newValue })
                     }
                 }
-                ConfigSelectionArray {
-                    text: Translation.tr("Division")
-                    icon: "dashboard"
-                    currentValue: customImageSection.currentTarget?.division ?? "1x1"
-                    onSelected: newValue => {
-                        customImageSection.updateCurrentTarget({ division: newValue });
-                    }
-                    options: [
-                        {
-                            displayName: Translation.tr("1x1"),
-                            icon: "crop_square",
-                            value: "1x1",
-                        },
-                        {
-                            displayName: Translation.tr("1x2"),
-                            icon: "view_column",
-                            value: "1x2",
-                        },
-                        {
-                            displayName: Translation.tr("2x1"),
-                            icon: "splitscreen",
-                            value: "2x1",
-                        },
-                        {
-                            displayName: Translation.tr("2x2"),
-                            icon: "grid_view",
-                            value: "2x2",
-                        },
-                        {
-                            displayName: Translation.tr("1L+2R"),
-                            icon: "dashboard",
-                            value: "1L-2R",
-                        },
-                        {
-                            displayName: Translation.tr("1T+2B"),
-                            icon: "view_agenda",
-                            value: "1T-2B",
-                        },
-                        {
-                            displayName: Translation.tr("1x3"),
-                            icon: "view_column_2",
-                            value: "1x3",
+
+                ColumnLayout {
+                    Layout.fillWidth: true
+                    Layout.leftMargin: 8
+                    Layout.rightMargin: 8
+                    spacing: 6
+
+                    RowLayout {
+                        spacing: 8
+                        MaterialSymbol {
+                            text: "dashboard"
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: Appearance.colors.colOnSecondaryContainer
                         }
-                    ]
+                        StyledText {
+                            text: Translation.tr("Division")
+                            color: Appearance.colors.colOnSecondaryContainer
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                        }
+                    }
+
+                    Flow {
+                        Layout.fillWidth: true
+                        spacing: 4
+
+                        Repeater {
+                            model: [
+                                { displayName: Translation.tr("1x1"),   icon: "crop_square",   value: "1x1" },
+                                { displayName: Translation.tr("1x2"),   icon: "view_column_2", value: "1x2" },
+                                { displayName: Translation.tr("2x1"),   icon: "splitscreen",   value: "2x1" },
+                                { displayName: Translation.tr("2x2"),   icon: "grid_view",     value: "2x2" },
+                                { displayName: Translation.tr("1L+2R"), icon: "dashboard",     value: "1L-2R" },
+                                { displayName: Translation.tr("1T+2B"), icon: "view_agenda",    value: "1T-2B" },
+                                { displayName: Translation.tr("1x3"),   icon: "view_column",   value: "1x3" },
+                            ]
+                            delegate: SelectionGroupButton {
+                                required property var modelData
+                                required property int index
+
+                                buttonIcon: modelData.icon
+                                buttonText: modelData.displayName
+                                toggled: (customImageSection.currentTarget?.division ?? "1x1") === modelData.value
+                                onClicked: {
+                                    customImageSection.updateCurrentTarget({ division: modelData.value });
+                                }
+                            }
+                        }
+                    }
                 }
                 ConfigSlider {
                     Layout.fillWidth: true
