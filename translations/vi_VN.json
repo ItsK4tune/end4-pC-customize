@@ -478,5 +478,9 @@
   "Refresh": "Làm mới",
   "Enable GPS based location": "Bật định vị qua GPS",
   "Fahrenheit unit": "Đơn vị Fahrenheit (°F)",
-  "Polling interval (m)": "Chu kỳ cập nhật (phút)"
+  "Polling interval (m)": "Chu kỳ cập nhật (phút)",
+  "Custom Image": "Ảnh tùy chỉnh",
+  "Division": "Phân chia khung",
+  "Border Gap": "Khoảng cách viền",
+  "Add Widget": "Thêm Widget"
 }
