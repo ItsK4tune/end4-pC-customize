@@ -6,6 +6,7 @@ import QtQuick.Controls
 import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.ii.background.widgets
@@ -250,6 +251,32 @@ AbstractBackgroundWidget {
         }
     }
 
+    Timer {
+        id: saveInstanceSettingsTimer
+        interval: 250
+        repeat: false
+        onTriggered: {
+            if (root.instanceIndex >= 0) {
+                root.updateInstanceProperty({
+                    division: root.division,
+                    gap: root.gap,
+                    rotation: root.widgetRotation,
+                    bgPath: root.bgPath,
+                    bgOpacity: root.bgOpacity,
+                    bgDim: root.bgDim,
+                    showSettings: root.showSettingsPopup
+                });
+            } else {
+                Config.options.background.widgets.customImage.division = root.division;
+                Config.options.background.widgets.customImage.gap = root.gap;
+                Config.options.background.widgets.customImage.rotation = root.widgetRotation;
+                Config.options.background.widgets.customImage.bgPath = root.bgPath;
+                Config.options.background.widgets.customImage.bgOpacity = root.bgOpacity;
+                Config.options.background.widgets.customImage.bgDim = root.bgDim;
+            }
+        }
+    }
+
     function updateInstanceSetting(props) {
         if (root.instanceIndex >= 0) {
             if (root.instanceConfig) {
@@ -257,12 +284,14 @@ AbstractBackgroundWidget {
                     root.instanceConfig[k] = props[k];
                 }
             }
-            root.updateInstanceProperty(props);
-        } else {
-            for (let k in props) {
-                Config.options.background.widgets.customImage[k] = props[k];
-            }
         }
+        if (props.division !== undefined) root.division = props.division;
+        if (props.gap !== undefined) root.gap = props.gap;
+        if (props.rotation !== undefined) root.widgetRotation = props.rotation;
+        if (props.bgPath !== undefined) root.bgPath = props.bgPath;
+        if (props.bgOpacity !== undefined) root.bgOpacity = props.bgOpacity;
+        if (props.bgDim !== undefined) root.bgDim = props.bgDim;
+        saveInstanceSettingsTimer.restart();
     }
 
     function duplicateInstance() {
@@ -313,7 +342,13 @@ AbstractBackgroundWidget {
     }
 
     property bool controlBarVisible: false
-    property bool showSettingsPopup: false
+    property bool showSettingsPopup: instanceConfig?.showSettings ?? false
+
+    onShowSettingsPopupChanged: {
+        if (root.instanceConfig) {
+            root.instanceConfig.showSettings = root.showSettingsPopup;
+        }
+    }
 
     Timer {
         id: hideControlBarTimer
@@ -672,6 +707,13 @@ AbstractBackgroundWidget {
             }
         }
 
+        MouseArea {
+            anchors.fill: parent
+            preventStealing: true
+            acceptedButtons: Qt.LeftButton | Qt.RightButton
+            onPressed: (mouse) => mouse.accepted = true
+        }
+
         ColumnLayout {
             id: settingsCardCol
             anchors {
@@ -705,7 +747,7 @@ AbstractBackgroundWidget {
                         anchors.centerIn: parent
                         iconSize: 15
                         text: "open_in_new"
-                        color: Appearance.colors.colOnLayer0Secondary
+                        color: Appearance.colors.colSubtext
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -727,7 +769,7 @@ AbstractBackgroundWidget {
                         anchors.centerIn: parent
                         iconSize: 15
                         text: "close"
-                        color: Appearance.colors.colOnLayer0Secondary
+                        color: Appearance.colors.colSubtext
                     }
                     MouseArea {
                         anchors.fill: parent
@@ -781,15 +823,16 @@ AbstractBackgroundWidget {
                 MaterialSymbol {
                     text: "border_inner"
                     iconSize: 16
-                    color: Appearance.colors.colOnLayer0Secondary
+                    color: Appearance.colors.colSubtext
                 }
                 StyledText {
                     text: `${Translation.tr("Gap")}: ${Math.round(root.gap)}px`
                     font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnLayer0Secondary
+                    color: Appearance.colors.colSubtext
                 }
-                Slider {
+                StyledSlider {
                     Layout.fillWidth: true
+                    configuration: StyledSlider.Configuration.XS
                     from: 0
                     to: 24
                     value: root.gap
@@ -872,15 +915,16 @@ AbstractBackgroundWidget {
                 MaterialSymbol {
                     text: "brightness_medium"
                     iconSize: 16
-                    color: Appearance.colors.colOnLayer0Secondary
+                    color: Appearance.colors.colSubtext
                 }
                 StyledText {
                     text: `${Translation.tr("Dim")}: ${Math.round(root.bgDim * 100)}%`
                     font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnLayer0Secondary
+                    color: Appearance.colors.colSubtext
                 }
-                Slider {
+                StyledSlider {
                     Layout.fillWidth: true
+                    configuration: StyledSlider.Configuration.XS
                     from: 0
                     to: 1
                     value: root.bgDim
@@ -896,15 +940,16 @@ AbstractBackgroundWidget {
                 MaterialSymbol {
                     text: "rotate_right"
                     iconSize: 16
-                    color: Appearance.colors.colOnLayer0Secondary
+                    color: Appearance.colors.colSubtext
                 }
                 StyledText {
                     text: `${Translation.tr("Angle")}: ${Math.round(root.widgetRotation)}°`
                     font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnLayer0Secondary
+                    color: Appearance.colors.colSubtext
                 }
-                Slider {
+                StyledSlider {
                     Layout.fillWidth: true
+                    configuration: StyledSlider.Configuration.XS
                     from: -45
                     to: 45
                     value: root.widgetRotation

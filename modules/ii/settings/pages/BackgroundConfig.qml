@@ -1193,10 +1193,45 @@ ContentPage {
                     onValueChanged: customImageSection.updateCurrentTarget({ gap: Math.round(value) })
                 }
 
-                RowLayout {
+                ConfigSlider {
                     Layout.fillWidth: true
-                    visible: (customImageSection.currentTarget?.division ?? "1x1") !== "1x1" && (customImageSection.currentTarget?.gap ?? 0) > 0
-                    spacing: 8
+                    text: Translation.tr("Rotation Angle")
+                    value: customImageSection.currentTarget?.rotation ?? 0
+                    usePercentTooltip: false
+                    buttonIcon: "rotate_right"
+                    from: -45
+                    to: 45
+                    stopIndicatorValues: [-45, 0, 45]
+                    onValueChanged: customImageSection.updateCurrentTarget({ rotation: Math.round(value) })
+                }
+            }
+
+            Rectangle {
+                Layout.fillWidth: true
+                visible: (customImageSection.currentTarget?.division ?? "1x1") !== "1x1" && (customImageSection.currentTarget?.gap ?? 0) > 0
+                radius: Appearance.rounding.normal
+                color: Appearance.colors.colLayer1
+                implicitHeight: bgCardCol.implicitHeight + 24
+
+                ColumnLayout {
+                    id: bgCardCol
+                    anchors { fill: parent; margins: 12 }
+                    spacing: 10
+
+                    RowLayout {
+                        spacing: 8
+                        MaterialSymbol {
+                            text: "wallpaper"
+                            iconSize: Appearance.font.pixelSize.larger
+                            color: Appearance.colors.colOnSecondaryContainer
+                        }
+                        StyledText {
+                            text: Translation.tr("Frame Background")
+                            color: Appearance.colors.colOnSecondaryContainer
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.DemiBold
+                        }
+                    }
 
                     Rectangle {
                         Layout.fillWidth: true
@@ -1252,31 +1287,19 @@ ContentPage {
                             }
                         }
                     }
-                }
 
-                ConfigSlider {
-                    Layout.fillWidth: true
-                    visible: (customImageSection.currentTarget?.division ?? "1x1") !== "1x1" && (customImageSection.currentTarget?.gap ?? 0) > 0 && (customImageSection.currentTarget?.bgPath ?? "") !== ""
-                    text: Translation.tr("Background Dim")
-                    value: Math.round((customImageSection.currentTarget?.bgDim ?? 0) * 100)
-                    usePercentTooltip: true
-                    buttonIcon: "brightness_medium"
-                    from: 0
-                    to: 100
-                    stopIndicatorValues: [0, 50, 100]
-                    onValueChanged: customImageSection.updateCurrentTarget({ bgDim: value / 100 })
-                }
-
-                ConfigSlider {
-                    Layout.fillWidth: true
-                    text: Translation.tr("Rotation Angle")
-                    value: customImageSection.currentTarget?.rotation ?? 0
-                    usePercentTooltip: false
-                    buttonIcon: "rotate_right"
-                    from: -45
-                    to: 45
-                    stopIndicatorValues: [-45, 0, 45]
-                    onValueChanged: customImageSection.updateCurrentTarget({ rotation: Math.round(value) })
+                    ConfigSlider {
+                        Layout.fillWidth: true
+                        visible: (customImageSection.currentTarget?.bgPath ?? "") !== ""
+                        text: Translation.tr("Background Dim")
+                        value: Math.round((customImageSection.currentTarget?.bgDim ?? 0) * 100)
+                        usePercentTooltip: true
+                        buttonIcon: "brightness_medium"
+                        from: 0
+                        to: 100
+                        stopIndicatorValues: [0, 50, 100]
+                        onValueChanged: customImageSection.updateCurrentTarget({ bgDim: value / 100 })
+                    }
                 }
             }
         }
