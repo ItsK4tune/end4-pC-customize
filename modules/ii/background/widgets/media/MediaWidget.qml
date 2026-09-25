@@ -86,8 +86,8 @@ AbstractBackgroundWidget {
     property bool showLyrics: false
 
     property string displayedArtFilePath: {
-        if (!root.downloaded) return ""
-        if (root.artUrl && root.artUrl.startsWith("file://")) return root.artUrl
+        if (!root.artUrl || root.artUrl.length === 0) return ""
+        if (String(root.artUrl).startsWith("file://")) return root.artUrl
         return root.downloaded ? Qt.resolvedUrl(artFilePath) : ""
     }
 

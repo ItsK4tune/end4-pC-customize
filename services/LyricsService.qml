@@ -35,20 +35,51 @@ Singleton {
     }
 
     property real manualOffset: 0.0
+    property var savedOffsets: ({})
+    readonly property string offsetsFilePath: FileUtils.trimFileProtocol(`${Directories.cache}/lyrics_offsets.json`)
+
+    FileView {
+        id: offsetFileView
+        path: root.offsetsFilePath
+        onLoaded: {
+            try {
+                const parsed = JSON.parse(offsetFileView.text())
+                root.savedOffsets = (parsed && typeof parsed === "object") ? parsed : {}
+            } catch(e) {
+                root.savedOffsets = {}
+            }
+        }
+        onLoadFailed: (error) => {
+            root.savedOffsets = {}
+        }
+    }
+
+    function saveCurrentOffset() {
+        if (!root.lastTrackKey) return
+        root.savedOffsets[root.lastTrackKey] = root.manualOffset
+        try {
+            offsetFileView.setText(JSON.stringify(root.savedOffsets, null, 2))
+        } catch(e) {
+            console.warn("Failed to write lyrics offset:", e)
+        }
+    }
 
     function setOffset(val) {
         const num = parseFloat(val)
         if (!isNaN(num)) {
             root.manualOffset = Math.round(num * 10) / 10
+            root.saveCurrentOffset()
         }
     }
 
     function adjustOffset(delta) {
         root.manualOffset = Math.round((root.manualOffset + delta) * 10) / 10
+        root.saveCurrentOffset()
     }
 
     function resetOffset() {
         root.manualOffset = 0.0
+        root.saveCurrentOffset()
     }
 
     function seekToLine(idx) {
@@ -58,9 +89,19 @@ Singleton {
         }
     }
 
+    function syncLineToCurrentTime(idx) {
+        if (idx >= 0 && idx < root.lyricsLines.length && root.activePlayer) {
+            const playerPos = root.activePlayer.position ?? 0
+            const lineTime = root.lyricsLines[idx].time
+            // pos = playerPos + manualOffset => manualOffset = lineTime - playerPos
+            root.manualOffset = Math.round((lineTime - playerPos) * 10) / 10
+            root.saveCurrentOffset()
+        }
+    }
+
     Timer {
         id: syncTimer
-        interval: 200
+        interval: 150
         repeat: true
         running: root.status === "ok" && root.lyricsLines.length > 0
         onTriggered: {
@@ -77,41 +118,59 @@ Singleton {
         }
     }
 
+    property int currentReqId: 0
+
+    function handleLyricsOutput(rawText, reqId) {
+        if (reqId !== root.currentReqId) return
+
+        const trimmed = (rawText || "").trim()
+        if (!trimmed || trimmed === "not_found") {
+            root.status = "not_found"
+            return
+        }
+        if (trimmed === "no_info") {
+            root.status = "no_info"
+            return
+        }
+
+        const parts = trimmed.split("§")
+        if (parts.length < 3 || parts[parts.length - 1].trim() !== "ok") {
+            root.status = "not_found"
+            return
+        }
+
+        let lines = []
+        for (let i = 0; i < parts.length - 1; i += 2) {
+            const t = parseFloat(parts[i])
+            const txt = parts[i + 1] || ""
+            if (!isNaN(t)) lines.push({ time: t, text: txt })
+        }
+
+        if (lines.length === 0) {
+            root.status = "not_found"
+            return
+        }
+
+        root.lyricsLines = lines
+        root.activeIndex = -1
+        root.slots = root.buildSlots(-1)
+        root.status = "ok"
+    }
+
     Process {
         id: lyricsProc
         running: false
-        onRunningChanged: {
-            if (!running && root.status === "loading") {
-                root.status = "not_found";
+        property int reqId: 0
+        stderr: StdioCollector {
+            onStreamFinished: {
+                if (this.text && this.text.trim()) {
+                    console.warn("lyricsProc stderr:", this.text.trim())
+                }
             }
         }
-        stderr: SplitParser {
-            onRead: data => console.warn("lyricsProc stderr:", data)
-        }
-        stdout: SplitParser {
-            onRead: data => {
-                const trimmed = data.trim()
-                if (!trimmed) return
-                if (trimmed === "not_found") { root.status = "not_found"; return }
-                if (trimmed === "no_info")   { root.status = "no_info";   return }
-
-                const parts = trimmed.split("§")
-                if (parts.length < 3) return
-                if (parts[parts.length - 1].trim() !== "ok") return
-
-                let lines = []
-                for (let i = 0; i < parts.length - 1; i += 2) {
-                    const t = parseFloat(parts[i])
-                    const txt = parts[i + 1] || ""
-                    if (!isNaN(t)) lines.push({ time: t, text: txt })
-                }
-
-                if (lines.length === 0) { root.status = "not_found"; return }
-
-                root.lyricsLines = lines
-                root.activeIndex = -1
-                root.slots = root.buildSlots(-1)
-                root.status = "ok"
+        stdout: StdioCollector {
+            onStreamFinished: {
+                root.handleLyricsOutput(this.text, lyricsProc.reqId)
             }
         }
     }
@@ -130,17 +189,22 @@ Singleton {
         }
 
         root.lastTrackKey = trackKey
+        root.currentReqId++
         lyricsProc.running = false
         root.lyricsLines = []
         root.activeIndex = -1
         root.slots = ["", "", "", "", "", "", ""]
         root.status = "loading"
-        root.manualOffset = 0.0
+        root.manualOffset = root.savedOffsets[trackKey] ?? 0.0
 
-        if (!title) { root.status = "no_info"; return }
+        if (!title) {
+            root.status = "no_info"
+            return
+        }
 
         const dbusName = root.activePlayer?.dbusName ?? ""
         const scriptFile = FileUtils.trimFileProtocol(`${Directories.scriptPath}/lyrics/lyrics.py`)
+        lyricsProc.reqId = root.currentReqId
         lyricsProc.command = [
             "python3",
             scriptFile,
@@ -177,6 +241,9 @@ Singleton {
         }
         function seekToLine(idx) {
             root.seekToLine(idx)
+        }
+        function syncLineToCurrentTime(idx) {
+            root.syncLineToCurrentTime(idx)
         }
         property real manualOffset: root.manualOffset
         property string status: root.status
