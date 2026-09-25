@@ -171,6 +171,7 @@ Item {
 
                 readonly property bool isActive: index === LyricsService.activeIndex
                 readonly property int dist: Math.abs(index - LyricsService.activeIndex)
+                readonly property bool isHovered: lineMouse.containsMouse || syncLineMouse.containsMouse
 
                 width: listView.width
                 height: Math.max(34, lyricText.implicitHeight + 12)
@@ -179,7 +180,7 @@ Item {
                 StyledText {
                     id: lyricText
                     anchors.centerIn: parent
-                    width: parent.width - 20
+                    width: parent.width - (syncLineButton.visible ? 56 : 20)
                     horizontalAlignment: root.textAlignment
                     wrapMode: Text.WordWrap
                     text: lyricDelegate.modelData?.text || "♪"
@@ -205,14 +206,60 @@ Item {
                     Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                 }
 
+                // Quick 1-click sync button (appears on hover) to sync this line with current player position
+                Rectangle {
+                    id: syncLineButton
+                    anchors {
+                        right: parent.right
+                        rightMargin: 6
+                        verticalCenter: parent.verticalCenter
+                    }
+                    visible: lyricDelegate.isHovered && root.showControls && LyricsService.status === "ok"
+                    implicitWidth: 26
+                    implicitHeight: 26
+                    radius: Appearance.rounding.small
+                    color: syncLineMouse.containsMouse
+                        ? ColorUtils.transparentize(root.activeColor, 0.70)
+                        : ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4)
+                    border.color: ColorUtils.transparentize(root.activeColor, 0.3)
+                    border.width: 1
+                    z: 5
+
+                    MaterialSymbol {
+                        anchors.centerIn: parent
+                        iconSize: 15
+                        text: "more_time"
+                        color: root.activeColor
+                    }
+
+                    MouseArea {
+                        id: syncLineMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            LyricsService.syncLineToCurrentTime(lyricDelegate.index)
+                            root.isDetached = false
+                        }
+                    }
+                }
+
                 MouseArea {
+                    id: lineMouse
                     anchors.fill: parent
+                    anchors.rightMargin: syncLineButton.visible ? 32 : 0
                     cursorShape: Qt.PointingHandCursor
                     hoverEnabled: true
-                    onClicked: {
-                        LyricsService.seekToLine(lyricDelegate.index)
-                        root.isDetached = false
-                        root.scrollToIndex(lyricDelegate.index, true)
+                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                    onClicked: (mouse) => {
+                        if (mouse.button === Qt.RightButton) {
+                            LyricsService.syncLineToCurrentTime(lyricDelegate.index)
+                            root.isDetached = false
+                        } else {
+                            LyricsService.seekToLine(lyricDelegate.index)
+                            root.isDetached = false
+                            root.scrollToIndex(lyricDelegate.index, true)
+                        }
                     }
                 }
             }
