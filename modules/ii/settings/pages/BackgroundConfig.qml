@@ -1018,6 +1018,8 @@ ContentPage {
                         size: lastItem.size ?? 200,
                         shape: lastItem.shape ?? "Circle",
                         division: "1x1",
+                        margin: 0,
+                        padding: 4,
                         gap: 4,
                         images: [],
                         path: "",
@@ -1035,7 +1037,9 @@ ContentPage {
                         size: current.size ?? 200,
                         shape: current.shape ?? "Cookie4Sided",
                         division: current.division ?? "1x1",
-                        gap: current.gap ?? 4,
+                        margin: current.margin ?? 0,
+                        padding: current.padding ?? (current.gap ?? 4),
+                        gap: current.padding ?? (current.gap ?? 4),
                         images: (current.images ?? []).slice(),
                         path: current.path ?? "",
                         bgPath: current.bgPath ?? "",
@@ -1183,14 +1187,26 @@ ContentPage {
                 }
                 ConfigSlider {
                     Layout.fillWidth: true
-                    text: Translation.tr("Border Gap")
-                    value: customImageSection.currentTarget?.gap ?? 4
+                    text: Translation.tr("Margin")
+                    value: customImageSection.currentTarget?.margin ?? 0
+                    usePercentTooltip: false
+                    buttonIcon: "border_outer"
+                    from: 0
+                    to: 32
+                    stopIndicatorValues: [0, 8, 16, 24, 32]
+                    onValueChanged: customImageSection.updateCurrentTarget({ margin: Math.round(value) })
+                }
+
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Padding")
+                    value: customImageSection.currentTarget?.padding ?? (customImageSection.currentTarget?.gap ?? 4)
                     usePercentTooltip: false
                     buttonIcon: "border_inner"
                     from: 0
-                    to: 24
-                    stopIndicatorValues: [0, 4, 8]
-                    onValueChanged: customImageSection.updateCurrentTarget({ gap: Math.round(value) })
+                    to: 32
+                    stopIndicatorValues: [0, 4, 8, 16, 24, 32]
+                    onValueChanged: customImageSection.updateCurrentTarget({ padding: Math.round(value), gap: Math.round(value) })
                 }
 
                 ConfigSlider {
@@ -1199,16 +1215,16 @@ ContentPage {
                     value: customImageSection.currentTarget?.rotation ?? 0
                     usePercentTooltip: false
                     buttonIcon: "rotate_right"
-                    from: -45
-                    to: 45
-                    stopIndicatorValues: [-45, 0, 45]
+                    from: -180
+                    to: 180
+                    stopIndicatorValues: [-180, -90, 0, 90, 180]
                     onValueChanged: customImageSection.updateCurrentTarget({ rotation: Math.round(value) })
                 }
             }
 
             Rectangle {
                 Layout.fillWidth: true
-                visible: (customImageSection.currentTarget?.division ?? "1x1") !== "1x1" && (customImageSection.currentTarget?.gap ?? 0) > 0
+                visible: (customImageSection.currentTarget?.margin ?? 0) > 0 || ((customImageSection.currentTarget?.division ?? "1x1") !== "1x1" && ((customImageSection.currentTarget?.padding ?? customImageSection.currentTarget?.gap ?? 0) > 0))
                 radius: Appearance.rounding.normal
                 color: Appearance.colors.colLayer1
                 implicitHeight: bgCardCol.implicitHeight + 24

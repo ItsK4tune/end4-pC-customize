@@ -24,7 +24,9 @@ AbstractBackgroundWidget {
     property string imagePath: (instanceConfig?.path ?? Config.options.background.widgets.customImage.path) ?? ""
     property real widgetSize: (instanceConfig?.size ?? Config.options.background.widgets.customImage.size) ?? 200
     property string division: (instanceConfig?.division ?? Config.options.background.widgets.customImage.division) ?? "1x1"
-    property real gap: (instanceConfig?.gap ?? Config.options.background.widgets.customImage.gap) ?? 4
+    property real margin: (instanceConfig?.margin ?? Config.options.background.widgets.customImage.margin) ?? 0
+    property real padding: (instanceConfig?.padding ?? (instanceConfig?.gap ?? Config.options.background.widgets.customImage.padding ?? Config.options.background.widgets.customImage.gap)) ?? 4
+    property real gap: padding
     property var imagesList: (instanceConfig?.images ?? Config.options.background.widgets.customImage.images) ?? []
     property string shapeName: (instanceConfig?.shape ?? Config.options.background.widgets.customImage.shape) ?? "Cookie4Sided"
     property string bgPath: (instanceConfig?.bgPath ?? Config.options.background.widgets.customImage.bgPath) ?? ""
@@ -109,74 +111,80 @@ AbstractBackgroundWidget {
         }
     }
 
-    function getSlotLayouts(div, totalW, totalH, g) {
+    function getSlotLayouts(div, totalW, totalH, p, m) {
         if (totalW <= 0 || totalH <= 0) return [];
-        let validGap = Math.max(0, g);
+        let validPadding = Math.max(0, p ?? 0);
+        let validMargin = Math.max(0, m ?? 0);
+        let innerW = Math.max(1, totalW - validMargin * 2);
+        let innerH = Math.max(1, totalH - validMargin * 2);
+        let mx = validMargin;
+        let my = validMargin;
+
         switch (div) {
             case "1x2": {
-                let w1 = Math.floor((totalW - validGap) / 2);
-                let w2 = Math.max(1, totalW - validGap - w1);
+                let w1 = Math.floor((innerW - validPadding) / 2);
+                let w2 = Math.max(1, innerW - validPadding - w1);
                 return [
-                    { x: 0, y: 0, width: w1, height: totalH },
-                    { x: w1 + validGap, y: 0, width: w2, height: totalH }
+                    { x: mx, y: my, width: w1, height: innerH },
+                    { x: mx + w1 + validPadding, y: my, width: w2, height: innerH }
                 ];
             }
             case "2x1": {
-                let h1 = Math.floor((totalH - validGap) / 2);
-                let h2 = Math.max(1, totalH - validGap - h1);
+                let h1 = Math.floor((innerH - validPadding) / 2);
+                let h2 = Math.max(1, innerH - validPadding - h1);
                 return [
-                    { x: 0, y: 0, width: totalW, height: h1 },
-                    { x: 0, y: h1 + validGap, width: totalW, height: h2 }
+                    { x: mx, y: my, width: innerW, height: h1 },
+                    { x: mx, y: my + h1 + validPadding, width: innerW, height: h2 }
                 ];
             }
             case "2x2": {
-                let w1 = Math.floor((totalW - validGap) / 2);
-                let w2 = Math.max(1, totalW - validGap - w1);
-                let h1 = Math.floor((totalH - validGap) / 2);
-                let h2 = Math.max(1, totalH - validGap - h1);
+                let w1 = Math.floor((innerW - validPadding) / 2);
+                let w2 = Math.max(1, innerW - validPadding - w1);
+                let h1 = Math.floor((innerH - validPadding) / 2);
+                let h2 = Math.max(1, innerH - validPadding - h1);
                 return [
-                    { x: 0, y: 0, width: w1, height: h1 },
-                    { x: w1 + validGap, y: 0, width: w2, height: h1 },
-                    { x: 0, y: h1 + validGap, width: w1, height: h2 },
-                    { x: w1 + validGap, y: h1 + validGap, width: w2, height: h2 }
+                    { x: mx, y: my, width: w1, height: h1 },
+                    { x: mx + w1 + validPadding, y: my, width: w2, height: h1 },
+                    { x: mx, y: my + h1 + validPadding, width: w1, height: h2 },
+                    { x: mx + w1 + validPadding, y: my + h1 + validPadding, width: w2, height: h2 }
                 ];
             }
             case "1L-2R": {
-                let w1 = Math.floor((totalW - validGap) / 2);
-                let w2 = Math.max(1, totalW - validGap - w1);
-                let h1 = Math.floor((totalH - validGap) / 2);
-                let h2 = Math.max(1, totalH - validGap - h1);
+                let w1 = Math.floor((innerW - validPadding) / 2);
+                let w2 = Math.max(1, innerW - validPadding - w1);
+                let h1 = Math.floor((innerH - validPadding) / 2);
+                let h2 = Math.max(1, innerH - validPadding - h1);
                 return [
-                    { x: 0, y: 0, width: w1, height: totalH },
-                    { x: w1 + validGap, y: 0, width: w2, height: h1 },
-                    { x: w1 + validGap, y: h1 + validGap, width: w2, height: h2 }
+                    { x: mx, y: my, width: w1, height: innerH },
+                    { x: mx + w1 + validPadding, y: my, width: w2, height: h1 },
+                    { x: mx + w1 + validPadding, y: my + h1 + validPadding, width: w2, height: h2 }
                 ];
             }
             case "1T-2B": {
-                let w1 = Math.floor((totalW - validGap) / 2);
-                let w2 = Math.max(1, totalW - validGap - w1);
-                let h1 = Math.floor((totalH - validGap) / 2);
-                let h2 = Math.max(1, totalH - validGap - h1);
+                let w1 = Math.floor((innerW - validPadding) / 2);
+                let w2 = Math.max(1, innerW - validPadding - w1);
+                let h1 = Math.floor((innerH - validPadding) / 2);
+                let h2 = Math.max(1, innerH - validPadding - h1);
                 return [
-                    { x: 0, y: 0, width: totalW, height: h1 },
-                    { x: 0, y: h1 + validGap, width: w1, height: h2 },
-                    { x: w1 + validGap, y: h1 + validGap, width: w2, height: h2 }
+                    { x: mx, y: my, width: innerW, height: h1 },
+                    { x: mx, y: my + h1 + validPadding, width: w1, height: h2 },
+                    { x: mx + w1 + validPadding, y: my + h1 + validPadding, width: w2, height: h2 }
                 ];
             }
             case "1x3": {
-                let w1 = Math.floor((totalW - validGap * 2) / 3);
-                let w2 = Math.floor((totalW - validGap * 2) / 3);
-                let w3 = Math.max(1, totalW - validGap * 2 - w1 - w2);
+                let w1 = Math.floor((innerW - validPadding * 2) / 3);
+                let w2 = Math.floor((innerW - validPadding * 2) / 3);
+                let w3 = Math.max(1, innerW - validPadding * 2 - w1 - w2);
                 return [
-                    { x: 0, y: 0, width: w1, height: totalH },
-                    { x: w1 + validGap, y: 0, width: w2, height: totalH },
-                    { x: (w1 + validGap) + w2 + validGap, y: 0, width: w3, height: totalH }
+                    { x: mx, y: my, width: w1, height: innerH },
+                    { x: mx + w1 + validPadding, y: my, width: w2, height: innerH },
+                    { x: mx + (w1 + validPadding) + w2 + validPadding, y: my, width: w3, height: innerH }
                 ];
             }
             case "1x1":
             default: {
                 return [
-                    { x: 0, y: 0, width: totalW, height: totalH }
+                    { x: mx, y: my, width: innerW, height: innerH }
                 ];
             }
         }
@@ -259,7 +267,9 @@ AbstractBackgroundWidget {
             if (root.instanceIndex >= 0) {
                 root.updateInstanceProperty({
                     division: root.division,
-                    gap: root.gap,
+                    margin: root.margin,
+                    padding: root.padding,
+                    gap: root.padding,
                     rotation: root.widgetRotation,
                     bgPath: root.bgPath,
                     bgOpacity: root.bgOpacity,
@@ -268,7 +278,9 @@ AbstractBackgroundWidget {
                 });
             } else {
                 Config.options.background.widgets.customImage.division = root.division;
-                Config.options.background.widgets.customImage.gap = root.gap;
+                Config.options.background.widgets.customImage.margin = root.margin;
+                Config.options.background.widgets.customImage.padding = root.padding;
+                Config.options.background.widgets.customImage.gap = root.padding;
                 Config.options.background.widgets.customImage.rotation = root.widgetRotation;
                 Config.options.background.widgets.customImage.bgPath = root.bgPath;
                 Config.options.background.widgets.customImage.bgOpacity = root.bgOpacity;
@@ -286,7 +298,15 @@ AbstractBackgroundWidget {
             }
         }
         if (props.division !== undefined) root.division = props.division;
-        if (props.gap !== undefined) root.gap = props.gap;
+        if (props.margin !== undefined) root.margin = props.margin;
+        if (props.padding !== undefined) {
+            root.padding = props.padding;
+            root.gap = props.padding;
+        }
+        if (props.gap !== undefined) {
+            root.gap = props.gap;
+            root.padding = props.gap;
+        }
         if (props.rotation !== undefined) root.widgetRotation = props.rotation;
         if (props.bgPath !== undefined) root.bgPath = props.bgPath;
         if (props.bgOpacity !== undefined) root.bgOpacity = props.bgOpacity;
@@ -303,7 +323,9 @@ AbstractBackgroundWidget {
             size: root.widgetSize,
             shape: root.shapeName,
             division: root.division,
-            gap: root.gap,
+            margin: root.margin,
+            padding: root.padding,
+            gap: root.padding,
             images: (root.imagesList || []).slice(),
             path: root.imagePath,
             bgPath: root.bgPath,
@@ -328,7 +350,9 @@ AbstractBackgroundWidget {
                 size: root.widgetSize,
                 shape: root.shapeName,
                 division: root.division,
-                gap: root.gap,
+                margin: root.margin,
+                padding: root.padding,
+                gap: root.padding,
                 images: (root.imagesList || []).slice(),
                 path: root.imagePath,
                 bgPath: root.bgPath,
@@ -516,11 +540,11 @@ AbstractBackgroundWidget {
                 }
             }
 
-            // Background frame layer (visible when gap > 0 and division != 1x1)
+            // Background frame layer (visible when margin > 0 or inner padding > 0 in split view)
             Item {
                 id: frameBgLayer
                 anchors.fill: parent
-                visible: root.division !== "1x1" && root.gap > 0
+                visible: (root.margin > 0) || (root.division !== "1x1" && root.padding > 0)
 
                 SmartImage {
                     anchors.fill: parent
@@ -540,7 +564,7 @@ AbstractBackgroundWidget {
 
             Repeater {
                 id: slotsRepeater
-                model: root.getSlotLayouts(root.division, imageShape.width, imageShape.height, root.gap)
+                model: root.getSlotLayouts(root.division, imageShape.width, imageShape.height, root.padding, root.margin)
 
                 delegate: Item {
                     id: slotRoot
@@ -816,17 +840,17 @@ AbstractBackgroundWidget {
                 }
             }
 
-            // Gap slider
+            // Margin slider
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
                 MaterialSymbol {
-                    text: "border_inner"
+                    text: "border_outer"
                     iconSize: 16
                     color: Appearance.colors.colSubtext
                 }
                 StyledText {
-                    text: `${Translation.tr("Gap")}: ${Math.round(root.gap)}px`
+                    text: `${Translation.tr("Margin")}: ${Math.round(root.margin)}px`
                     font.pixelSize: Appearance.font.pixelSize.smaller
                     color: Appearance.colors.colSubtext
                 }
@@ -834,17 +858,42 @@ AbstractBackgroundWidget {
                     Layout.fillWidth: true
                     configuration: StyledSlider.Configuration.XS
                     from: 0
-                    to: 24
-                    value: root.gap
-                    onMoved: root.updateInstanceSetting({ gap: Math.round(value) })
+                    to: 32
+                    value: root.margin
+                    onMoved: root.updateInstanceSetting({ margin: Math.round(value) })
                 }
             }
 
-            // Frame Background drop area (when gap > 0 and not 1x1)
+            // Padding slider (visible when division is not 1x1)
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
-                visible: root.division !== "1x1" && root.gap > 0
+                visible: root.division !== "1x1"
+                MaterialSymbol {
+                    text: "border_inner"
+                    iconSize: 16
+                    color: Appearance.colors.colSubtext
+                }
+                StyledText {
+                    text: `${Translation.tr("Padding")}: ${Math.round(root.padding)}px`
+                    font.pixelSize: Appearance.font.pixelSize.smaller
+                    color: Appearance.colors.colSubtext
+                }
+                StyledSlider {
+                    Layout.fillWidth: true
+                    configuration: StyledSlider.Configuration.XS
+                    from: 0
+                    to: 32
+                    value: root.padding
+                    onMoved: root.updateInstanceSetting({ padding: Math.round(value), gap: Math.round(value) })
+                }
+            }
+
+            // Frame Background drop area (when margin > 0 or (padding > 0 and not 1x1))
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 6
+                visible: (root.margin > 0) || (root.division !== "1x1" && root.padding > 0)
 
                 Rectangle {
                     Layout.fillWidth: true
@@ -910,7 +959,7 @@ AbstractBackgroundWidget {
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
-                visible: root.division !== "1x1" && root.gap > 0 && root.bgPath !== ""
+                visible: ((root.margin > 0) || (root.division !== "1x1" && root.padding > 0)) && root.bgPath !== ""
 
                 MaterialSymbol {
                     text: "brightness_medium"
@@ -932,7 +981,7 @@ AbstractBackgroundWidget {
                 }
             }
 
-            // Rotation slider (-45 to +45 deg)
+            // Rotation slider (-180 to +180 deg)
             RowLayout {
                 Layout.fillWidth: true
                 spacing: 6
@@ -950,8 +999,8 @@ AbstractBackgroundWidget {
                 StyledSlider {
                     Layout.fillWidth: true
                     configuration: StyledSlider.Configuration.XS
-                    from: -45
-                    to: 45
+                    from: -180
+                    to: 180
                     value: root.widgetRotation
                     onMoved: root.updateInstanceSetting({ rotation: Math.round(value) })
                 }

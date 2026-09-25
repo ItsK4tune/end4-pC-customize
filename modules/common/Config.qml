@@ -414,6 +414,8 @@ Singleton {
                         property real size: 200
                         property string division: "1x1"
                         property real gap: 4
+                        property real margin: 0
+                        property real padding: 4
                         property list<string> images: []
                         property list<var> instances: []
                         property string bgPath: ""
