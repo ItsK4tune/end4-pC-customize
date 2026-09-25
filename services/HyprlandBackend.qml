@@ -45,8 +45,27 @@ Scope {
     }
 
     function activeWorkspaceForMonitor(monitorName) {
-        const m = Hyprland.monitors.values.find(mm => mm.name === monitorName);
-        return m?.activeWorkspace ? { id: m.activeWorkspace.id } : null;
+        if (monitorName) {
+            const m = Hyprland.monitors.values.find(mm => mm.name === monitorName);
+            if (m?.activeWorkspace) return { id: m.activeWorkspace.id };
+        }
+        const activeOnMon = Hyprland.workspaces.values.find(ws => (!monitorName || (ws.monitor && ws.monitor.name === monitorName)) && ws.active);
+        if (activeOnMon) return { id: activeOnMon.id };
+        return Hyprland.focusedWorkspace ? { id: Hyprland.focusedWorkspace.id } : null;
+    }
+
+    function hasWindowsOnActiveWorkspace(monitorName) {
+        const wsList = Hyprland.workspaces.values.filter(ws => !monitorName || (ws.monitor && ws.monitor.name === monitorName));
+        const activeWs = wsList.find(ws => ws.active);
+        if (activeWs) {
+            if (activeWs.toplevels?.values?.length > 0) return true;
+            if (activeWs.windows !== undefined) return activeWs.windows > 0;
+        }
+        const curWsId = activeWorkspaceForMonitor(monitorName)?.id;
+        if (curWsId !== undefined && curWsId !== null) {
+            return windowList.some(w => w.workspaceId === curWsId);
+        }
+        return false;
     }
 
     function biggestWindowForWorkspace(wsId) {
@@ -79,5 +98,12 @@ Scope {
         function onWindowListChanged() { root.refresh() }
         function onWorkspacesChanged() { root.refresh() }
         function onMonitorsChanged() { root.refresh() }
+        function onActiveWorkspaceChanged() { root.refresh() }
+    }
+
+    Connections {
+        target: Hyprland
+        function onFocusedWorkspaceChanged() { root.refresh() }
+        function onFocusedMonitorChanged() { root.refresh() }
     }
 }

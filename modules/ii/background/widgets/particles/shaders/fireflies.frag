@@ -44,15 +44,14 @@ void main() {
     }
 
     float cellSize = 160.0;
-    vec2 gridCoord = flowCoord / cellSize;
+    vec2 layerCoord = flowCoord + vec2(-windDrift * 35.0, 0.0);
+    vec2 gridCoord = layerCoord / cellSize;
     vec2 currentCell = floor(gridCoord);
 
     bool hasPrimary = primaryColor.a > 0.05;
     bool hasSecondary = secondaryColor.a > 0.05;
     vec3 warmYellow = hasPrimary ? primaryColor.rgb : vec3(0.95, 0.95, 0.35);
     vec3 limeGlow = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(1.0), 0.3) : vec3(0.65, 1.0, 0.25));
-
-    vec2 windOffset = vec2(-windDrift * 35.0, 0.0);
 
     for (int y = -2; y <= 2; y++) {
         for (int x = -2; x <= 2; x++) {
@@ -68,10 +67,10 @@ void main() {
             vec2 drift = vec2(
                 sin(time * (0.5 + 0.3 * rnd.x) + rndPhase * 6.28) * (cellSize * (0.18 + mid * 0.06)),
                 cos(time * (0.4 + 0.4 * rnd.y) + rnd.x * 6.28) * (cellSize * (0.18 + mid * 0.06))
-            ) + windOffset;
+            );
             vec2 particlePos = basePos + drift;
 
-            vec2 p = flowCoord - particlePos;
+            vec2 p = layerCoord - particlePos;
             float dist = length(p);
 
             float pulse = pow(0.5 + 0.5 * sin(time * (1.1 + 1.3 * rnd.y) + rndPhase * 6.28), 2.5);

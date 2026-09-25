@@ -58,6 +58,12 @@ Scope {
         return root.workspaces.find(ws => ws.output === monitorName && ws.is_active) ?? null;
     }
 
+    function hasWindowsOnActiveWorkspace(monitorName) {
+        const ws = activeWorkspaceForMonitor(monitorName);
+        if (!ws) return false;
+        return root.windowList.some(w => w.workspaceId === ws.id);
+    }
+
     function biggestWindowForWorkspace(wsId) {
         const wins = root.windowList.filter(w => w.workspaceId === wsId);
         if (wins.length === 0) return null;

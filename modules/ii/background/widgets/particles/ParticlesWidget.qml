@@ -87,12 +87,83 @@ Item {
     readonly property string fpsCapValue: configEntry?.fpsCap ?? "auto"
     readonly property string pauseModeValue: configEntry?.pauseMode ?? ((configEntry?.pauseFullscreen ?? true) ? "fullscreen" : "none")
 
-    readonly property bool isFullscreenActive: WM.fullscreenOnMonitor(root.screen?.name ?? "")
-    readonly property bool hasWindowsOnWorkspace: {
-        const monitorName = root.screen?.name ?? "";
-        const wsId = WM.activeWorkspaceForMonitor(monitorName)?.id ?? WM.activeWorkspace?.id ?? 1;
-        return WM.windowList.some(w => w.workspaceId === wsId);
+    readonly property var effectiveScreen: root.screen ?? (Quickshell.screens.length > 0 ? Quickshell.screens[0] : null)
+    readonly property string monitorName: root.effectiveScreen?.name ?? ""
+
+    property int stateRevision: 0
+
+    function notifyStateChanged() {
+        root.stateRevision++;
     }
+
+    Connections {
+        target: Hyprland.workspaces
+        enabled: WM.compositor === "hyprland"
+        function onValuesChanged() { root.notifyStateChanged(); }
+    }
+
+    Connections {
+        target: Hyprland
+        enabled: WM.compositor === "hyprland"
+        function onFocusedWorkspaceChanged() { root.notifyStateChanged(); }
+        function onFocusedMonitorChanged() { root.notifyStateChanged(); }
+    }
+
+    Connections {
+        target: HyprlandData
+        enabled: WM.compositor === "hyprland"
+        function onWindowListChanged() { root.notifyStateChanged(); }
+        function onWorkspacesChanged() { root.notifyStateChanged(); }
+        function onActiveWorkspaceChanged() { root.notifyStateChanged(); }
+    }
+
+    Connections {
+        target: WM
+        function onWindowListChanged() { root.notifyStateChanged(); }
+        function onWorkspacesChanged() { root.notifyStateChanged(); }
+        function onActiveWorkspaceChanged() { root.notifyStateChanged(); }
+    }
+
+    readonly property bool isFullscreenActive: {
+        root.stateRevision;
+        if (WM.compositor === "hyprland") {
+            const monName = root.monitorName;
+            const wsList = Hyprland.workspaces?.values || [];
+            const matchingWs = wsList.filter(ws => ws && (!monName || (ws.monitor && ws.monitor.name === monName)));
+            return matchingWs.some(ws => ws.active && (
+                ws.hasfullscreen
+                || (ws.toplevels?.values?.some(w => w.wayland?.fullscreen))
+            ));
+        }
+        return WM.fullscreenOnMonitor(root.monitorName);
+    }
+
+    readonly property bool hasWindowsOnWorkspace: {
+        root.stateRevision;
+        if (WM.compositor === "hyprland") {
+            const monName = root.monitorName;
+            const wsList = Hyprland.workspaces?.values || [];
+            const matchingWs = wsList.filter(ws => ws && (!monName || (ws.monitor && ws.monitor.name === monName)));
+            const activeWs = matchingWs.find(ws => ws.active);
+            if (activeWs) {
+                if (activeWs.toplevels?.values?.length > 0) return true;
+                if (activeWs.windows !== undefined) return activeWs.windows > 0;
+            }
+            const activeId = Hyprland.focusedWorkspace?.id ?? HyprlandData.activeWorkspace?.id ?? WM.activeWorkspace?.id;
+            if (activeId !== undefined && activeId !== null) {
+                const wsById = wsList.find(ws => ws && ws.id === activeId);
+                if (wsById) {
+                    if (wsById.toplevels?.values?.length > 0) return true;
+                    if (wsById.windows !== undefined) return wsById.windows > 0;
+                }
+                const rawWinList = HyprlandData.windowList || [];
+                return rawWinList.some(w => w?.workspace?.id === activeId && !w.hidden);
+            }
+            return false;
+        }
+        return WM.hasWindowsOnActiveWorkspace(root.monitorName);
+    }
+
     readonly property bool isAnimationPaused: {
         if (root.pauseModeValue === "hasWindows") return root.hasWindowsOnWorkspace || root.isFullscreenActive;
         if (root.pauseModeValue === "fullscreen") return root.isFullscreenActive;

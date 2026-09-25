@@ -33,6 +33,7 @@ Variants {
         }
 
         ParticlesWidget {
+            screen: win.screen
             anchors.fill: parent
             screenWidth: win.width
             screenHeight: win.height
