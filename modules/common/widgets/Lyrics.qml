@@ -288,11 +288,14 @@ Item {
                     implicitHeight: 22
                     radius: Appearance.rounding.small
                     color: minusMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4) : ColorUtils.transparentize(Appearance.colors.colLayer1, 0.6)
+                    border.color: ColorUtils.transparentize(root.activeColor, minusMouse.containsMouse ? 0.4 : 0.15)
+                    border.width: 1
 
                     StyledText {
                         anchors.centerIn: parent
                         text: "-"
                         font.pixelSize: Appearance.font.pixelSize.small
+                        font.weight: Font.Bold
                         color: root.dimColor
                     }
 
@@ -305,26 +308,67 @@ Item {
                     }
                 }
 
-                // Current offset display / reset button
+                // Editable offset input box (always visible, click to type, wheel to scroll)
                 Rectangle {
-                    visible: Math.abs(LyricsService.manualOffset) > 0.05
-                    implicitWidth: offsetText.implicitWidth + 8
+                    id: offsetBox
+                    implicitWidth: Math.max(52, offsetInput.implicitWidth + 16)
                     implicitHeight: 22
                     radius: Appearance.rounding.small
-                    color: ColorUtils.transparentize(Appearance.colors.colPrimaryContainer, 0.5)
+                    color: offsetInput.activeFocus
+                        ? ColorUtils.transparentize(root.activeColor, 0.80)
+                        : (offsetBoxMouse.containsMouse
+                            ? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4)
+                            : ColorUtils.transparentize(Appearance.colors.colLayer1, 0.6))
+                    border.color: offsetInput.activeFocus
+                        ? root.activeColor
+                        : ColorUtils.transparentize(root.activeColor, Math.abs(LyricsService.manualOffset) > 0.05 ? 0.4 : 0.15)
+                    border.width: 1
 
-                    StyledText {
-                        id: offsetText
+                    TextInput {
+                        id: offsetInput
                         anchors.centerIn: parent
-                        text: (LyricsService.manualOffset > 0 ? "+" : "") + LyricsService.manualOffset.toFixed(1) + "s"
+                        width: parent.width - 8
+                        horizontalAlignment: TextInput.AlignHCenter
+                        verticalAlignment: TextInput.AlignVCenter
                         font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.colors.colPrimary
+                        font.weight: Font.DemiBold
+                        color: Math.abs(LyricsService.manualOffset) > 0.05 ? root.activeColor : root.dimColor
+                        selectByMouse: true
+                        inputMethodHints: Qt.ImhFormattedNumbersOnly
+
+                        text: {
+                            if (activeFocus) return LyricsService.manualOffset.toString()
+                            const off = LyricsService.manualOffset
+                            return (off > 0 ? "+" : "") + off.toFixed(1) + "s"
+                        }
+
+                        onAccepted: {
+                            LyricsService.setOffset(text.replace(/s$/i, ""))
+                            focus = false
+                        }
+
+                        onEditingFinished: {
+                            LyricsService.setOffset(text.replace(/s$/i, ""))
+                        }
                     }
 
                     MouseArea {
+                        id: offsetBoxMouse
                         anchors.fill: parent
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: LyricsService.resetOffset()
+                        enabled: !offsetInput.activeFocus
+                        hoverEnabled: true
+                        cursorShape: Qt.IBeamCursor
+                        onClicked: {
+                            offsetInput.forceActiveFocus()
+                            offsetInput.selectAll()
+                        }
+                        onWheel: (event) => {
+                            if (event.angleDelta.y > 0) {
+                                LyricsService.adjustOffset(0.5)
+                            } else if (event.angleDelta.y < 0) {
+                                LyricsService.adjustOffset(-0.5)
+                            }
+                        }
                     }
                 }
 
@@ -334,11 +378,14 @@ Item {
                     implicitHeight: 22
                     radius: Appearance.rounding.small
                     color: plusMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4) : ColorUtils.transparentize(Appearance.colors.colLayer1, 0.6)
+                    border.color: ColorUtils.transparentize(root.activeColor, plusMouse.containsMouse ? 0.4 : 0.15)
+                    border.width: 1
 
                     StyledText {
                         anchors.centerIn: parent
                         text: "+"
                         font.pixelSize: Appearance.font.pixelSize.small
+                        font.weight: Font.Bold
                         color: root.dimColor
                     }
 
@@ -348,6 +395,30 @@ Item {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: LyricsService.adjustOffset(0.5)
+                    }
+                }
+
+                // Quick reset button (visible only when offset is not 0)
+                Rectangle {
+                    visible: Math.abs(LyricsService.manualOffset) > 0.05
+                    implicitWidth: 18
+                    implicitHeight: 22
+                    radius: Appearance.rounding.small
+                    color: resetMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.4) : "transparent"
+
+                    StyledText {
+                        anchors.centerIn: parent
+                        text: "×"
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        color: root.dimColor
+                    }
+
+                    MouseArea {
+                        id: resetMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: LyricsService.resetOffset()
                     }
                 }
             }

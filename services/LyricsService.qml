@@ -36,6 +36,13 @@ Singleton {
 
     property real manualOffset: 0.0
 
+    function setOffset(val) {
+        const num = parseFloat(val)
+        if (!isNaN(num)) {
+            root.manualOffset = Math.round(num * 10) / 10
+        }
+    }
+
     function adjustOffset(delta) {
         root.manualOffset = Math.round((root.manualOffset + delta) * 10) / 10
     }
@@ -158,6 +165,9 @@ Singleton {
         target: "lyrics"
         function restart() {
             root.restartLyrics(true)
+        }
+        function setOffset(val) {
+            root.setOffset(val)
         }
         function adjustOffset(delta) {
             root.adjustOffset(delta)
