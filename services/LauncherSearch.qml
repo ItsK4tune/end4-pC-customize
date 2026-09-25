@@ -222,6 +222,33 @@ Singleton {
         }
     }
 
+    function createResult(props) {
+        return resultComp.createObject(root, props);
+    }
+
+    property var _previousResults: []
+    onResultsChanged: {
+        Qt.callLater(() => {
+            const old = root._previousResults;
+            const current = root.results ? [...root.results] : [];
+            root._previousResults = current;
+            if (old && old.length > 0) {
+                const currentSet = new Set(current);
+                for (let i = 0; i < old.length; ++i) {
+                    const item = old[i];
+                    if (item && !currentSet.has(item) && typeof item.destroy === "function") {
+                        if (item.actions && Array.isArray(item.actions)) {
+                            for (let a of item.actions) {
+                                if (a && typeof a.destroy === "function") a.destroy();
+                            }
+                        }
+                        item.destroy();
+                    }
+                }
+            }
+        });
+    }
+
     property list<var> results: {
         // Search results are handled here
         ////////////////// Skip? //////////////////
@@ -239,7 +266,7 @@ Singleton {
                     shouldBlurImage = shouldBlurImage && (root.containsUnsafeLink(array[index - 1]) || root.containsUnsafeLink(array[index + 1]));
                 }
                 const type = `#${entry.match(/^\s*(\S+)/)?.[1] || ""}`;
-                return resultComp.createObject(null, {
+                return createResult({
                     rawValue: entry,
                     name: StringUtils.cleanCliphistEntry(entry),
                     verb: "",
@@ -247,14 +274,14 @@ Singleton {
                     execute: () => {
                         Cliphist.copy(entry);
                     },
-                    actions: [resultComp.createObject(null, {
+                    actions: [createResult({
                             name: Translation.tr("Copy"),
                             iconName: "content_copy",
                             iconType: LauncherSearchResult.IconType.Material,
                             execute: () => {
                                 Cliphist.copy(entry);
                             }
-                        }), resultComp.createObject(null, {
+                        }), createResult({
                             name: Translation.tr("Delete"),
                             iconName: "delete",
                             iconType: LauncherSearchResult.IconType.Material,
@@ -270,7 +297,7 @@ Singleton {
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.emojis);
             return Emojis.fuzzyQuery(searchString).map(entry => {
                 const emoji = entry.match(/^\s*(\S+)/)?.[1] || "";
-                return resultComp.createObject(null, {
+                return createResult({
                     rawValue: entry,
                     name: entry.replace(/^\s*\S+\s+/, ""),
                     iconName: emoji,
@@ -308,7 +335,7 @@ Singleton {
             }).map(bind => {
                 const modsStr = (bind.mods ?? []).join(" + ");
                 const keyStr  = modsStr.length > 0 ? (bind.key ? `${modsStr} + ${bind.key}` : modsStr) : bind.key;
-                return resultComp.createObject(null, {
+                return createResult({
                     name: bind.comment,
                     iconName: "keyboard",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -325,7 +352,7 @@ Singleton {
                             Quickshell.execDetached(["notify-send", "Keybind", "Copied: " + keyStr + " (" + bind.comment + ")", "-a", "Shell", "-i", "input-keyboard"]);
                         }
                     },
-                    actions: [resultComp.createObject(null, {
+                    actions: [createResult({
                         name: Translation.tr("Copy shortcut"),
                         iconName: "content_copy",
                         iconType: LauncherSearchResult.IconType.Material,
@@ -343,7 +370,7 @@ Singleton {
                 const tabIdx = entry.indexOf("\t");
                 const symName = tabIdx >= 0 ? entry.slice(0, tabIdx) : entry;
                 const symTags = tabIdx >= 0 ? entry.slice(tabIdx + 1) : "";
-                return resultComp.createObject(null, {
+                return createResult({
                     rawValue: entry,
                     name: symName,
                     iconName: symName,
@@ -360,7 +387,7 @@ Singleton {
 
         ////////////////// Init ///////////////////
         nonAppResultsTimer.restart();
-        const mathResultObject = resultComp.createObject(null, {
+        const mathResultObject = createResult({
             name: root.mathResult,
             verb: Translation.tr("Copy"),
             type: Translation.tr("Math result"),
@@ -372,7 +399,7 @@ Singleton {
             }
         });
         const appResultObjects = AppSearch.fuzzyQuery(StringUtils.cleanPrefix(root.query, Config.options.search.prefix.app)).map(entry => {
-            return resultComp.createObject(null, {
+            return createResult({
                 type: Translation.tr("App"),
                 id: entry.id,
                 name: entry.name,
@@ -392,7 +419,7 @@ Singleton {
                 genericName: entry.genericName,
                 keywords: entry.keywords,
                 actions: entry.actions.map(action => {
-                    return resultComp.createObject(null, {
+                    return createResult({
                         name: action.name,
                         iconName: action.icon,
                         iconType: LauncherSearchResult.IconType.System,
@@ -416,7 +443,7 @@ Singleton {
             if (query === "") return acc;
 
             if (page.page.toLowerCase().includes(query) || dynamicKeywords.includes(query)) {
-                acc.push(resultComp.createObject(null, {
+                acc.push(createResult({
                     name: page.page,
                     comment: dynamicKeywords.includes(query) ? "Section: " + query : "Settings for " + page.page,
                     verb: Translation.tr("Go"),
@@ -434,7 +461,7 @@ Singleton {
             }
             return acc;
         }, []);
-        const commandResultObject = resultComp.createObject(null, {
+        const commandResultObject = createResult({
             name: StringUtils.cleanPrefix(root.query, Config.options.search.prefix.shellCommand).replace("file://", ""),
             verb: Translation.tr("Run"),
             type: Translation.tr("Command"),
@@ -450,7 +477,7 @@ Singleton {
                 Quickshell.execDetached(["bash", "-c", root.query.startsWith('sudo') ? `${Config.options.apps.terminal} fish -C '${cleanedCommand}'` : cleanedCommand]);
             }
         });
-        const webSearchResultObject = resultComp.createObject(null, {
+        const webSearchResultObject = createResult({
             name: StringUtils.cleanPrefix(root.query, Config.options.search.prefix.webSearch),
             verb: Translation.tr("Search"),
             type: Translation.tr("Web search"),
@@ -468,7 +495,7 @@ Singleton {
         const launcherActionObjects = root.allActions.map(action => {
             const actionString = `${Config.options.search.prefix.action}${action.action}`;
             if (actionString.startsWith(root.query) || root.query.startsWith(actionString)) {
-                return resultComp.createObject(null, {
+                return createResult({
                     name: root.query.startsWith(actionString) ? root.query : actionString,
                     verb: Translation.tr("Run"),
                     type: Translation.tr("Action"),

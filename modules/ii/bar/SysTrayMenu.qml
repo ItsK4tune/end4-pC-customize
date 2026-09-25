@@ -246,7 +246,7 @@ PopupWindow {
 
                 onDismiss: root.close()
                 onOpenSubmenu: handle => {
-                    stackView.push(subMenuComponent.createObject(null, {
+                    stackView.push(subMenuComponent.createObject(stackView, {
                         handle: handle,
                         isSubMenu: true
                     }));

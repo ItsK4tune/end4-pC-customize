@@ -334,7 +334,7 @@ MouseArea {
                 readonly property string cleanedTitle: StringUtils.cleanMusicTitle(activePlayer?.trackTitle) || ""
                 
                 Timer {
-                    running: activePlayer?.playbackState == MprisPlaybackState.Playing
+                    running: activePlayer?.playbackState == MprisPlaybackState.Playing && GlobalStates.screenLocked
                     interval: Config.options.resources.updateInterval
                     repeat: true
                     onTriggered: activePlayer.positionChanged()

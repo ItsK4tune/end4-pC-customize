@@ -129,7 +129,8 @@ Singleton {
     }
 
     Timer {
-        interval: 1
+        triggeredOnStart: true
+        interval: Config.options?.resources?.updateInterval ?? 3000
         running: true
         repeat: true
         onTriggered: {
@@ -176,7 +177,6 @@ Singleton {
             }
 
             root.updateHistories()
-            interval = Config.options?.resources?.updateInterval ?? 3000
         }
     }
 

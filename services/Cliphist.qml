@@ -144,7 +144,8 @@ Singleton {
 
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) {
-                root.entries = readProc.buffer
+                // Limit to recent 300 entries to bound memory usage and keep fuzzy search fast
+                root.entries = readProc.buffer.slice(0, 300);
             } else {
                 root.entries = []
                 console.error("[Cliphist] Failed to refresh with code", exitCode, "and status", exitStatus)

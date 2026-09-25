@@ -223,7 +223,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
         property string imageDecodeFilePath: `${imageDecodePath}/${imageDecodeFileName}`
         function handleEntry(entry: string) {
             imageDecodeFileName = parseInt(entry.match(/^(\d+)\t/)[1]);
-            decodeImageAndAttachProc.exec(["bash", "-c", `[ -f ${imageDecodeFilePath} ] || echo '${StringUtils.shellSingleQuoteEscape(entry)}' | ${Cliphist.cliphistBinary} decode > '${imageDecodeFilePath}'`]);
+            decodeImageAndAttachProc.exec(["bash", "-c", `[ -f "${imageDecodeFilePath}" ] || echo '${StringUtils.shellSingleQuoteEscape(entry)}' | ${Cliphist.cliphistBinary} decode > '${imageDecodeFilePath}'`]);
         }
         onExited: (exitCode, exitStatus) => {
             if (exitCode === 0) {

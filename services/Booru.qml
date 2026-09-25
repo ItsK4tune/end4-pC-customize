@@ -293,11 +293,16 @@ Singleton {
     }
 
     function clearResponses() {
-        responses = []
+        for (let i = 0; i < responses.length; ++i) {
+            if (responses[i] && typeof responses[i].destroy === "function") {
+                responses[i].destroy();
+            }
+        }
+        responses = [];
     }
 
     function addSystemMessage(message) {
-        responses = [...responses, root.booruResponseDataComponent.createObject(null, {
+        responses = [...responses, root.booruResponseDataComponent.createObject(root, {
             "provider": "system",
             "tags": [],
             "page": -1,
@@ -361,7 +366,7 @@ Singleton {
         var url = constructRequestUrl(tags, nsfw, limit, page)
         console.log("[Booru] Making request to " + url)
 
-        const newResponse = root.booruResponseDataComponent.createObject(null, {
+        const newResponse = root.booruResponseDataComponent.createObject(root, {
             "provider": currentProvider,
             "tags": tags,
             "page": page,

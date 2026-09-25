@@ -93,6 +93,13 @@ Singleton {
         NotifTimer {}
     }
 
+    Timer {
+        id: saveNotifDebounce
+        interval: 500
+        repeat: false
+        onTriggered: notifFileView.setText(stringifyList(root.list))
+    }
+
     function stringifyList(list) {
         return JSON.stringify(list.map((notif) => notifToJSON(notif)), null, 2);
     }
@@ -170,7 +177,19 @@ Singleton {
                 "notification": notification,
                 "time": Date.now(),
             });
-			root.list = [...root.list, newNotifObject];
+            let updatedList = [...root.list, newNotifObject];
+            const maxStored = 100;
+            if (updatedList.length > maxStored) {
+                const overflow = updatedList.length - maxStored;
+                for (let i = 0; i < overflow; i++) {
+                    const oldNotif = updatedList[i];
+                    if (oldNotif && !oldNotif.popup) {
+                        oldNotif.destroy();
+                    }
+                }
+                updatedList = updatedList.slice(overflow);
+            }
+            root.list = updatedList;
 
             // Popup
             if (!root.popupInhibited) {
@@ -184,8 +203,8 @@ Singleton {
                 root.unread++;
             }
             root.notify(newNotifObject);
-            // console.log(notifToString(newNotifObject));
-            notifFileView.setText(stringifyList(root.list));
+            // Debounce disk writes to avoid thrashing storage
+            saveNotifDebounce.restart();
         }
     }
 
@@ -206,7 +225,7 @@ Singleton {
         const remaining = root.list.filter((notif) => !idSet.has(notif.notificationId));
         if (remaining.length !== root.list.length) {
             root.list = remaining;
-            notifFileView.setText(stringifyList(root.list));
+            saveNotifDebounce.restart();
         }
         notifServer.trackedNotifications.values
             .filter((notif) => idSet.has(notif.id + root.idOffset))
@@ -217,7 +236,7 @@ Singleton {
     function discardAllNotifications() {
         root.list = []
         triggerListChange()
-        notifFileView.setText(stringifyList(root.list));
+        saveNotifDebounce.restart();
         notifServer.trackedNotifications.values.forEach((notif) => {
             notif.dismiss()
         })
