@@ -6,6 +6,7 @@ import qs.modules.common
 import qs.modules.common.widgets
 import qs.modules.common.functions
 import Quickshell.Hyprland
+import Quickshell.Io
 
 
 ContentPage {
@@ -1230,6 +1231,35 @@ ContentPage {
                 }
             }
 
+            Process {
+                id: bgPickerProc
+                command: [
+                    "bash", "-c",
+                    `
+                    START_DIR="$HOME/Pictures"
+                    [ ! -d "$START_DIR" ] && START_DIR="$HOME"
+                    TITLE="${Translation.tr("Choose Frame Background")}"
+                    if command -v kdialog >/dev/null 2>&1; then
+                        kdialog --getopenfilename "$START_DIR" "image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff" --title "$TITLE"
+                    elif command -v zenity >/dev/null 2>&1; then
+                        zenity --file-selection --file-filter="Images | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff" --title="$TITLE"
+                    fi
+                    `
+                ]
+                stdout: StdioCollector {
+                    id: bgPickerStdout
+                }
+                onExited: (code) => {
+                    if (code === 0) {
+                        let chosenPath = bgPickerStdout.text.trim();
+                        if (chosenPath.length > 0) {
+                            chosenPath = decodeURIComponent(chosenPath.replace(/^file:\/\//, ""));
+                            customImageSection.updateCurrentTarget({ bgPath: chosenPath });
+                        }
+                    }
+                }
+            }
+
             Rectangle {
                 Layout.fillWidth: true
                 visible: (customImageSection.currentTarget?.margin ?? 0) > 0 || ((customImageSection.currentTarget?.division ?? "1x1") !== "1x1" && ((customImageSection.currentTarget?.padding ?? customImageSection.currentTarget?.gap ?? 0) > 0))
@@ -1265,6 +1295,14 @@ ContentPage {
                         border.width: 1
                         border.color: bgDropAreaConfig.containsDrag ? Appearance.colors.colPrimary : "transparent"
 
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (!bgPickerProc.running) bgPickerProc.running = true;
+                            }
+                        }
+
                         RowLayout {
                             anchors.fill: parent
                             anchors.leftMargin: 10
@@ -1288,6 +1326,7 @@ ContentPage {
                             }
 
                             RippleButtonWithIcon {
+                                z: 2
                                 visible: (customImageSection.currentTarget?.bgPath ?? "") !== ""
                                 materialIcon: "close"
                                 mainText: Translation.tr("Clear")

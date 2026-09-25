@@ -6,6 +6,7 @@ import QtQuick.Controls
 import QtQuick.Effects
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.Io
 import qs.services
 import qs.modules.common
 import qs.modules.common.widgets
@@ -222,6 +223,78 @@ AbstractBackgroundWidget {
                 Config.options.background.widgets.customImage.path = path;
             }
             Config.options.background.widgets.customImage.images = currentImages;
+        }
+    }
+
+    property int pickingSlotIndex: -1
+    property bool pickingFrameBg: false
+
+    Process {
+        id: imagePickerProc
+        command: [
+            "bash", "-c",
+            `
+            START_DIR="$HOME/Pictures"
+            [ ! -d "$START_DIR" ] && START_DIR="$HOME"
+            TITLE="${root.pickingFrameBg ? Translation.tr("Choose Frame Background") : Translation.tr("Choose Image")}"
+            if command -v kdialog >/dev/null 2>&1; then
+                kdialog --getopenfilename "$START_DIR" "image/png image/jpeg image/webp image/gif image/avif image/bmp image/svg+xml image/tiff" --title "$TITLE"
+            elif command -v zenity >/dev/null 2>&1; then
+                zenity --file-selection --file-filter="Images | *.png *.jpg *.jpeg *.webp *.gif *.avif *.bmp *.svg *.tiff" --title="$TITLE"
+            fi
+            `
+        ]
+        stdout: StdioCollector {
+            id: pickerStdout
+        }
+        onExited: (code) => {
+            if (code === 0) {
+                let chosenPath = pickerStdout.text.trim();
+                if (chosenPath.length > 0) {
+                    chosenPath = decodeURIComponent(chosenPath.replace(/^file:\/\//, ""));
+                    if (root.pickingFrameBg) {
+                        root.updateInstanceSetting({ bgPath: chosenPath });
+                    } else if (root.pickingSlotIndex >= 0) {
+                        root.setSlotImage(root.pickingSlotIndex, chosenPath);
+                    }
+                }
+            }
+            root.pickingSlotIndex = -1;
+            root.pickingFrameBg = false;
+        }
+    }
+
+    function pickImageForSlot(idx) {
+        if (imagePickerProc.running) return;
+        root.pickingFrameBg = false;
+        root.pickingSlotIndex = idx;
+        imagePickerProc.running = true;
+    }
+
+    function pickImageForFrameBg() {
+        if (imagePickerProc.running) return;
+        root.pickingSlotIndex = -1;
+        root.pickingFrameBg = true;
+        imagePickerProc.running = true;
+    }
+
+    Connections {
+        target: root
+        function onClicked(mouse) {
+            if (mouse.button !== Qt.LeftButton || (mouse.modifiers & Qt.ControlModifier)) return;
+            if (root.dragging) return;
+
+            let pt = root.mapToItem(imageShape, mouse.x, mouse.y);
+            if (pt.x < 0 || pt.x > imageShape.width || pt.y < 0 || pt.y > imageShape.height) return;
+
+            let slots = root.getSlotLayouts(root.division, imageShape.width, imageShape.height, root.padding, root.margin);
+            for (let i = 0; i < slots.length; i++) {
+                let s = slots[i];
+                if (pt.x >= s.x && pt.x <= s.x + s.width && pt.y >= s.y && pt.y <= s.y + s.height) {
+                    root.pickImageForSlot(i);
+                    break;
+                }
+            }
         }
     }
 
@@ -920,6 +993,12 @@ AbstractBackgroundWidget {
                     border.width: 1
                     border.color: bgDropArea.containsDrag ? Appearance.colors.colPrimary : "transparent"
 
+                    MouseArea {
+                        anchors.fill: parent
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.pickImageForFrameBg()
+                    }
+
                     RowLayout {
                         anchors.centerIn: parent
                         spacing: 6
@@ -935,6 +1014,7 @@ AbstractBackgroundWidget {
                         }
                         // Clear bg button
                         Rectangle {
+                            z: 2
                             width: 18
                             height: 18
                             radius: 9
