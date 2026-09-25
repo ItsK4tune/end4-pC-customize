@@ -996,6 +996,62 @@ ContentPage {
                         Config.options.background.widgets.customImage.shape = newValue
                     }
                 }
+                ConfigSelectionArray {
+                    text: Translation.tr("Division")
+                    icon: "dashboard"
+                    currentValue: Config.options.background.widgets.customImage.division ?? "1x1"
+                    onSelected: newValue => {
+                        Config.options.background.widgets.customImage.division = newValue;
+                    }
+                    options: [
+                        {
+                            displayName: Translation.tr("1x1"),
+                            icon: "crop_square",
+                            value: "1x1",
+                        },
+                        {
+                            displayName: Translation.tr("1x2"),
+                            icon: "view_column",
+                            value: "1x2",
+                        },
+                        {
+                            displayName: Translation.tr("2x1"),
+                            icon: "splitscreen",
+                            value: "2x1",
+                        },
+                        {
+                            displayName: Translation.tr("2x2"),
+                            icon: "grid_view",
+                            value: "2x2",
+                        },
+                        {
+                            displayName: Translation.tr("1L+2R"),
+                            icon: "dashboard",
+                            value: "1L-2R",
+                        },
+                        {
+                            displayName: Translation.tr("1T+2B"),
+                            icon: "view_agenda",
+                            value: "1T-2B",
+                        },
+                        {
+                            displayName: Translation.tr("1x3"),
+                            icon: "view_column_2",
+                            value: "1x3",
+                        }
+                    ]
+                }
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    text: Translation.tr("Border Gap")
+                    value: Config.options.background.widgets.customImage.gap ?? 4
+                    usePercentTooltip: false
+                    buttonIcon: "border_inner"
+                    from: 0
+                    to: 24
+                    stopIndicatorValues: [0, 4, 8]
+                    onValueChanged: Config.options.background.widgets.customImage.gap = Math.round(value)
+                }
             }
         }
 
