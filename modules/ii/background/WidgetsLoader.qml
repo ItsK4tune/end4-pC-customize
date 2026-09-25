@@ -167,26 +167,32 @@ Item {
             z: Config.options.background.widgets.customImage.z ?? 0
             visible: Config.options.background.widgets.customImage.enable
 
-            Repeater {
-                model: {
-                    if (!Config.options.background.widgets.customImage.enable) {
-                        return [];
-                    }
-                    let insts = Config.options.background.widgets.customImage.instances;
-                    if (insts && insts.length > 0) {
-                        return insts;
-                    }
-                    if (Config.options.background.widgets.customImage.path !== "") {
-                        return [ Config.options.background.widgets.customImage ];
-                    }
-                    return [];
+            readonly property var currentInstances: Config.options.background.widgets.customImage.instances
+            readonly property bool hasInstances: currentInstances && currentInstances.length > 0
+            readonly property int activeCount: {
+                if (!Config.options.background.widgets.customImage.enable) {
+                    return 0;
                 }
+                if (hasInstances) {
+                    return currentInstances.length;
+                }
+                if (Config.options.background.widgets.customImage.path !== "") {
+                    return 1;
+                }
+                return 0;
+            }
+
+            Repeater {
+                model: customImagesWrapper.activeCount
                 delegate: CustomImage {
-                    required property var modelData
                     required property int index
 
-                    instanceIndex: modelData !== null ? index : -1
-                    instanceConfig: modelData
+                    instanceIndex: customImagesWrapper.hasInstances ? index : -1
+                    instanceConfig: customImagesWrapper.hasInstances
+                        ? ((customImagesWrapper.currentInstances && index < customImagesWrapper.currentInstances.length)
+                            ? customImagesWrapper.currentInstances[index]
+                            : null)
+                        : Config.options.background.widgets.customImage
 
                     screenWidth: root.screen.width
                     screenHeight: root.screen.height
