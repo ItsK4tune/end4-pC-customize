@@ -1,6 +1,7 @@
 import QtQuick
 import Quickshell
 import qs.modules.common
+import qs.services
 import qs
 
 /*
@@ -91,7 +92,10 @@ MouseArea {
 
     Component.onDestruction: {
         var canvas = findCanvas(root.parent)
-        if (canvas) canvas.unregisterWidget(root)
+        if (canvas) {
+            if (root.dragging) canvas.setDragging(false)
+            canvas.unregisterWidget(root)
+        }
     }
 
     Item {

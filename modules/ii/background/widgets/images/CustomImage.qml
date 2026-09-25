@@ -29,13 +29,30 @@ AbstractBackgroundWidget {
     implicitWidth: contentItem.implicitWidth
     implicitHeight: contentItem.implicitHeight
 
+    Timer {
+        id: savePositionTimer
+        interval: 350
+        repeat: false
+        onTriggered: {
+            if (root.instanceIndex >= 0) {
+                root.updateInstanceProperty({
+                    x: Math.round(root.x),
+                    y: Math.round(root.y),
+                    z: Math.round(root.z),
+                    size: root.widgetSize
+                });
+            }
+        }
+    }
+
     onPositionCommitted: {
         if (root.instanceIndex >= 0) {
-            root.updateInstanceProperty({
-                x: root.x,
-                y: root.y,
-                z: root.z
-            });
+            if (root.instanceConfig) {
+                root.instanceConfig.x = Math.round(root.x);
+                root.instanceConfig.y = Math.round(root.y);
+                root.instanceConfig.z = Math.round(root.z);
+            }
+            savePositionTimer.restart();
         }
     }
 
@@ -570,7 +587,10 @@ AbstractBackgroundWidget {
             }
             onResizeFinished: {
                 if (root.instanceIndex >= 0) {
-                    root.updateInstanceProperty({ size: root.widgetSize });
+                    if (root.instanceConfig) {
+                        root.instanceConfig.size = root.widgetSize;
+                    }
+                    savePositionTimer.restart();
                 } else {
                     Config.options.background.widgets.customImage.size = root.widgetSize;
                 }
