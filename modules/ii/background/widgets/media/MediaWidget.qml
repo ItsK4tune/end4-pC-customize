@@ -24,7 +24,7 @@ AbstractBackgroundWidget {
 
     readonly property var playerList: MprisController.players
     property MprisPlayer currentPlayer: MprisController.activePlayer
-    property var artUrl: currentPlayer?.trackArtUrl
+    property var artUrl: MprisController.getEffectiveArtUrl(currentPlayer)
     property string artDownloadLocation: Directories.coverArt
     property string artFileName: Qt.md5(artUrl)
     property string artFilePath: `${artDownloadLocation}/${artFileName}`
@@ -101,7 +101,7 @@ AbstractBackgroundWidget {
             root.downloaded = false
             return
         }
-        if (root.artUrl.startsWith("file://")) {
+        if (String(root.artUrl).startsWith("file://")) {
             root.downloaded = true
             return
         }
@@ -115,7 +115,7 @@ AbstractBackgroundWidget {
         id: coverArtDownloader
         property string targetFile: root.artUrl
         property string artFilePath: root.artFilePath
-        command: ["bash", "-c", `[ -f ${artFilePath} ] || curl -sSL '${targetFile}' -o '${artFilePath}'`]
+        command: ["bash", "-c", `[ -f '${artFilePath}' ] || curl -sSL '${targetFile}' -o '${artFilePath}'`]
         onExited: { root.downloaded = true }
     }
 

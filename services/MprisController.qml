@@ -89,6 +89,27 @@ Singleton {
 		}
 	}
 
+	function getEffectiveArtUrl(player: MprisPlayer): string {
+		if (!player) return "";
+		const art = player.trackArtUrl ?? "";
+		if (art && art.length > 0) return art;
+
+		const meta = player.metadata ?? {};
+		if (meta["mpris:artUrl"]) {
+			const mArt = String(meta["mpris:artUrl"]);
+			if (mArt.length > 0) return mArt;
+		}
+
+		const url = String(meta["xesam:url"] ?? "");
+		if (url) {
+			const ytMatch = url.match(/(?:v=|\/embed\/|youtu\.be\/|\/v\/|\/shorts\/)([a-zA-Z0-9_-]{11})/);
+			if (ytMatch && ytMatch[1]) {
+				return `https://i.ytimg.com/vi/${ytMatch[1]}/hqdefault.jpg`;
+			}
+		}
+		return "";
+	}
+
 	Connections {
 		target: activePlayer
 
@@ -96,9 +117,11 @@ Singleton {
 		function onTrackArtistChanged() { root.updateTrack(); }
 		function onTrackAlbumChanged() { root.updateTrack(); }
 		function onMetadataChanged() { root.updateTrack(); }
+		function onPostTrackChanged() { root.updateTrack(); }
 
 		function onTrackArtUrlChanged() {
-			if (root.activePlayer && root.activeTrack && root.activePlayer.uniqueId == root.activeTrack.uniqueId && root.activePlayer.trackArtUrl != root.activeTrack.artUrl) {
+			const effective = root.getEffectiveArtUrl(root.activePlayer);
+			if (root.activePlayer && root.activeTrack && root.activePlayer.uniqueId == root.activeTrack.uniqueId && effective != root.activeTrack.artUrl) {
 				const r = root.__reverse;
 				root.updateTrack();
 				root.__reverse = r;
@@ -106,13 +129,23 @@ Singleton {
 		}
 	}
 
-	onActivePlayerChanged: this.updateTrack();
+	Timer {
+		id: trackUpdateTimer
+		interval: 50
+		repeat: false
+		onTriggered: root.doUpdateTrack()
+	}
+
+	onActivePlayerChanged: root.doUpdateTrack();
 
 	function updateTrack() {
-		//console.log(`update: ${this.activePlayer?.trackTitle ?? ""} : ${this.activePlayer?.trackArtists}`)
+		trackUpdateTimer.restart();
+	}
+
+	function doUpdateTrack() {
 		this.activeTrack = {
 			uniqueId: this.activePlayer?.uniqueId ?? 0,
-			artUrl: this.activePlayer?.trackArtUrl ?? "",
+			artUrl: root.getEffectiveArtUrl(this.activePlayer),
 			title: this.activePlayer?.trackTitle || Translation.tr("Unknown Title"),
 			artist: this.activePlayer?.trackArtist || Translation.tr("Unknown Artist"),
 			album: this.activePlayer?.trackAlbum || Translation.tr("Unknown Album"),
