@@ -36,7 +36,8 @@ Singleton {
     property string uptime: "0h, 0m"
 
     Timer {
-        interval: 10
+        triggeredOnStart: true
+        interval: 30000
         running: true
         repeat: true
         onTriggered: {
@@ -54,11 +55,10 @@ Singleton {
             if (days > 0)
                 formatted += `${days}d`;
             if (hours > 0)
-            formatted += `${formatted ? ", " : ""}${hours}h`;
+                formatted += `${formatted ? ", " : ""}${hours}h`;
             if (minutes > 0 || !formatted)
                 formatted += `${formatted ? ", " : ""}${minutes}m`;
-                uptime = formatted;
-                interval = Config.options?.resources?.updateInterval ?? 3000;
+            uptime = formatted;
         }
     }
 

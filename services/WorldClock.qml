@@ -101,13 +101,7 @@ Singleton {
     }
     readonly property bool use24h: root.ampmToken === ""
 
-    property var now: new Date()
-    Timer {
-        interval: 1000
-        running: true
-        repeat: true
-        onTriggered: root.now = new Date()
-    }
+    property var now: DateTime.clock.date
 
     property var offsetsMinutes: [0, 0, 0, 0]
 

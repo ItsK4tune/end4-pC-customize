@@ -24,65 +24,16 @@ Singleton {
         }
     }
     
-    Process {
-        id: keywordHarvester
-        property var pendingPages: []
-        property string currentPageName: ""
-        
-        function startHarvesting() {
-            root.settingsKeywordsCache = {}; 
-            pendingPages = root.settingsIndex.slice();
-            next();
-        }
-
-        function next() {
-            if (pendingPages.length === 0) {
-                return;
-            }
-            
-            let currentPage = pendingPages.shift();
-            let fullPath = FileUtils.trimFileProtocol(
-                Quickshell.shellPath("modules/ii/settings/pages/" + currentPage.path)
-            )
-
-            let rawCommand = "grep -oP \"title:\\s*Translation.tr\\(['\\\"].*?['\\\"]\\)\" " + fullPath + " | sed -E \"s/title:\\s*Translation.tr\\(['\\\"](.*)['\\\"]\\)/\\1/g\" | tr '\\n' ' '";
-            
-            command = ["bash", "-c", rawCommand];
-            
-            keywordHarvester.currentPageName = currentPage.page;
-            running = true;
-        }
-
-        onExited: (exitCode, exitStatus) => {
-            keywordHarvester.next();
-        }
-
-        stdout: SplitParser {
-            onRead: data => {
-                let cache = root.settingsKeywordsCache;
-                cache[keywordHarvester.currentPageName] = (cache[keywordHarvester.currentPageName] || "") + " " + data;
-                root.settingsKeywordsCache = cache;
-            }
-        }
-    }
-
-    Component.onCompleted: {
-        keywordHarvester.startHarvesting();
-    }
-
-
-    // https://specifications.freedesktop.org/menu/latest/category-registry.html
-    property list<string> mainRegisteredCategories: ["AudioVideo", "Development", "Education", "Game", "Graphics", "Network", "Office", "Science", "Settings", "System", "Utility"]
-    property list<string> appCategories: DesktopEntries.applications.values.reduce((acc, entry) => {
-        for (const category of entry.categories) {
-            if (!acc.includes(category) && mainRegisteredCategories.includes(category)) {
-                acc.push(category);
-            }
-        }
-        return acc;
-    }, []).sort()
-
-    property var settingsKeywordsCache: ({})
+    property var settingsKeywordsCache: ({
+        "General": "Time Weather Battery Audio Sounds Language Work safety",
+        "Bar": "Screens Show bar on Bar layout Positioning & Styles Dynamic Island Media Notifications Tray Divider Utility buttons Workspaces Resources Media Tooltips",
+        "Desktop": "Wallpaper Centered wallpaper Clock Digital clock settings Cookie clock settings Pixel Clock Settings Quote Custom Image Visualizer Ambient Particles Text Font Colors Widgets Show widgets on Canvas",
+        "Interface": "Transparency Settings Panel Left Sidebar Right Sidebar Quick toggles Sliders Hot Corners Top Bottom Overview Default Settings Dock Buttons & Media Lock screen Security Style: General Style: Blurred Overlay Floating Image Crosshair Region selector (screen snipping/Google Lens) Hint target regions Google Lens Rectangular selection Circle selection On-screen display Wallpaper selector Fonts Color generation",
+        "Services": "AI Networking Music Recognition Save paths Search Prefixes Web search System updates (Arch only)",
+        "Hyprland": "Displays HDR & Color Management Layout Input Keyboard Touchpad Idle Visual & Aesthetics Border Color Management Autostart Apps Animations",
+        "About": "System Info Version Update",
+        "Quick": "Wallpaper & Colors"
+    })
 
     property var settingsIndex: [
         { page: "General",   path: "GeneralConfig.qml" },

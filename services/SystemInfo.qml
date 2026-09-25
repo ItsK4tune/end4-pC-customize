@@ -11,7 +11,7 @@ Singleton {
     property string distroName: "Unknown"
     property string distroId: "unknown"
     property string distroIcon: ""
-    property string username: "user"
+    property string username: Quickshell.env("USER") || "user"
     property string hostname: ""
     property string homeUrl: ""
     property string documentationUrl: ""
@@ -19,13 +19,13 @@ Singleton {
     property string bugReportUrl: ""
     property string privacyPolicyUrl: ""
     property string logo: ""
-    property string desktopEnvironment: ""
-    property string windowingSystem: ""
+    property string desktopEnvironment: Quickshell.env("XDG_CURRENT_DESKTOP") || ""
+    property string windowingSystem: (Quickshell.env("WAYLAND_DISPLAY") || "").length > 0 ? "Wayland" : "X11"
     property string cpu: ""
     property string gpu: ""
     property string memory: ""
     property string disk: ""
-    property string shell: ""
+    property string shell: (Quickshell.env("SHELL") || "").split("/").pop()
     property string packages: ""
     property string installAge: ""
     property string kernelVersion: ""
@@ -35,15 +35,15 @@ Singleton {
         getGpu.running = false;       getGpu.running = true
         getMemory.running = false;    getMemory.running = true
         getDisk.running = false;      getDisk.running = true
-        getShell.running = false;     getShell.running = true
+        root.shell = (Quickshell.env("SHELL") || "").split("/").pop()
         getPackages.running = false;  getPackages.running = true
         getInstallAge.running = false; getInstallAge.running = true
         getKernel.running = false; getKernel.running = true
     }
 
     function refreshHostname() {
-        getHostname.running = false
-        getHostname.running = true
+        fileHostname.reload()
+        root.hostname = fileHostname.text().trim()
     }
 
     Timer {
@@ -52,8 +52,8 @@ Singleton {
         running: true
         repeat: false
         onTriggered: {
-            getUsername.running = true
-            getHostname.running = true
+            fileHostname.reload()
+            root.hostname = fileHostname.text().trim()
             fileOsRelease.reload()
             const textOsRelease = fileOsRelease.text()
 
@@ -103,30 +103,9 @@ Singleton {
         }
     }
 
-    Process {
-        id: getUsername
-        command: ["whoami"]
-        stdout: SplitParser { onRead: data => root.username = data.trim() }
-    }
-
-    Process {
-        id: getHostname
-        command: ["cat", "/etc/hostname"]
-        stdout: SplitParser { onRead: data => root.hostname = data.trim() }
-    }
-
-    Process {
-        id: getDesktopEnvironment
-        running: true
-        command: ["bash", "-c", "echo $XDG_CURRENT_DESKTOP,$WAYLAND_DISPLAY"]
-        stdout: StdioCollector {
-            id: deCollector
-            onStreamFinished: {
-                const [desktop, wayland] = deCollector.text.split(",")
-                root.desktopEnvironment = desktop.trim()
-                root.windowingSystem = wayland.trim().length > 0 ? "Wayland" : "X11"
-            }
-        }
+    FileView {
+        id: fileHostname
+        path: "/etc/hostname"
     }
 
     FileView {
@@ -184,12 +163,6 @@ Singleton {
         stdout: SplitParser { onRead: data => root.disk = data.trim() }
     }
 
-    Process {
-        id: getShell
-        running: false
-        command: ["bash", "-c", "echo $SHELL | awk -F'/' '{print $NF}'"]
-        stdout: SplitParser { onRead: data => root.shell = data.trim() }
-    }
 
     Process {
         id: getPackages
