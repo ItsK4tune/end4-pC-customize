@@ -120,13 +120,82 @@ AbstractBackgroundWidget {
     }
 
     component AvatarImage: Image {
-        source: Config.options.profile.avatarPath !== ""
-            ? "file://" + Config.options.profile.avatarPicture
-            : "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"
+        source: SystemInfo.effectiveAvatar
         sourceSize.width: width * 2
         sourceSize.height: height * 2
         fillMode: Image.PreserveAspectCrop
         onStatusChanged: if (status === Image.Error) visible = false
+    }
+
+    component StatusDot: Rectangle {
+        width: 14
+        height: 14
+        radius: 7
+        color: "#4CAF50"
+        border.width: 2.5
+        border.color: Appearance.colors.colLayer0
+    }
+
+    component InteractiveAvatar: Rectangle {
+        id: avatarContainer
+        property real avatarRadius: width / 2
+        property bool showHoverOverlay: true
+        radius: avatarRadius
+        color: Appearance.colors.colPrimaryContainer
+        border.width: 3
+        border.color: Appearance.colors.colLayer1
+        clip: true
+
+        AvatarImage {
+            id: innerAvatarImg
+            anchors.fill: parent
+            anchors.margins: 2
+        }
+
+        MaterialSymbol {
+            anchors.centerIn: parent
+            text: "account_circle"
+            iconSize: Math.max(16, parent.width * 0.5)
+            color: Appearance.colors.colOnPrimaryContainer
+            visible: innerAvatarImg.status === Image.Error
+        }
+
+        Rectangle {
+            id: avatarEditOverlay
+            anchors.fill: parent
+            radius: parent.radius
+            color: ColorUtils.transparentize(Appearance.colors.colScrim, 0.4)
+            visible: avatarContainer.showHoverOverlay && avatarMouse.containsMouse
+
+            MaterialSymbol {
+                anchors.centerIn: parent
+                text: "photo_camera"
+                iconSize: Math.max(14, parent.width * 0.35)
+                color: Appearance.colors.colOnPrimary
+            }
+        }
+
+        MouseArea {
+            id: avatarMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: SystemInfo.pickAvatar()
+        }
+
+        DropArea {
+            anchors.fill: parent
+            onDropped: (drop) => {
+                if (drop.hasUrls && drop.urls.length > 0) {
+                    const rawUrl = drop.urls[0].toString();
+                    const clean = decodeURIComponent(rawUrl.replace(/^file:\/\//, ""));
+                    if (/\.(png|jpe?g|webp|svg|gif|avif)$/i.test(clean)) {
+                        SystemInfo.setAvatar(clean);
+                        drop.accept();
+                    }
+                }
+            }
+        }
     }
 
     Rectangle {
@@ -155,35 +224,9 @@ AbstractBackgroundWidget {
         // 1x1
         Component {
             id: oneByOneContent
-            Item {
-                id: avatarSingleWrap
+            InteractiveAvatar {
                 anchors.fill: parent
-                layer.enabled: true
-                layer.effect: OpacityMask {
-                    maskSource: Rectangle {
-                        width: avatarSingleWrap.width
-                        height: avatarSingleWrap.height
-                        radius: Appearance.rounding?.verylarge ?? 30
-                    }
-                }
-
-                Rectangle {
-                    anchors.fill: parent
-                    color: Appearance.colors.colLayer0
-                }
-
-                AvatarImage {
-                    id: avatarSingle
-                    anchors.fill: parent
-                }
-
-                MaterialSymbol {
-                    anchors.centerIn: parent
-                    text: "account_circle"
-                    iconSize: 32
-                    color: Appearance.colors.colOnPrimaryContainer
-                    visible: avatarSingle.status === Image.Error
-                }
+                avatarRadius: Appearance.rounding?.verylarge ?? 30
             }
         }
 
@@ -210,36 +253,10 @@ AbstractBackgroundWidget {
                     anchors { fill: parent; margins: 10 }
                     spacing: 12
 
-                    Item {
-                        id: avatarWideWrap
+                    InteractiveAvatar {
                         Layout.preferredWidth: parent.height
                         Layout.preferredHeight: parent.height 
-                        layer.enabled: true
-                        layer.effect: OpacityMask {
-                            maskSource: Rectangle {
-                                width: avatarWideWrap.width
-                                height: avatarWideWrap.height
-                                radius: (Appearance.rounding?.verylarge ?? 30) - 6
-                            }
-                        }
-
-                        Rectangle {
-                            anchors.fill: parent
-                            color: Appearance.colors.colLayer0
-                        }
-
-                        AvatarImage {
-                            id: avatarWide
-                            anchors.fill: parent
-                        }
-
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "account_circle"
-                            iconSize: 32
-                            color: Appearance.colors.colOnPrimaryContainer
-                            visible: avatarWide.status === Image.Error
-                        }
+                        avatarRadius: (Appearance.rounding?.verylarge ?? 30) - 6
                     }
 
                     ColumnLayout {
@@ -515,48 +532,19 @@ AbstractBackgroundWidget {
                     }
                 }
 
-                Rectangle {
+                InteractiveAvatar {
                     id: avatarRect
                     x: root.blurMargin + 16
                     y: contentBox.y - root.avatarSize / 2
                     width: root.avatarSize + 10
                     height: root.avatarSize + 10
-                    radius: width / 2
-                    color: Appearance.colors.colPrimaryContainer
-                    border.width: 3
-                    border.color: Appearance.colors.colLayer1
+                    avatarRadius: width / 2
                     z: 2
 
-                    Image {
-                        id: avatarImage
-                        anchors.fill: parent
+                    StatusDot {
+                        anchors.bottom: parent.bottom
+                        anchors.right: parent.right
                         anchors.margins: 3
-                        source: Config.options.profile.avatarPath !== ""
-                            ? "file://" + Config.options.profile.avatarPicture
-                            : "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"
-                        sourceSize.width: avatarImage.width * 2
-                        sourceSize.height: avatarImage.height * 2
-                        fillMode: Image.PreserveAspectCrop
-                        layer.enabled: true
-                        layer.effect: OpacityMask {
-                            maskSource: Rectangle {
-                                width: avatarRect.width - 6
-                                height: avatarRect.height - 6
-                                radius: (avatarRect.width - 6) / 2
-                            }
-                        }
-                        onStatusChanged: {
-                            if (status === Image.Error)
-                                visible = false
-                        }
-                    }
-
-                    MaterialSymbol {
-                        anchors.centerIn: parent
-                        text: "account_circle"
-                        iconSize: 32
-                        color: Appearance.colors.colOnPrimaryContainer
-                        visible: avatarImage.status === Image.Error
                     }
                 }
 
@@ -577,7 +565,7 @@ AbstractBackgroundWidget {
                     }
                     StyledText {
                         Layout.fillWidth: true
-                        text: "Up • " + DateTime.uptime
+                        text: (SystemInfo.distroName !== "" ? SystemInfo.distroName + " • " : "") + "Up " + DateTime.uptime
                         font.pixelSize: Appearance.font.pixelSize.smaller
                         color: Appearance.colors.colOnLayer1
                         opacity: 0.6
@@ -644,6 +632,20 @@ AbstractBackgroundWidget {
                             cache: false
                             sourceSize: Qt.size(root.snapWidth4, heroWrap.height)
                         }
+
+                        DropArea {
+                            anchors.fill: parent
+                            onDropped: (drop) => {
+                                if (drop.hasUrls && drop.urls.length > 0) {
+                                    const rawUrl = drop.urls[0].toString();
+                                    const clean = decodeURIComponent(rawUrl.replace(/^file:\/\//, ""));
+                                    if (/\.(png|jpe?g|webp|svg|gif|avif)$/i.test(clean)) {
+                                        Config.options.sidebar.bannerImage = clean;
+                                        drop.accept();
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     // Tr settings button
@@ -673,45 +675,19 @@ AbstractBackgroundWidget {
                     }
 
                     // Avatar overlapping
-                    Rectangle {
+                    InteractiveAvatar {
                         id: avatarRect3
                         x: 16
                         y: heroWrap.height - 70
                         width: root.avatarSize + 10
                         height: root.avatarSize + 10
-                        radius: width / 2
-                        color: Appearance.colors.colPrimaryContainer
-                        border.width: 3
-                        border.color: Appearance.colors.colLayer1
+                        avatarRadius: width / 2
                         z: 2
 
-                        Image {
-                            id: avatarImage3
-                            anchors.fill: parent
+                        StatusDot {
+                            anchors.bottom: parent.bottom
+                            anchors.right: parent.right
                             anchors.margins: 3
-                            source: Config.options.profile.avatarPath !== ""
-                                ? "file://" + Config.options.profile.avatarPicture
-                                : "file:///home/" + (Quickshell.env("USER") ?? "user") + "/.face"
-                            sourceSize.width: avatarImage3.width * 2
-                            sourceSize.height: avatarImage3.height * 2
-                            fillMode: Image.PreserveAspectCrop
-                            layer.enabled: true
-                            layer.effect: OpacityMask {
-                                maskSource: Rectangle {
-                                    width: avatarRect3.width - 6
-                                    height: avatarRect3.height - 6
-                                    radius: (avatarRect3.width - 6) / 2
-                                }
-                            }
-                            onStatusChanged: if (status === Image.Error) visible = false
-                        }
-
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "account_circle"
-                            iconSize: 32
-                            color: Appearance.colors.colOnPrimaryContainer
-                            visible: avatarImage3.status === Image.Error
                         }
                     }
 
@@ -724,14 +700,14 @@ AbstractBackgroundWidget {
                             bottom: parent.bottom
                             leftMargin: 16
                             rightMargin: 16
-                            topMargin: 6
-                            bottomMargin: 12
+                            topMargin: 4
+                            bottomMargin: 10
                         }
-                        spacing: 3
+                        spacing: 2
 
                         StyledText {
                             Layout.fillWidth: true
-                            Layout.topMargin: -6
+                            Layout.topMargin: -4
                             Layout.leftMargin: 4
                             text: root.userDisplay
                             font.pixelSize: Appearance.font.pixelSize.normal
@@ -740,8 +716,19 @@ AbstractBackgroundWidget {
                             elide: Text.ElideRight
                         }
 
+                        StyledText {
+                            Layout.fillWidth: true
+                            Layout.leftMargin: 4
+                            text: (Config.options.profile?.descriptionText !== "" ? Config.options.profile?.descriptionText : "") || (SystemInfo.distroName !== "" ? (SystemInfo.distroName + (SystemInfo.kernelVersion !== "" ? " • " + SystemInfo.kernelVersion : "")) : "Linux")
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: Appearance.colors.colOnPrimaryContainer
+                            opacity: 0.65
+                            elide: Text.ElideRight
+                        }
+
                         RowLayout {
                             Layout.fillWidth: true
+                            Layout.topMargin: 2
                             spacing: 10
 
                             ColumnLayout {
@@ -764,7 +751,7 @@ AbstractBackgroundWidget {
 
                             Rectangle {
                                 Layout.preferredWidth: 1
-                                Layout.preferredHeight: 28
+                                Layout.preferredHeight: 24
                                 color: Appearance.colors.colOnPrimaryContainer
                                 opacity: 0.15
                             }
@@ -789,7 +776,7 @@ AbstractBackgroundWidget {
 
                             Rectangle {
                                 Layout.preferredWidth: 1
-                                Layout.preferredHeight: 28
+                                Layout.preferredHeight: 24
                                 color: Appearance.colors.colOnPrimaryContainer
                                 opacity: 0.15
                             }
@@ -806,6 +793,31 @@ AbstractBackgroundWidget {
                                 StyledText {
                                     Layout.alignment: Qt.AlignHCenter
                                     text: "min"
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                    opacity: 0.6
+                                }
+                            }
+
+                            Rectangle {
+                                Layout.preferredWidth: 1
+                                Layout.preferredHeight: 24
+                                color: Appearance.colors.colOnPrimaryContainer
+                                opacity: 0.15
+                            }
+
+                            ColumnLayout {
+                                spacing: 0
+                                StyledText {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: Math.round(ResourceUsage.memoryUsedPercentage * 100) + "%"
+                                    font.pixelSize: Appearance.font.pixelSize.normal
+                                    font.weight: Font.Bold
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                }
+                                StyledText {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: "RAM"
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     color: Appearance.colors.colOnPrimaryContainer
                                     opacity: 0.6
