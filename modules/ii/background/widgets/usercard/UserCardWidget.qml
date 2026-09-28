@@ -16,6 +16,8 @@ AbstractBackgroundWidget {
     configEntryName: "userCard"
     hoverEnabled: true
 
+    readonly property color widgetBorderColor: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(0, 0, 0, 0.12)
+
     readonly property real snapWidth1: 132
     readonly property real snapWidth2: 276
     readonly property real snapWidth3: 276
@@ -132,8 +134,8 @@ AbstractBackgroundWidget {
         height: 14
         radius: 7
         color: "#4CAF50"
-        border.width: 2.5
-        border.color: Appearance.colors.colLayer0
+        border.width: 2
+        border.color: Appearance.colors.colLayer1
     }
 
     component InteractiveAvatar: Rectangle {
@@ -142,8 +144,8 @@ AbstractBackgroundWidget {
         property bool showHoverOverlay: true
         radius: avatarRadius
         color: Appearance.colors.colPrimaryContainer
-        border.width: 2
-        border.color: Appearance.colors.colLayer0Border
+        border.width: 1.5
+        border.color: root.widgetBorderColor
 
         AvatarImage {
             id: innerAvatarImg
@@ -244,6 +246,8 @@ AbstractBackgroundWidget {
                 anchors.fill: parent
                 radius: Appearance.rounding?.verylarge ?? 30
                 color: Appearance.colors.colPrimaryContainer
+                border.width: 1
+                border.color: root.widgetBorderColor
 
                 FastBlurred {
                     anchors.fill: parent
@@ -312,6 +316,8 @@ AbstractBackgroundWidget {
                 anchors.fill: parent
                 radius: Appearance.rounding?.verylarge ?? 30
                 color: Appearance.colors.colPrimaryContainer
+                border.width: 1
+                border.color: root.widgetBorderColor
                 clip: true
 
                 FastBlurred {
@@ -391,7 +397,7 @@ AbstractBackgroundWidget {
                         radius: 12
                         color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                         border.width: 1
-                        border.color: Appearance.colors.colLayer0Border
+                        border.color: root.widgetBorderColor
                         clip: true
 
                         readonly property bool musicAvailable: (MprisController.activePlayer?.trackTitle ?? "").length > 0
@@ -510,7 +516,7 @@ AbstractBackgroundWidget {
                             radius: 10
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colLayer0Border
+                            border.color: root.widgetBorderColor
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -535,7 +541,7 @@ AbstractBackgroundWidget {
                             radius: 10
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colLayer0Border
+                            border.color: root.widgetBorderColor
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -560,7 +566,7 @@ AbstractBackgroundWidget {
                             radius: 10
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colLayer0Border
+                            border.color: root.widgetBorderColor
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -621,7 +627,7 @@ AbstractBackgroundWidget {
                             radius: 19
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colLayer0Border
+                            border.color: root.widgetBorderColor
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
@@ -642,7 +648,7 @@ AbstractBackgroundWidget {
                             radius: 19
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colLayer0Border
+                            border.color: root.widgetBorderColor
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
@@ -663,7 +669,7 @@ AbstractBackgroundWidget {
                             radius: 19
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colLayer0Border
+                            border.color: root.widgetBorderColor
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
@@ -695,6 +701,8 @@ AbstractBackgroundWidget {
                     anchors.fill: parent
                     radius: Appearance.rounding?.verylarge ?? 30
                     color: Appearance.colors.colPrimaryContainer
+                    border.width: 1
+                    border.color: root.widgetBorderColor
                     clip: true
 
                     FastBlurred {
@@ -967,7 +975,7 @@ AbstractBackgroundWidget {
                                 radius: 18
                                 color: "transparent"
                                 border.width: 1
-                                border.color: Appearance.colors.colOnPrimaryContainer
+                                border.color: root.widgetBorderColor
 
                                 MaterialSymbol {
                                     anchors.centerIn: parent
