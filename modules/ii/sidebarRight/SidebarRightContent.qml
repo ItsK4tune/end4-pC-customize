@@ -216,7 +216,6 @@ Item {
                                     id: avatarRect
                                     width: 48; height: 48; radius: width / 2
                                     color: Appearance.colors.colPrimaryContainer
-                                    clip: true
 
                                     Image {
                                         id: avatarImage
@@ -225,6 +224,14 @@ Item {
                                         sourceSize.width: avatarImage.width * 2
                                         sourceSize.height: avatarImage.height * 2
                                         fillMode: Image.PreserveAspectCrop
+                                        layer.enabled: true
+                                        layer.effect: OpacityMask {
+                                            maskSource: Rectangle {
+                                                width: avatarRect.width
+                                                height: avatarRect.height
+                                                radius: avatarRect.radius
+                                            }
+                                        }
                                         onStatusChanged: {
                                             if (status === Image.Error) visible = false
                                         }

@@ -304,7 +304,6 @@ ContentPage {
                         height: 72
                         radius: 36
                         color: Appearance.colors.colPrimaryContainer
-                        clip: true
 
                         Image {
                             id: previewAvatarImg
@@ -313,6 +312,14 @@ ContentPage {
                             sourceSize.width: 144
                             sourceSize.height: 144
                             fillMode: Image.PreserveAspectCrop
+                            layer.enabled: true
+                            layer.effect: OpacityMask {
+                                maskSource: Rectangle {
+                                    width: previewAvatarRect.width
+                                    height: previewAvatarRect.height
+                                    radius: previewAvatarRect.radius
+                                }
+                            }
                             onStatusChanged: if (status === Image.Error) visible = false
                         }
 

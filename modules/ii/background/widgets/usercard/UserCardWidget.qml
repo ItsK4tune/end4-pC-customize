@@ -144,12 +144,19 @@ AbstractBackgroundWidget {
         color: Appearance.colors.colPrimaryContainer
         border.width: 3
         border.color: Appearance.colors.colLayer1
-        clip: true
 
         AvatarImage {
             id: innerAvatarImg
             anchors.fill: parent
             anchors.margins: 2
+            layer.enabled: true
+            layer.effect: OpacityMask {
+                maskSource: Rectangle {
+                    width: innerAvatarImg.width
+                    height: innerAvatarImg.height
+                    radius: Math.max(0, avatarContainer.avatarRadius - 2)
+                }
+            }
         }
 
         MaterialSymbol {
@@ -297,89 +304,20 @@ AbstractBackgroundWidget {
             }
         }
 
-        // 2x2 (original design)
+        // 2x2
         Component {
             id: twoByTwoContent
-            Item {
-                id: outerRect
-                implicitWidth: root.snapWidth3
-                implicitHeight: root.snapHeight3
-
-                Item {
-                    id: bgImage
-                    anchors.fill: parent
-                    visible: false
-
-                    // Only feeds the FastBlur used when widget blur is off
-                    property string effectiveSource: Config.options.background.widgets.blurWidgets ? "" : "file://" + (GlobalStates.screenLocked && Config.options.background.lockWall !== ""
-                        ? Config.options.background.lockWall
-                        : Config.options.background.wallpaperPath)
-
-                    Image {
-                        id: bgImageA
-                        anchors.fill: parent
-                        fillMode: Image.PreserveAspectCrop
-                        sourceSize: Qt.size(root.snapWidth3, root.snapHeight3)
-                        asynchronous: true
-                        cache: false
-                        opacity: 1
-                        Behavior on opacity {
-                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
-                        }
-                    }
-                    Image {
-                        id: bgImageB
-                        anchors.fill: parent
-                        fillMode: Image.PreserveAspectCrop
-                        sourceSize: Qt.size(root.snapWidth3, root.snapHeight3)
-                        asynchronous: true
-                        cache: false
-                        opacity: 0
-                        Behavior on opacity {
-                            NumberAnimation { duration: 400; easing.type: Easing.InOutCubic }
-                        }
-                    }
-
-                    property bool usingA: true
-
-                    onEffectiveSourceChanged: {
-                        if (usingA) {
-                            bgImageB.source = effectiveSource
-                            bgImageB.opacity = 1
-                            bgImageA.opacity = 0
-                        } else {
-                            bgImageA.source = effectiveSource
-                            bgImageA.opacity = 1
-                            bgImageB.opacity = 0
-                        }
-                        usingA = !usingA
-                    }
-
-                    Component.onCompleted: {
-                        bgImageA.source = effectiveSource
-                    }
-                }
-
-                FastBlur {
-                    id: blurredBg
-                    anchors.fill: bgImage
-                    visible: !Config.options.background.widgets.blurWidgets 
-                    source: bgImage
-                    radius: 48
-                    layer.enabled: true
-                    layer.effect: OpacityMask {
-                        maskSource: Rectangle {
-                            width: outerRect.width
-                            height: outerRect.height
-                            radius: Appearance.rounding?.verylarge ?? 30
-                        }
-                    }
-                }
+            Rectangle {
+                id: card2x2
+                anchors.fill: parent
+                radius: Appearance.rounding?.verylarge ?? 30
+                color: Appearance.colors.colPrimaryContainer
+                clip: true
 
                 FastBlurred {
                     anchors.fill: parent
                     blurSource: root.wallpaperItem
-                    cardRadius: Appearance.rounding?.verylarge ?? 30
+                    cardRadius: card2x2.radius
                     tint: Appearance.colors.colLayer1
                     tintOpacity: 0.55
                     trackX: root.x  
@@ -388,188 +326,304 @@ AbstractBackgroundWidget {
                 }
 
                 Rectangle {
-                    anchors.fill: blurredBg
-                    radius: Appearance.rounding?.verylarge ?? 30
-                    color: Appearance.colors.colScrim
-                    opacity: 0.1
+                    anchors.fill: parent
+                    radius: card2x2.radius
+                    color: Appearance.colors.colLayer0
+                    opacity: 0.25
                 }
 
-                Rectangle {
-                    id: contentBox
-                    x: root.blurMargin
-                    y: root.avatarSize / 2 + root.blurMargin + 30
-                    width: 240
-                    color: Appearance.colors.colPrimaryContainer
-                    radius: Appearance.rounding.large
-                    implicitHeight: contentColumn.implicitHeight + 30
+                ColumnLayout {
+                    anchors {
+                        fill: parent
+                        margins: 14
+                    }
+                    spacing: 8
 
-                    ColumnLayout {
-                        id: contentColumn
-                        anchors {
-                            top: parent.top
-                            left: parent.left
-                            right: parent.right
-                            margins: 16
+                    // 1. Header row: Avatar + Name / Distro / Kernel / Uptime
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 12
+
+                        InteractiveAvatar {
+                            id: avatarRect2x2
+                            Layout.preferredWidth: 54
+                            Layout.preferredHeight: 54
+                            avatarRadius: 27
+
+                            StatusDot {
+                                anchors.bottom: parent.bottom
+                                anchors.right: parent.right
+                                anchors.margins: 2
+                            }
                         }
-                        Layout.topMargin: root.avatarSize / 2 + 4
-                        spacing: 10
 
-                        Item {
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: root.avatarSize / 2
-                        }
+                            spacing: 1
 
-                        Item {
-                            Layout.fillWidth: true
-                            implicitHeight: quipRow.implicitHeight
-
-                            RowLayout {
-                                id: quipRow
-                                anchors.fill: parent
-                                spacing: 6
-
-                                MaterialSymbol {
-                                    Layout.alignment: Qt.AlignTop
-                                    Layout.topMargin: 2
-                                    iconSize: Appearance.font.pixelSize.normal
-                                    text: root.currentQuip.icon
-                                    color: Appearance.colors.colOnPrimaryContainer
-                                    opacity: 0.85
-                                }
-
-                                StyledText {
-                                    Layout.fillWidth: true
-                                    wrapMode: Text.WordWrap
-                                    maximumLineCount: 2
-                                    elide: Text.ElideRight
-                                    font.pixelSize: Appearance.font.pixelSize.small
-                                    color: Appearance.colors.colOnPrimaryContainer
-                                    opacity: 0.85
-                                    text: root.currentQuip.text
-                                }
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: root.userDisplay
+                                font.pixelSize: Appearance.font.pixelSize.normal
+                                font.weight: Font.Bold
+                                color: Appearance.colors.colOnPrimaryContainer
+                                elide: Text.ElideRight
                             }
 
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: (SystemInfo.distroName !== "" ? SystemInfo.distroName : "Linux") + " • Up " + DateTime.uptime
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                color: Appearance.colors.colOnPrimaryContainer
+                                opacity: 0.75
+                                elide: Text.ElideRight
+                            }
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                text: (Config.options.profile?.descriptionText !== "" ? Config.options.profile?.descriptionText : "") || (SystemInfo.kernelVersion !== "" ? "Kernel " + SystemInfo.kernelVersion : "Online")
+                                font.pixelSize: Appearance.font.pixelSize.smallest
+                                color: Appearance.colors.colOnPrimaryContainer
+                                opacity: 0.55
+                                elide: Text.ElideRight
+                            }
+                        }
+                    }
+
+                    // 2. Weather Quip / Live Media Player Pill
+                    Rectangle {
+                        id: quipPill
+                        Layout.fillWidth: true
+                        implicitHeight: 34
+                        radius: 12
+                        color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.45)
+                        border.width: 1
+                        border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.75)
+
+                        RowLayout {
+                            anchors {
+                                fill: parent
+                                leftMargin: 10
+                                rightMargin: 10
+                            }
+                            spacing: 8
+
+                            MaterialSymbol {
+                                iconSize: Appearance.font.pixelSize.normal
+                                text: (MprisController.activePlayer?.isPlaying) ? "music_note" : root.currentQuip.icon
+                                color: Appearance.colors.colOnPrimaryContainer
+                                opacity: 0.9
+                            }
+
+                            StyledText {
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                font.pixelSize: Appearance.font.pixelSize.small
+                                color: Appearance.colors.colOnPrimaryContainer
+                                opacity: 0.9
+                                text: {
+                                    if (MprisController.activePlayer?.isPlaying && MprisController.activePlayer?.trackTitle) {
+                                        const title = MprisController.activePlayer.trackTitle;
+                                        const artist = MprisController.activePlayer.trackArtist ? " • " + MprisController.activePlayer.trackArtist : "";
+                                        return title + artist;
+                                    }
+                                    return root.currentQuip.text;
+                                }
+                            }
+                        }
+
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            hoverEnabled: true
+                            onClicked: {
+                                if (MprisController.activePlayer?.isPlaying) {
+                                    MprisController.activePlayer.playPause();
+                                } else {
+                                    WeatherQuips.shuffle();
+                                }
+                            }
+                        }
+                    }
+
+                    // 3. Live Hardware Stats Row (RAM, CPU, Disk)
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 32
+                            radius: 10
+                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.45)
+                            border.width: 1
+                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.8)
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                MaterialSymbol {
+                                    iconSize: 15
+                                    text: "memory"
+                                    color: Appearance.colors.colPrimary
+                                }
+                                StyledText {
+                                    text: Math.round(ResourceUsage.memoryUsedPercentage * 100) + "%"
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 32
+                            radius: 10
+                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.45)
+                            border.width: 1
+                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.8)
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                MaterialSymbol {
+                                    iconSize: 15
+                                    text: "speed"
+                                    color: Appearance.colors.colSecondary
+                                }
+                                StyledText {
+                                    text: Math.round(ResourceUsage.cpuUsage * 100) + "%"
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 32
+                            radius: 10
+                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.45)
+                            border.width: 1
+                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.8)
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 4
+                                MaterialSymbol {
+                                    iconSize: 15
+                                    text: "hard_drive"
+                                    color: Appearance.colors.colTertiary
+                                }
+                                StyledText {
+                                    text: Math.round(ResourceUsage.diskUsedPercentage * 100) + "%"
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                }
+                            }
+                        }
+                    }
+
+                    Item { Layout.fillHeight: true }
+
+                    // 4. Action buttons: Lock, Shuffle Quip, Settings, Power
+                    RowLayout {
+                        Layout.fillWidth: true
+                        spacing: 8
+
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: 38
+                            radius: Appearance.rounding.full
+                            color: Appearance.colors.colOnPrimaryContainer
+
+                            RowLayout {
+                                anchors.centerIn: parent
+                                spacing: 6
+                                MaterialSymbol {
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    text: "lock"
+                                    color: Appearance.colors.colPrimaryContainer
+                                }
+                                StyledText {
+                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colPrimaryContainer
+                                    text: GlobalStates.screenLocked ? "Locked" : "Lock"
+                                }
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: GlobalStates.screenLocked = true
+                            }
+                        }
+
+                        Rectangle {
+                            implicitWidth: 38
+                            implicitHeight: 38
+                            radius: 19
+                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.4)
+                            border.width: 1
+                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.7)
+
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                iconSize: Appearance.font.pixelSize.normal
+                                text: "casino"
+                                color: Appearance.colors.colOnPrimaryContainer
+                            }
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: WeatherQuips.shuffle()
                             }
-                        } 
+                        }
 
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.topMargin: 4
-                            spacing: 8
+                        Rectangle {
+                            implicitWidth: 38
+                            implicitHeight: 38
+                            radius: 19
+                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.4)
+                            border.width: 1
+                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.7)
 
-                            Rectangle {
-                                Layout.fillWidth: true
-                                implicitHeight: 40
-                                radius: Appearance.rounding.full
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                iconSize: Appearance.font.pixelSize.normal
+                                text: "settings"
                                 color: Appearance.colors.colOnPrimaryContainer
-
-                                RowLayout {
-                                    anchors.centerIn: parent
-                                    spacing: 4
-                                    MaterialSymbol {
-                                        iconSize: Appearance.font.pixelSize.normal
-                                        text: "lock"
-                                        color: Appearance.colors.colPrimaryContainer
-                                    }
-                                    StyledText {
-                                        font.pixelSize: Appearance.font.pixelSize.small
-                                        font.weight: Font.DemiBold
-                                        color: Appearance.colors.colPrimaryContainer
-                                        text: GlobalStates.screenLocked ? "Locked" : "Lock"
-                                    }
-                                }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: GlobalStates.screenLocked = true
-                                }
                             }
-
-                            Rectangle {
-                                implicitWidth: 40
-                                implicitHeight: 40
-                                radius: 20
-                                color: "transparent"
-                                border.width: 1
-                                border.color: Appearance.colors.colOnPrimaryContainer
-                                MaterialSymbol {
-                                    anchors.centerIn: parent
-                                    iconSize: Appearance.font.pixelSize.normal
-                                    text: "settings"
-                                    color: Appearance.colors.colOnPrimaryContainer
-                                }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: GlobalStates.settingsOpen = true
-                                }
-                            }
-
-                            Rectangle {
-                                implicitWidth: 40
-                                implicitHeight: 40
-                                radius: 20
-                                color: "transparent"
-                                border.width: 1
-                                border.color: Appearance.colors.colOnPrimaryContainer
-                                MaterialSymbol {
-                                    anchors.centerIn: parent
-                                    iconSize: Appearance.font.pixelSize.normal
-                                    text: "power_settings_new"
-                                    color: Appearance.colors.colOnPrimaryContainer
-                                }
-                                MouseArea {
-                                    anchors.fill: parent
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: GlobalStates.sessionOpen = true
-                                }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: GlobalStates.settingsOpen = true
                             }
                         }
-                    }
-                }
 
-                InteractiveAvatar {
-                    id: avatarRect
-                    x: root.blurMargin + 16
-                    y: contentBox.y - root.avatarSize / 2
-                    width: root.avatarSize + 10
-                    height: root.avatarSize + 10
-                    avatarRadius: width / 2
-                    z: 2
+                        Rectangle {
+                            implicitWidth: 38
+                            implicitHeight: 38
+                            radius: 19
+                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.4)
+                            border.width: 1
+                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.7)
 
-                    StatusDot {
-                        anchors.bottom: parent.bottom
-                        anchors.right: parent.right
-                        anchors.margins: 3
-                    }
-                }
-
-                ColumnLayout {
-                    x: avatarRect.x + avatarRect.width + 13
-                    y: avatarRect.y + (avatarRect.height - implicitHeight) / 2 + 20
-                    spacing: 0
-                    z: 2
-                    width: outerRect.width - x - root.blurMargin
-
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: root.userDisplay
-                        font.pixelSize: Appearance.font.pixelSize.small
-                        font.weight: Font.DemiBold
-                        color: Appearance.colors.colOnLayer1
-                        elide: Text.ElideRight
-                    }
-                    StyledText {
-                        Layout.fillWidth: true
-                        text: (SystemInfo.distroName !== "" ? SystemInfo.distroName + " • " : "") + "Up " + DateTime.uptime
-                        font.pixelSize: Appearance.font.pixelSize.smaller
-                        color: Appearance.colors.colOnLayer1
-                        opacity: 0.6
-                        elide: Text.ElideRight
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                iconSize: Appearance.font.pixelSize.normal
+                                text: "power_settings_new"
+                                color: Appearance.colors.colOnPrimaryContainer
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: GlobalStates.sessionOpen = true
+                            }
+                        }
                     }
                 }
             }
