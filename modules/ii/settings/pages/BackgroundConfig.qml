@@ -2323,7 +2323,16 @@ ContentPage {
                             name: Translation.tr("Sticker"),
                             enabled: Config.options.background.widgets.sticker.enable
                         },
-                        
+                        {
+                            icon: "title",
+                            name: Translation.tr("Custom Text"),
+                            enabled: Config.options.background.widgets.customText?.enable ?? false
+                        },
+                        {
+                            icon: "pets",
+                            name: Translation.tr("Desktop Pet"),
+                            enabled: Config.options.background.widgets.pet?.enable ?? false
+                        },
                     ]
                     delegate: Rectangle {
                         Layout.fillWidth: true
@@ -2374,6 +2383,14 @@ ContentPage {
                                             Config.options.background.widgets.timers.enable = checked
                                         else if (modelData.icon === "sticker")
                                             Config.options.background.widgets.sticker.enable = checked
+                                        else if (modelData.icon === "title")
+                                            Config.options.background.widgets.customText.enable = checked
+                                        else if (modelData.icon === "pets") {
+                                            if (Config.options.background.widgets.pet)
+                                                Config.options.background.widgets.pet.enable = checked
+                                            else
+                                                Config.setNestedValue("background.widgets.pet.enable", checked)
+                                        }
                                     }
                                 }
                             }
