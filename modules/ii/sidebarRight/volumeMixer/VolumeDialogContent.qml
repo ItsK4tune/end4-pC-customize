@@ -38,6 +38,16 @@ ColumnLayout {
         }
     }
 
+    Visualizer {
+        Layout.fillWidth: true
+        Layout.preferredHeight: 24
+        visible: root.isSink && (MprisController.activePlayer?.isPlaying ?? false)
+        barCount: 28
+        dotSize: 4
+        dotSpacing: 3
+        barColor: Appearance.colors.colPrimary
+    }
+
     StyledComboBox {
         id: deviceSelector
         Layout.fillHeight: false

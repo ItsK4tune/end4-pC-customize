@@ -44,6 +44,13 @@ Item {
 
     property var allCommands: [
         {
+            name: "vision",
+            description: Translation.tr("Capture screen and attach for vision analysis"),
+            execute: args => {
+                Ai.captureScreenAndAttach(args.join(" ").trim());
+            }
+        },
+        {
             name: "attach",
             description: Translation.tr("Attach a file. Only works with Gemini."),
             execute: args => {
@@ -737,6 +744,10 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                         name: "",
                         sendDirectly: false,
                         dontAddSpace: true
+                    },
+                    {
+                        name: "vision",
+                        sendDirectly: false
                     },
                     {
                         name: "clear",

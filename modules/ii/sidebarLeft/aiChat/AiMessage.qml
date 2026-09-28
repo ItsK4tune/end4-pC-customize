@@ -20,7 +20,29 @@ Rectangle {
     property bool renderMarkdown: true
     property bool editing: false
 
-    property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.messageData?.content)
+    property string throttledContent: root.messageData?.content ?? ""
+    property list<var> messageBlocks: StringUtils.splitMarkdownBlocks(root.throttledContent)
+
+    Timer {
+        id: throttleTimer
+        interval: 60
+        repeat: false
+        onTriggered: {
+            root.throttledContent = root.messageData?.content ?? ""
+        }
+    }
+
+    Connections {
+        target: root.messageData ?? null
+        function onContentChanged() {
+            if (root.messageData?.done) {
+                throttleTimer.stop()
+                root.throttledContent = root.messageData.content
+            } else if (!throttleTimer.running) {
+                throttleTimer.restart()
+            }
+        }
+    }
 
     anchors.left: parent?.left
     anchors.right: parent?.right

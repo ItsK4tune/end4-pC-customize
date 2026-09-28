@@ -923,4 +923,43 @@ Singleton {
             getSavedChats.running = true;
         }
     }
+
+    function captureScreenAndAttach(prompt = "") {
+        const tempPath = "/tmp/quickshell/ai/screenshot_vision.png";
+        const cmd = ["bash", "-c", `mkdir -p /tmp/quickshell/ai && grim '${tempPath}'`];
+        Quickshell.execDetached(cmd);
+        screenVisionTimer.prompt = prompt;
+        screenVisionTimer.tempPath = tempPath;
+        screenVisionTimer.restart();
+    }
+
+    Timer {
+        id: screenVisionTimer
+        interval: 150
+        repeat: false
+        property string prompt: ""
+        property string tempPath: ""
+        onTriggered: {
+            root.attachFile(screenVisionTimer.tempPath);
+            if (screenVisionTimer.prompt.length > 0) {
+                root.sendUserMessage(screenVisionTimer.prompt);
+            }
+        }
+    }
+
+    IpcHandler {
+        target: "aiService"
+
+        function ask(prompt: string): void {
+            root.sendUserMessage(prompt);
+        }
+
+        function captureAndAsk(prompt: string): void {
+            root.captureScreenAndAttach(prompt);
+        }
+
+        function clear(): void {
+            root.clearMessages();
+        }
+    }
 }

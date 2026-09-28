@@ -209,6 +209,44 @@ RippleButton {
                         }
                     }
                 }
+                Loader { // Pin badge for pinned clipboard entry
+                    visible: !!root.cliphistRawString && Cliphist.isPinned(root.cliphistRawString)
+                    active: visible
+                    sourceComponent: Rectangle {
+                        implicitWidth: pinText.implicitHeight
+                        implicitHeight: pinText.implicitHeight
+                        radius: Appearance.rounding.full
+                        color: Appearance.colors.colSecondaryContainer
+                        MaterialSymbol {
+                            id: pinText
+                            anchors.centerIn: parent
+                            text: "push_pin"
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            color: Appearance.colors.colOnSecondaryContainer
+                        }
+                    }
+                }
+                Loader { // Color chip preview for hex colors
+                    visible: !!root.cliphistRawString && Cliphist.entryType(root.cliphistRawString) === "color"
+                    active: visible
+                    sourceComponent: Rectangle {
+                        implicitWidth: 16
+                        implicitHeight: 16
+                        radius: 8
+                        color: root.itemName.match(/#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})/)?.[0] ?? "transparent"
+                        border.width: 1
+                        border.color: Appearance.colors.colOutlineVariant
+                    }
+                }
+                Loader { // Code badge for code snippets
+                    visible: !!root.cliphistRawString && Cliphist.entryType(root.cliphistRawString) === "code"
+                    active: visible
+                    sourceComponent: MaterialSymbol {
+                        text: "code"
+                        font.pixelSize: Appearance.font.pixelSize.small
+                        color: Appearance.colors.colSecondary
+                    }
+                }
                 Repeater { // Favicons for links
                     model: root.query == root.itemName ? [] : root.urls
                     Favicon {

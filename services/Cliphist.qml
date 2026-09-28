@@ -24,28 +24,54 @@ Singleton {
     }))
 
     function fuzzyQuery(search: string): var {
+        let base;
         if (search.trim() === "") {
-            return entries;
-        }
-        if (root.sloppySearch) {
+            base = entries;
+        } else if (root.sloppySearch) {
             const results = entries.slice(0, 100).map(str => ({
                 entry: str,
                 score: Levendist.computeTextMatchScore(str.toLowerCase(), search.toLowerCase())
             })).filter(item => item.score > root.scoreThreshold)
                 .sort((a, b) => b.score - a.score)
-            return results.map(item => item.entry)
+            base = results.map(item => item.entry);
+        } else {
+            base = Fuzzy.go(search, preparedEntries, {
+                all: true,
+                key: "name"
+            }).map(r => r.obj.entry);
         }
-
-        return Fuzzy.go(search, preparedEntries, {
-            all: true,
-            key: "name"
-        }).map(r => {
-            return r.obj.entry
-        });
+        if (root.pinnedEntries.length === 0) return base;
+        const matchingPins = root.pinnedEntries.filter(p => base.includes(p));
+        const nonPins = base.filter(e => !root.pinnedEntries.includes(e));
+        return [...matchingPins, ...nonPins];
     }
 
     function entryIsImage(entry) {
         return !!(/^\d+\t\[\[.*binary data.*\d+x\d+.*\]\]$/.test(entry))
+    }
+
+    function entryType(entry) {
+        if (!entry) return "text";
+        if (entryIsImage(entry)) return "image";
+        const content = entry.replace(/^\s*\S+\s+/, "").trim();
+        if (/^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$/.test(content)) return "color";
+        if (/^https?:\/\/[^\s]+$/.test(content)) return "url";
+        if (/(?:function\s+|const\s+|let\s+|var\s+|import\s+|class\s+|def\s+|\{\s*[\r\n]|;\s*$)/m.test(content)) return "code";
+        return "text";
+    }
+
+    property var pinnedEntries: []
+
+    function isPinned(entry) {
+        return pinnedEntries.includes(entry);
+    }
+
+    function togglePin(entry) {
+        if (isPinned(entry)) {
+            pinnedEntries = pinnedEntries.filter(e => e !== entry);
+        } else {
+            pinnedEntries = [entry, ...pinnedEntries];
+        }
     }
 
     function refresh() {

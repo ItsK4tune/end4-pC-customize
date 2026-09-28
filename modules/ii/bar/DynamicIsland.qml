@@ -27,6 +27,7 @@ Item {
     readonly property real mediaExpandedWidth: Math.min(root.mediaExpandedWidthCap, root.mediaTextContentWidth)
     readonly property real mediaWidth: root.mediaTrackInfoVisible ? root.mediaExpandedWidth : root.mediaCollapsedWidth
     readonly property real timerWidth: 130
+    readonly property real recordingWidth: 140
     readonly property real osdWidth: 132
     readonly property real notificationWidth: 220
     readonly property real batteryWidth: 170
@@ -286,7 +287,15 @@ Item {
                 if (coolingDown) return
                 coolingDown = true
                 idleToggleDebounceTimer.restart()
-                root.forceIdle = !root.forceIdle
+                if (root.activeContentId === "media" || root.activeContentId === "osd") {
+                    if (event.angleDelta.y > 0) {
+                        Audio.incrementVolume();
+                    } else if (event.angleDelta.y < 0) {
+                        Audio.decrementVolume();
+                    }
+                } else {
+                    root.forceIdle = !root.forceIdle;
+                }
             }
         }
 

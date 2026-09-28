@@ -275,6 +275,13 @@ Singleton {
                         Cliphist.copy(entry);
                     },
                     actions: [createResult({
+                            name: Cliphist.isPinned(entry) ? Translation.tr("Unpin") : Translation.tr("Pin"),
+                            iconName: Cliphist.isPinned(entry) ? "keep_off" : "push_pin",
+                            iconType: LauncherSearchResult.IconType.Material,
+                            execute: () => {
+                                Cliphist.togglePin(entry);
+                            }
+                        }), createResult({
                             name: Translation.tr("Copy"),
                             iconName: "content_copy",
                             iconType: LauncherSearchResult.IconType.Material,
