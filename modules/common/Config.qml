@@ -501,6 +501,12 @@ Singleton {
                         property real z: 0
                         property string petType: "cat"
                         property real petScale: 1.0
+                        property string backgroundStyle: "glass" // "glass", "transparent", "solid", "dim"
+                        property bool canWander: true
+                        property int wanderInterval: 45 // seconds
+                        property string aiProvider: "gemini" // "gemini", "openai", "builtin"
+                        property string aiApiKey: ""
+                        property string aiPrompt: "You are a cute, affectionate, playful desktop cat pet. You talk warmly, use cute pet expressions like 'meow~', '*purrs*', '*tilts head*', keep answers brief (1-2 sentences), and care deeply about your human friend."
                         property bool showSpeechBubble: true
                         property bool reactToMusic: true
                         property bool reactToSystem: true

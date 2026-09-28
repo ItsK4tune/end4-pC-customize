@@ -4,9 +4,11 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.Io
 import qs
 import qs.services
 import qs.modules.common
+import qs.modules.common.functions
 import qs.modules.common.widgets
 import qs.modules.ii.background.widgets
 
@@ -17,10 +19,13 @@ AbstractBackgroundWidget {
 
     readonly property real petScale: configEntry?.petScale ?? 1.0
     readonly property string petType: configEntry?.petType ?? "cat"
+    readonly property string backgroundStyle: configEntry?.backgroundStyle ?? "glass" // "glass", "transparent", "solid", "dim"
     readonly property bool showSpeechBubble: configEntry?.showSpeechBubble ?? true
     readonly property bool reactToMusic: configEntry?.reactToMusic ?? true
     readonly property bool reactToSystem: configEntry?.reactToSystem ?? true
     readonly property bool reactToWeather: configEntry?.reactToWeather ?? true
+    readonly property bool canWander: configEntry?.canWander ?? true
+    readonly property int wanderInterval: (configEntry?.wanderInterval ?? 45) * 1000
 
     implicitWidth: 190 * petScale
     implicitHeight: 170 * petScale
@@ -37,7 +42,11 @@ AbstractBackgroundWidget {
         (Weather.currentCondition?.toLowerCase() ?? "").includes("drizzle") ||
         (Weather.currentCondition?.toLowerCase() ?? "").includes("shower")
     )
-    property bool isSleeping: idleSeconds > 35 && !isDancing && !isPetted
+    property bool isWalking: false
+    property bool facingLeft: false
+    property string wanderQuip: ""
+    property string customSpeechText: ""
+    property bool isSleeping: idleSeconds > 35 && !isDancing && !isPetted && !isWalking
 
     property int idleSeconds: 0
     Timer {
@@ -46,7 +55,7 @@ AbstractBackgroundWidget {
         repeat: true
         running: true
         onTriggered: {
-            if (!root.containsMouse && !root.dragging) {
+            if (!root.containsMouse && !root.dragging && !chatOverlay.visible) {
                 root.idleSeconds++;
             }
         }
@@ -88,11 +97,77 @@ AbstractBackgroundWidget {
         root.petHeartCount++;
         pettedCooldown.restart();
         heartBurstAnim.restart();
+        bubbleDisplayTimer.interval = 4000;
         bubbleDisplayTimer.restart();
+    }
+
+    // Smooth movement animations for wandering
+    NumberAnimation {
+        id: wanderAnimX
+        target: root
+        property: "x"
+        easing.type: Easing.InOutQuad
+    }
+    NumberAnimation {
+        id: wanderAnimY
+        target: root
+        property: "y"
+        easing.type: Easing.InOutQuad
+        onFinished: {
+            root.isWalking = false;
+            root.commitPosition();
+            wanderCooldownTimer.interval = Math.floor(Math.random() * 20000) + root.wanderInterval;
+            wanderCooldownTimer.restart();
+        }
+    }
+
+    Timer {
+        id: wanderCooldownTimer
+        interval: root.wanderInterval
+        repeat: true
+        running: root.canWander && !root.dragging && !root.isSleeping && !root.isDancing && !chatOverlay.visible
+        onTriggered: {
+            if (root.dragging || root.isSleeping || root.isDancing || chatOverlay.visible || root.containsMouse) return;
+
+            // Pick a destination on screen
+            var minX = 60;
+            var maxX = Math.max(minX + 50, root.scaledScreenWidth - root.width - 60);
+            var minY = 80;
+            var maxY = Math.max(minY + 50, root.scaledScreenHeight - root.height - 80);
+
+            var nextX = Math.floor(Math.random() * (maxX - minX)) + minX;
+            var nextY = Math.floor(Math.random() * (maxY - minY)) + minY;
+
+            var dist = Math.hypot(nextX - root.x, nextY - root.y);
+            if (dist < 40) return; // too close
+
+            var duration = Math.max(2200, Math.min(5000, dist * 6));
+
+            root.facingLeft = (nextX < root.x);
+            root.isWalking = true;
+
+            const wanderQuips = ["*tiptoeing~*", "*sniffing around*", "*pitter-patter*", "*wandering*", "*exploring*", "🐾"];
+            root.wanderQuip = wanderQuips[Math.floor(Math.random() * wanderQuips.length)];
+            bubbleDisplayTimer.interval = duration;
+            bubbleDisplayTimer.restart();
+
+            wanderAnimX.duration = duration;
+            wanderAnimX.from = root.x;
+            wanderAnimX.to = nextX;
+
+            wanderAnimY.duration = duration;
+            wanderAnimY.from = root.y;
+            wanderAnimY.to = nextY;
+
+            wanderAnimX.restart();
+            wanderAnimY.restart();
+        }
     }
 
     // Speech bubble dynamic messages
     readonly property string speechText: {
+        if (root.customSpeechText !== "") return root.customSpeechText;
+        if (root.isWalking && root.wanderQuip !== "") return root.wanderQuip;
         if (root.isPetted) {
             const petQuips = ["Purrrr! <3", "Meow meow~", "You are the best!", "*nuzzles hand*", "Nyaa~ <3"];
             return petQuips[root.petHeartCount % petQuips.length];
@@ -116,21 +191,49 @@ AbstractBackgroundWidget {
         return "Meow! Welcome!";
     }
 
-    // Glass backdrop pod
-    FastBlurred {
-        id: podBg
+    // Pod backdrop container
+    Item {
+        id: podContainer
         anchors.fill: parent
         anchors.margins: 6
-        cardRadius: 28 * root.petScale
-        blurSource: root.wallpaperItem
-        tint: Appearance.colors.colLayer0
-        tintOpacity: 0.35
+        visible: root.backgroundStyle !== "transparent"
 
+        // 1. Glass acrylic option
+        FastBlurred {
+            id: podBg
+            anchors.fill: parent
+            visible: root.backgroundStyle === "glass"
+            cardRadius: 28 * root.petScale
+            blurSource: root.wallpaperItem
+            tint: Appearance.colors.colLayer0
+            tintOpacity: 0.35
+
+            Rectangle {
+                anchors.fill: parent
+                radius: podBg.cardRadius
+                color: "transparent"
+                border.color: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(0, 0, 0, 0.12)
+                border.width: 1
+            }
+        }
+
+        // 2. Solid card option
         Rectangle {
             anchors.fill: parent
-            radius: podBg.cardRadius
-            color: "transparent"
-            border.color: Appearance.colors.colOutlineVariant
+            visible: root.backgroundStyle === "solid"
+            radius: 28 * root.petScale
+            color: Appearance.colors.colPrimaryContainer
+            border.color: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(0, 0, 0, 0.12)
+            border.width: 1
+        }
+
+        // 3. Dim dark translucent option
+        Rectangle {
+            anchors.fill: parent
+            visible: root.backgroundStyle === "dim"
+            radius: 28 * root.petScale
+            color: Qt.rgba(0, 0, 0, 0.5)
+            border.color: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.25) : Qt.rgba(0, 0, 0, 0.15)
             border.width: 1
         }
     }
@@ -155,10 +258,10 @@ AbstractBackgroundWidget {
         id: speechBubble
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.top: parent.top
-        anchors.topMargin: -8
-        width: Math.min(180 * root.petScale, bubbleText.implicitWidth + 24)
-        height: 28 * root.petScale
-        visible: root.showSpeechBubble && (root.isPetted || root.isDancing || root.isSweating || root.isSleeping || bubbleDisplayTimer.running)
+        anchors.topMargin: -14
+        width: Math.min(220 * root.petScale, Math.max(70, bubbleText.implicitWidth + 24))
+        height: Math.max(28 * root.petScale, bubbleText.implicitHeight + 10)
+        visible: root.showSpeechBubble && (root.isPetted || root.isDancing || root.isSweating || root.isSleeping || root.isWalking || root.customSpeechText !== "" || bubbleDisplayTimer.running)
         scale: visible ? 1.0 : 0.8
         opacity: visible ? 1.0 : 0.0
         Behavior on opacity { NumberAnimation { duration: 200 } }
@@ -174,12 +277,16 @@ AbstractBackgroundWidget {
             Text {
                 id: bubbleText
                 anchors.centerIn: parent
+                anchors.margins: 6
+                width: Math.min(implicitWidth, 200 * root.petScale)
+                wrapMode: Text.WordWrap
                 text: root.speechText
                 color: Appearance.colors.colOnPrimaryContainer
                 font.pixelSize: Math.max(9, Math.round(10 * root.petScale))
                 font.weight: Font.DemiBold
+                horizontalAlignment: Text.AlignHCenter
+                maximumLineCount: 2
                 elide: Text.ElideRight
-                maximumLineCount: 1
             }
         }
 
@@ -201,6 +308,159 @@ AbstractBackgroundWidget {
         id: bubbleDisplayTimer
         interval: 4000
         running: false
+        onTriggered: {
+            root.customSpeechText = "";
+            root.wanderQuip = "";
+        }
+    }
+
+    // AI Chat trigger button (visible on hover or open)
+    Rectangle {
+        id: chatButton
+        width: 26 * root.petScale
+        height: 26 * root.petScale
+        radius: width / 2
+        anchors.top: parent.top
+        anchors.right: parent.right
+        anchors.margins: 6
+        z: 10
+        color: chatOverlay.visible ? Appearance.colors.colPrimary : Appearance.colors.colPrimaryContainer
+        border.color: Appearance.colors.colPrimary
+        border.width: 1
+        opacity: (petArea.containsMouse || chatOverlay.visible || chatBtnMouse.containsMouse) ? 1.0 : 0.0
+        Behavior on opacity { NumberAnimation { duration: 200 } }
+
+        MaterialSymbol {
+            anchors.centerIn: parent
+            iconSize: 14 * root.petScale
+            text: chatOverlay.visible ? "close" : "forum"
+            color: chatOverlay.visible ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
+        }
+
+        MouseArea {
+            id: chatBtnMouse
+            anchors.fill: parent
+            hoverEnabled: true
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                chatOverlay.visible = !chatOverlay.visible;
+                if (chatOverlay.visible) {
+                    petInput.forceActiveFocus();
+                    root.resetIdle();
+                }
+            }
+        }
+        StyledToolTip {
+            text: Translation.tr("Chat with your pet")
+        }
+    }
+
+    // AI Chat Input Bar Overlay
+    Rectangle {
+        id: chatOverlay
+        anchors.bottom: parent.bottom
+        anchors.bottomMargin: -38 * root.petScale
+        anchors.horizontalCenter: parent.horizontalCenter
+        width: Math.max(180 * root.petScale, 190)
+        height: 32 * root.petScale
+        radius: 16
+        z: 20
+        visible: false
+        color: Appearance.colors.colLayer1
+        border.color: Appearance.colors.colPrimary
+        border.width: 1
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: 4
+            spacing: 4
+
+            TextInput {
+                id: petInput
+                Layout.fillWidth: true
+                Layout.leftMargin: 8
+                font.pixelSize: Math.max(10, Math.round(11 * root.petScale))
+                color: Appearance.colors.colOnLayer1
+                clip: true
+                selectByMouse: true
+                onAccepted: root.sendPetMessage()
+
+                Text {
+                    anchors.fill: parent
+                    text: Translation.tr("Talk to pet...")
+                    color: Appearance.colors.colSubtext
+                    font.pixelSize: petInput.font.pixelSize
+                    font.italic: true
+                    visible: !petInput.text && !petInput.activeFocus
+                }
+            }
+
+            Rectangle {
+                implicitWidth: 24 * root.petScale
+                implicitHeight: 24 * root.petScale
+                radius: width / 2
+                color: Appearance.colors.colPrimary
+                opacity: petInput.text.trim().length > 0 ? 1.0 : 0.4
+
+                MaterialSymbol {
+                    anchors.centerIn: parent
+                    iconSize: 12 * root.petScale
+                    text: "send"
+                    color: Appearance.colors.colOnPrimary
+                }
+
+                MouseArea {
+                    anchors.fill: parent
+                    cursorShape: Qt.PointingHandCursor
+                    onClicked: root.sendPetMessage()
+                }
+            }
+        }
+    }
+
+    function sendPetMessage() {
+        const text = petInput.text.trim();
+        if (text.length === 0) return;
+        petInput.text = "";
+        root.resetIdle();
+        root.customSpeechText = "*thinking...* 🐾";
+        bubbleDisplayTimer.interval = 14000;
+        bubbleDisplayTimer.restart();
+
+        const provider = Config.options.background.widgets.pet?.aiProvider ?? "gemini";
+        const apiKey = Config.options.background.widgets.pet?.aiApiKey ?? (KeyringStorage.keyringData?.apiKeys?.gemini ?? "");
+        const prompt = Config.options.background.widgets.pet?.aiPrompt ?? "You are an adorable, affectionate desktop pet companion (cat/dog/chibi). Keep responses short (1-2 sentences max), warm, playful, and expressive with pet sounds like 'meow~', '*purrs*', '*tilts head*'.";
+
+        petChatProc.command = [
+            FileUtils.trimFileProtocol(Directories.scriptPath) + "/ai/pet-chat.py",
+            "--provider", provider,
+            "--api-key", apiKey,
+            "--prompt", prompt,
+            "--message", text
+        ];
+        petChatProc.running = true;
+    }
+
+    Process {
+        id: petChatProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const reply = text.trim();
+                if (reply.length > 0) {
+                    root.customSpeechText = reply;
+                    bubbleDisplayTimer.interval = 9000;
+                    bubbleDisplayTimer.restart();
+                    heartBurstAnim.restart();
+                }
+            }
+        }
+        onExited: (code) => {
+            if (code !== 0 && root.customSpeechText === "*thinking...* 🐾") {
+                root.customSpeechText = "Meow? *snuggles close* <3";
+                bubbleDisplayTimer.interval = 4000;
+                bubbleDisplayTimer.restart();
+            }
+        }
     }
 
     // Pixel Pet Character Canvas / Construction
@@ -219,18 +479,31 @@ AbstractBackgroundWidget {
         readonly property color pupilColor: "#111111"
         readonly property color cheekBlushColor: "#ff8fa3"
 
-        // Animation Bobbing (Music Dancing / Breathing)
+        // Animation Bobbing (Music Dancing / Breathing / Walking)
         property real danceTilt: 0
         property real danceBob: 0
 
         SequentialAnimation {
-            running: root.isDancing
+            running: root.isWalking
+            loops: Animation.Infinite
+            NumberAnimation { target: petContainer; property: "danceTilt"; from: -8; to: 8; duration: 180; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: petContainer; property: "danceTilt"; from: 8; to: -8; duration: 180; easing.type: Easing.InOutQuad }
+        }
+        SequentialAnimation {
+            running: root.isWalking
+            loops: Animation.Infinite
+            NumberAnimation { target: petContainer; property: "danceBob"; from: 0; to: -5; duration: 90; easing.type: Easing.OutQuad }
+            NumberAnimation { target: petContainer; property: "danceBob"; from: -5; to: 0; duration: 90; easing.type: Easing.InQuad }
+        }
+
+        SequentialAnimation {
+            running: root.isDancing && !root.isWalking
             loops: Animation.Infinite
             NumberAnimation { target: petContainer; property: "danceTilt"; from: -7; to: 7; duration: 320; easing.type: Easing.InOutQuad }
             NumberAnimation { target: petContainer; property: "danceTilt"; from: 7; to: -7; duration: 320; easing.type: Easing.InOutQuad }
         }
         SequentialAnimation {
-            running: root.isDancing
+            running: root.isDancing && !root.isWalking
             loops: Animation.Infinite
             NumberAnimation { target: petContainer; property: "danceBob"; from: 0; to: -6; duration: 160; easing.type: Easing.OutQuad }
             NumberAnimation { target: petContainer; property: "danceBob"; from: -6; to: 0; duration: 160; easing.type: Easing.InQuad }
@@ -238,7 +511,7 @@ AbstractBackgroundWidget {
 
         // Idle gentle breathing
         SequentialAnimation {
-            running: !root.isDancing && !root.isSleeping
+            running: !root.isDancing && !root.isSleeping && !root.isWalking
             loops: Animation.Infinite
             NumberAnimation { target: petContainer; property: "danceBob"; from: 0; to: -2; duration: 1200; easing.type: Easing.InOutSine }
             NumberAnimation { target: petContainer; property: "danceBob"; from: -2; to: 0; duration: 1200; easing.type: Easing.InOutSine }
@@ -246,7 +519,7 @@ AbstractBackgroundWidget {
 
         // Sleeping gentle heave
         SequentialAnimation {
-            running: root.isSleeping
+            running: root.isSleeping && !root.isWalking
             loops: Animation.Infinite
             NumberAnimation { target: petContainer; property: "danceBob"; from: 0; to: -1; duration: 2000; easing.type: Easing.InOutSine }
             NumberAnimation { target: petContainer; property: "danceBob"; from: -1; to: 0; duration: 2000; easing.type: Easing.InOutSine }
@@ -254,7 +527,12 @@ AbstractBackgroundWidget {
 
         transform: [
             Rotation { origin.x: petContainer.width / 2; origin.y: petContainer.height; angle: petContainer.danceTilt },
-            Translate { y: petContainer.danceBob }
+            Translate { y: petContainer.danceBob },
+            Scale {
+                origin.x: petContainer.width / 2
+                xScale: root.facingLeft ? -1 : 1
+                Behavior on xScale { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+            }
         ]
 
         // --- Tail ---
