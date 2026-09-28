@@ -380,7 +380,13 @@ AbstractBackgroundWidget {
 
                             StyledText {
                                 Layout.fillWidth: true
-                                text: (Config.options.profile?.descriptionText !== "" ? Config.options.profile?.descriptionText : "") || (SystemInfo.kernelVersion !== "" ? "Kernel " + SystemInfo.kernelVersion : "Online")
+                                text: {
+                                    const desc = Config.options.profile?.descriptionText ?? ""
+                                    if (desc === "" || desc === "::uptime::" || desc === "::distro::") {
+                                        return SystemInfo.kernelVersion !== "" ? "Kernel " + SystemInfo.kernelVersion : "Online"
+                                    }
+                                    return desc
+                                }
                                 font.pixelSize: Appearance.font.pixelSize.smallest
                                 color: Appearance.colors.colOnPrimaryContainer
                                 opacity: 0.55
@@ -834,7 +840,12 @@ AbstractBackgroundWidget {
                         StyledText {
                             Layout.fillWidth: true
                             Layout.leftMargin: 4
-                            text: (Config.options.profile?.descriptionText !== "" ? Config.options.profile?.descriptionText : "") || (SystemInfo.distroName !== "" ? (SystemInfo.distroName + (SystemInfo.kernelVersion !== "" ? " • " + SystemInfo.kernelVersion : "")) : "Linux")
+                            text: {
+                                const desc = Config.options.profile?.descriptionText ?? ""
+                                if (desc === "::uptime::") return "Up • " + DateTime.uptime
+                                if (desc === "::distro::" || desc === "") return SystemInfo.distroName !== "" ? (SystemInfo.distroName + (SystemInfo.kernelVersion !== "" ? " • " + SystemInfo.kernelVersion : "")) : "Linux"
+                                return desc
+                            }
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             color: Appearance.colors.colOnPrimaryContainer
                             opacity: 0.65
