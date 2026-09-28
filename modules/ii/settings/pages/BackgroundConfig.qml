@@ -2079,6 +2079,177 @@ ContentPage {
         }
 
         ContentSection {
+            id: settingsDesktopPet
+            icon: "pets"
+            shape: MaterialShape.Shape.Cookie7Sided
+            title: Translation.tr("Desktop Pet")
+
+            readonly property var entry: Config.options.background.widgets.pet
+
+            GroupedList {
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "pets"
+                    text: Translation.tr("Enable Desktop Pet")
+                    checked: settingsDesktopPet.entry?.enable ?? false
+                    onCheckedChanged: {
+                        if (Config.options.background.widgets.pet)
+                            Config.options.background.widgets.pet.enable = checked;
+                        else
+                            Config.setNestedValue("background.widgets.pet.enable", checked);
+                    }
+                }
+
+                ConfigSelectionArray {
+                    text: Translation.tr("Background Style")
+                    icon: "layers"
+                    currentValue: settingsDesktopPet.entry?.backgroundStyle ?? "glass"
+                    options: [
+                        { "displayName": Translation.tr("Glass"),       "icon": "blur_on",          "value": "glass" },
+                        { "displayName": Translation.tr("Transparent"), "icon": "visibility_off",   "value": "transparent" },
+                        { "displayName": Translation.tr("Solid"),       "icon": "crop_portrait",    "value": "solid" },
+                        { "displayName": Translation.tr("Dim"),         "icon": "dark_mode",        "value": "dim" },
+                    ]
+                    onSelected: newValue => {
+                        if (Config.options.background.widgets.pet)
+                            Config.options.background.widgets.pet.backgroundStyle = newValue;
+                        else
+                            Config.setNestedValue("background.widgets.pet.backgroundStyle", newValue);
+                    }
+                }
+
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "explore"
+                    text: Translation.tr("Allow Wandering")
+                    checked: settingsDesktopPet.entry?.canWander ?? true
+                    onCheckedChanged: {
+                        if (Config.options.background.widgets.pet)
+                            Config.options.background.widgets.pet.canWander = checked;
+                        else
+                            Config.setNestedValue("background.widgets.pet.canWander", checked);
+                    }
+                }
+
+                ConfigSlider {
+                    Layout.fillWidth: true
+                    buttonIcon: "crop_free"
+                    text: Translation.tr("Pet Scale")
+                    value: settingsDesktopPet.entry?.petScale ?? 1.0
+                    usePercentTooltip: false
+                    from: 0.7
+                    to: 1.6
+                    onValueChanged: {
+                        if (Config.options.background.widgets.pet)
+                            Config.options.background.widgets.pet.petScale = Math.round(value * 20) / 20;
+                        else
+                            Config.setNestedValue("background.widgets.pet.petScale", Math.round(value * 20) / 20);
+                    }
+                }
+
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "music_note"
+                    text: Translation.tr("Dance to music")
+                    checked: settingsDesktopPet.entry?.reactToMusic ?? true
+                    onCheckedChanged: {
+                        if (Config.options.background.widgets.pet)
+                            Config.options.background.widgets.pet.reactToMusic = checked;
+                        else
+                            Config.setNestedValue("background.widgets.pet.reactToMusic", checked);
+                    }
+                }
+
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "thunderstorm"
+                    text: Translation.tr("React to weather & system load")
+                    checked: settingsDesktopPet.entry?.reactToSystem ?? true
+                    onCheckedChanged: {
+                        if (Config.options.background.widgets.pet) {
+                            Config.options.background.widgets.pet.reactToSystem = checked;
+                            Config.options.background.widgets.pet.reactToWeather = checked;
+                        } else {
+                            Config.setNestedValue("background.widgets.pet.reactToSystem", checked);
+                            Config.setNestedValue("background.widgets.pet.reactToWeather", checked);
+                        }
+                    }
+                }
+
+                ConfigSwitch {
+                    Layout.fillWidth: true
+                    buttonIcon: "chat_bubble"
+                    text: Translation.tr("Speech bubble reactions")
+                    checked: settingsDesktopPet.entry?.showSpeechBubble ?? true
+                    onCheckedChanged: {
+                        if (Config.options.background.widgets.pet)
+                            Config.options.background.widgets.pet.showSpeechBubble = checked;
+                        else
+                            Config.setNestedValue("background.widgets.pet.showSpeechBubble", checked);
+                    }
+                }
+            }
+
+            ContentSubsection {
+                title: Translation.tr("AI Companion Chat")
+                Layout.bottomMargin: 10
+
+                NoticeBox {
+                    Layout.fillWidth: true
+                    materialIcon: "smart_toy"
+                    text: Translation.tr("Click the chat icon on your pet or press Enter to chat with it live on desktop!")
+                }
+
+                GroupedList {
+                    ConfigSelectionArray {
+                        text: Translation.tr("AI Provider")
+                        icon: "smart_toy"
+                        currentValue: settingsDesktopPet.entry?.aiProvider ?? "gemini"
+                        options: [
+                            { "displayName": "Google Gemini", "icon": "auto_awesome", "value": "gemini" },
+                            { "displayName": "OpenAI",        "icon": "psychology",   "value": "openai" },
+                            { "displayName": "Ollama (Local)", "icon": "memory",       "value": "ollama" },
+                        ]
+                        onSelected: newValue => {
+                            if (Config.options.background.widgets.pet)
+                                Config.options.background.widgets.pet.aiProvider = newValue;
+                            else
+                                Config.setNestedValue("background.widgets.pet.aiProvider", newValue);
+                        }
+                    }
+
+                    ConfigTextArea {
+                        Layout.fillWidth: true
+                        buttonIcon: "key"
+                        text: Translation.tr("Pet AI API Key")
+                        placeholderText: Translation.tr("Leave empty to use global keyring key")
+                        value: settingsDesktopPet.entry?.aiApiKey ?? ""
+                        onValueChanged: {
+                            if (Config.options.background.widgets.pet)
+                                Config.options.background.widgets.pet.aiApiKey = value;
+                            else
+                                Config.setNestedValue("background.widgets.pet.aiApiKey", value);
+                        }
+                    }
+
+                    ConfigTextArea {
+                        Layout.fillWidth: true
+                        buttonIcon: "neurology"
+                        text: Translation.tr("Pet Personality Prompt")
+                        placeholderText: Translation.tr("Prompt to make pet friendly and warm...")
+                        value: settingsDesktopPet.entry?.aiPrompt ?? "You are a cute, affectionate, playful desktop cat pet. You talk warmly, use cute pet expressions like 'meow~', '*purrs*', '*tilts head*', keep answers brief (1-2 sentences), and care deeply about your human friend."
+                        onValueChanged: {
+                            if (Config.options.background.widgets.pet)
+                                Config.options.background.widgets.pet.aiPrompt = value;
+                            else
+                                Config.setNestedValue("background.widgets.pet.aiPrompt", value);
+                        }
+                    }
+                }
+            }
+        }
+
+        ContentSection {
             id: settingsCustomText
             icon: "text_fields"
             shape: MaterialShape.Shape.Cookie4Sided
@@ -2404,130 +2575,6 @@ ContentPage {
                                 font.pixelSize: Appearance.font.pixelSize.small
                                 color: Appearance.colors.colSubtext
                             }
-                        }
-                    }
-                }
-            }
-            ContentSubsection {
-                title: Translation.tr("Desktop Pet")
-                Layout.bottomMargin: 10
-
-                GroupedList {
-                    ConfigSwitch {
-                        Layout.fillWidth: true
-                        buttonIcon: "pets"
-                        text: Translation.tr("Enable Desktop Pet")
-                        checked: Config.options.background.widgets.pet?.enable ?? false
-                        onCheckedChanged: {
-                            if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.enable = checked;
-                            else
-                                Config.setNestedValue("background.widgets.pet.enable", checked);
-                        }
-                    }
-
-                    ConfigSelectionArray {
-                        text: Translation.tr("Background Style")
-                        icon: "layers"
-                        currentValue: Config.options.background.widgets.pet?.backgroundStyle ?? "glass"
-                        options: [
-                            { "displayName": Translation.tr("Glass"),       "icon": "blur_on",          "value": "glass" },
-                            { "displayName": Translation.tr("Transparent"), "icon": "visibility_off",   "value": "transparent" },
-                            { "displayName": Translation.tr("Solid"),       "icon": "crop_portrait",    "value": "solid" },
-                            { "displayName": Translation.tr("Dim"),         "icon": "dark_mode",        "value": "dim" },
-                        ]
-                        onSelected: newValue => {
-                            if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.backgroundStyle = newValue;
-                            else
-                                Config.setNestedValue("background.widgets.pet.backgroundStyle", newValue);
-                        }
-                    }
-
-                    ConfigSwitch {
-                        Layout.fillWidth: true
-                        buttonIcon: "explore"
-                        text: Translation.tr("Allow Wandering")
-                        checked: Config.options.background.widgets.pet?.canWander ?? true
-                        onCheckedChanged: {
-                            if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.canWander = checked;
-                            else
-                                Config.setNestedValue("background.widgets.pet.canWander", checked);
-                        }
-                    }
-
-                    ConfigSlider {
-                        Layout.fillWidth: true
-                        buttonIcon: "crop_free"
-                        text: Translation.tr("Pet scale")
-                        value: Config.options.background.widgets.pet?.petScale ?? 1.0
-                        usePercentTooltip: false
-                        from: 0.7
-                        to: 1.6
-                        onValueChanged: {
-                            if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.petScale = Math.round(value * 20) / 20;
-                            else
-                                Config.setNestedValue("background.widgets.pet.petScale", Math.round(value * 20) / 20);
-                        }
-                    }
-
-                    ConfigSwitch {
-                        Layout.fillWidth: true
-                        buttonIcon: "chat_bubble"
-                        text: Translation.tr("Speech bubble reactions")
-                        checked: Config.options.background.widgets.pet?.showSpeechBubble ?? true
-                        onCheckedChanged: {
-                            if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.showSpeechBubble = checked;
-                            else
-                                Config.setNestedValue("background.widgets.pet.showSpeechBubble", checked);
-                        }
-                    }
-
-                    ConfigSelectionArray {
-                        text: Translation.tr("AI Provider")
-                        icon: "smart_toy"
-                        currentValue: Config.options.background.widgets.pet?.aiProvider ?? "gemini"
-                        options: [
-                            { "displayName": "Google Gemini", "icon": "auto_awesome", "value": "gemini" },
-                            { "displayName": "OpenAI",        "icon": "psychology",   "value": "openai" },
-                            { "displayName": "Ollama (Local)", "icon": "memory",       "value": "ollama" },
-                        ]
-                        onSelected: newValue => {
-                            if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.aiProvider = newValue;
-                            else
-                                Config.setNestedValue("background.widgets.pet.aiProvider", newValue);
-                        }
-                    }
-
-                    ConfigTextArea {
-                        Layout.fillWidth: true
-                        buttonIcon: "key"
-                        text: Translation.tr("Pet AI API Key")
-                        placeholderText: Translation.tr("Leave empty to use global keyring key")
-                        value: Config.options.background.widgets.pet?.aiApiKey ?? ""
-                        onValueChanged: {
-                            if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.aiApiKey = value;
-                            else
-                                Config.setNestedValue("background.widgets.pet.aiApiKey", value);
-                        }
-                    }
-
-                    ConfigTextArea {
-                        Layout.fillWidth: true
-                        buttonIcon: "neurology"
-                        text: Translation.tr("Pet Personality Prompt")
-                        placeholderText: Translation.tr("Prompt to make pet friendly and warm...")
-                        value: Config.options.background.widgets.pet?.aiPrompt ?? "You are a cute, affectionate, playful desktop cat pet. You talk warmly, use cute pet expressions like 'meow~', '*purrs*', '*tilts head*', keep answers brief (1-2 sentences), and care deeply about your human friend."
-                        onValueChanged: {
-                            if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.aiPrompt = value;
-                            else
-                                Config.setNestedValue("background.widgets.pet.aiPrompt", value);
                         }
                     }
                 }
