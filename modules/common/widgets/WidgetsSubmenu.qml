@@ -27,6 +27,8 @@ Item {
         { key: "timers",      icon: "timer",              name: Translation.tr("Timers") },
         { key: "todo",        icon: "add_task",           name: Translation.tr("To-Do") },
         { key: "sticker",     icon: "sticker",            name: Translation.tr("Sticker") },
+        { key: "customText",  icon: "title",              name: Translation.tr("Custom Text") },
+        { key: "pet",         icon: "pets",               name: Translation.tr("Desktop Pet") },
     ]
 
     Rectangle {

@@ -492,6 +492,20 @@ Singleton {
                         property string alignment: "center" // "left", "center", "right"
                         property bool shadow: true
                     }
+
+                    property JsonObject pet: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 500
+                        property real y: 300
+                        property real z: 0
+                        property string petType: "cat"
+                        property real petScale: 1.0
+                        property bool showSpeechBubble: true
+                        property bool reactToMusic: true
+                        property bool reactToSystem: true
+                        property bool reactToWeather: true
+                    }
                 }
                 property list<string> screenList: [] 
                 property string wallpaperPath: ""

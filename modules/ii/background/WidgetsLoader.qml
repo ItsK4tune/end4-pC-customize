@@ -22,6 +22,7 @@ import qs.modules.ii.background.widgets.todo
 import qs.modules.ii.background.widgets.timers
 import qs.modules.ii.background.widgets.customtext
 import qs.modules.ii.background.widgets.particles
+import qs.modules.ii.background.widgets.pet
 
 Item {
     id: root
@@ -92,6 +93,7 @@ Item {
             { key: "todo" },
             { key: "timers" },
             { key: "customText" },
+            { key: "pet" },
         ]
 
         delegate: FadeLoader {
@@ -100,7 +102,7 @@ Item {
 
             property bool enableLoading: true
 
-            shown: Config.options.background.widgets[loaderDelegate.modelData.key].enable
+            shown: Config.options.background.widgets[loaderDelegate.modelData.key]?.enable ?? false
                 && loaderDelegate.enableLoading
                 && (loaderDelegate.modelData.alwaysOnLock
                     ? (GlobalStates.screenLocked || root.onThisScreen)
@@ -124,6 +126,7 @@ Item {
                     case "todo":        return todoComp
                     case "timers":      return timersComp
                     case "customText":  return customTextComp
+                    case "pet":         return petComp
                 }
                 return null
             }
@@ -369,6 +372,17 @@ Item {
     Component {
         id: customTextComp
         CustomTextWidget {
+            screenWidth: root.screen.width
+            screenHeight: root.screen.height
+            scaledScreenWidth: root.screen.width
+            scaledScreenHeight: root.screen.height
+            wallpaperScale: 1
+            wallpaperItem: root.wallpaperItem
+        }
+    }
+    Component {
+        id: petComp
+        DesktopPetWidget {
             screenWidth: root.screen.width
             screenHeight: root.screen.height
             scaledScreenWidth: root.screen.width
