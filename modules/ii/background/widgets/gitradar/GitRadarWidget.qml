@@ -16,8 +16,8 @@ AbstractBackgroundWidget {
     configEntryName: "gitRadar"
     hoverEnabled: true
 
-    readonly property real cardWidth: 350
-    readonly property real cardHeight: 250
+    readonly property real cardWidth: 300
+    readonly property real cardHeight: 252
     implicitWidth: root.cardWidth
     implicitHeight: root.cardHeight
 
@@ -82,8 +82,8 @@ AbstractBackgroundWidget {
         Rectangle {
             id: contentRect
             anchors.fill: parent
-            color: Appearance.colors.colLayer0
-            radius: Appearance.rounding.large
+            color: Appearance.colors.colPrimaryContainer
+            radius: Appearance.rounding?.verylarge ?? 30
             border.width: 1
             border.color: root.widgetBorderColor
 
@@ -92,7 +92,7 @@ AbstractBackgroundWidget {
                 blurSource: root.wallpaperItem
                 cardRadius: contentRect.radius
                 tint: Appearance.colors.colLayer1
-                tintOpacity: 0.65
+                tintOpacity: 0.55
                 trackX: root.x  
                 trackY: root.y
                 visible: Config.options.background.widgets.blurWidgets 
@@ -109,7 +109,7 @@ AbstractBackgroundWidget {
 
                     Rectangle {
                         width: 28; height: 28; radius: 14
-                        color: Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.2)
+                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
@@ -124,12 +124,12 @@ AbstractBackgroundWidget {
                         spacing: 0
                         StyledText {
                             text: Translation.tr("Git Radar")
-                            font.pixelSize: Appearance.font.pixelSize.medium
+                            font.pixelSize: Appearance.font.pixelSize.normal
                             font.weight: Font.DemiBold
-                            color: Appearance.colors.colText
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                         StyledText {
-                            text: `${root.radarData.total_commits ?? 0} commits (70d) · ${root.radarData.repo_count ?? 0} repos`
+                            text: `${root.radarData.total_commits ?? 0} commits · ${root.radarData.repo_count ?? 0} repos`
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             color: Appearance.colors.colSubtext
                         }
@@ -139,20 +139,20 @@ AbstractBackgroundWidget {
 
                     // Streak Pill
                     Rectangle {
-                        implicitWidth: streakRow.implicitWidth + 14
-                        implicitHeight: 24
+                        implicitWidth: streakRow.implicitWidth + 12
+                        implicitHeight: 22
                         radius: Appearance.rounding.full
-                        color: Qt.rgba(1, 0.45, 0.1, 0.18)
+                        color: Qt.rgba(1, 0.45, 0.1, 0.22)
                         border.width: 1
                         border.color: Qt.rgba(1, 0.5, 0.1, 0.4)
 
                         RowLayout {
                             id: streakRow
                             anchors.centerIn: parent
-                            spacing: 4
+                            spacing: 3
                             MaterialSymbol {
                                 text: "local_fire_department"
-                                iconSize: 14
+                                iconSize: 13
                                 color: "#ff7043"
                             }
                             StyledText {
@@ -167,7 +167,7 @@ AbstractBackgroundWidget {
                     // Refresh Button
                     Rectangle {
                         width: 24; height: 24; radius: 12
-                        color: refreshMouse.containsMouse ? Appearance.colors.colLayer2 : "transparent"
+                        color: refreshMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7) : "transparent"
                         border.width: 1
                         border.color: refreshMouse.containsMouse ? root.widgetBorderColor : "transparent"
 
@@ -195,15 +195,15 @@ AbstractBackgroundWidget {
                 // Heatmap Matrix
                 Rectangle {
                     Layout.fillWidth: true
-                    implicitHeight: 90
+                    implicitHeight: 88
                     radius: Appearance.rounding.normal
-                    color: Qt.rgba(0, 0, 0, 0.18)
+                    color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                     border.width: 1
                     border.color: root.widgetBorderColor
 
                     Item {
                         anchors.fill: parent
-                        anchors.margins: 8
+                        anchors.margins: 6
 
                         // Grid: 10 columns (weeks) x 7 rows (days)
                         Row {
@@ -234,11 +234,11 @@ AbstractBackgroundWidget {
 
                                             color: {
                                                 switch(level) {
-                                                    case 1: return Qt.rgba(0.2, 0.75, 0.4, 0.4)
-                                                    case 2: return Qt.rgba(0.2, 0.85, 0.4, 0.7)
+                                                    case 1: return Qt.rgba(0.2, 0.8, 0.45, 0.45)
+                                                    case 2: return Qt.rgba(0.2, 0.88, 0.45, 0.72)
                                                     case 3: return Qt.rgba(0.15, 0.95, 0.45, 0.88)
                                                     case 4: return Qt.rgba(0.1, 1.0, 0.5, 1.0)
-                                                    default: return Qt.rgba(1, 1, 1, 0.07)
+                                                    default: return Qt.rgba(1, 1, 1, 0.08)
                                                 }
                                             }
 
@@ -289,8 +289,8 @@ AbstractBackgroundWidget {
                             implicitHeight: 38
                             radius: Appearance.rounding.small
                             color: repoMouse.containsMouse 
-                                ? Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.12)
-                                : Qt.rgba(0, 0, 0, 0.15)
+                                ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                                : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                             border.width: 1
                             border.color: repoMouse.containsMouse ? Appearance.colors.colPrimary : root.widgetBorderColor
 
@@ -313,18 +313,18 @@ AbstractBackgroundWidget {
                                             text: repoCard.modelData.name ?? "repo"
                                             font.pixelSize: Appearance.font.pixelSize.smaller
                                             font.weight: Font.DemiBold
-                                            color: Appearance.colors.colText
+                                            color: Appearance.colors.colOnPrimaryContainer
                                         }
                                         Rectangle {
                                             implicitWidth: branchText.implicitWidth + 8
                                             implicitHeight: 16
                                             radius: 8
-                                            color: Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.2)
+                                            color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                                             StyledText {
                                                 id: branchText
                                                 anchors.centerIn: parent
                                                 text: repoCard.modelData.branch ?? "main"
-                                                font.pixelSize: Appearance.font.pixelSize.tiny ?? 10
+                                                font.pixelSize: Appearance.font.pixelSize.smallest
                                                 color: Appearance.colors.colPrimary
                                             }
                                         }
@@ -333,7 +333,7 @@ AbstractBackgroundWidget {
                                         Layout.fillWidth: true
                                         text: repoCard.modelData.last_commit ?? "No commits"
                                         elide: Text.ElideRight
-                                        font.pixelSize: Appearance.font.pixelSize.tiny ?? 10
+                                        font.pixelSize: Appearance.font.pixelSize.smallest
                                         color: Appearance.colors.colSubtext
                                     }
                                 }
@@ -364,7 +364,7 @@ AbstractBackgroundWidget {
                                         StyledText {
                                             id: modText
                                             anchors.centerIn: parent
-                                            text: `● ${repoCard.modelData.modified + repoCard.modelData.untracked}`
+                                            text: `● ${(repoCard.modelData.modified ?? 0) + (repoCard.modelData.untracked ?? 0)}`
                                             font.pixelSize: 10
                                             color: "#ffb74d"
                                         }
@@ -408,8 +408,8 @@ AbstractBackgroundWidget {
                     id: tipText
                     anchors.centerIn: parent
                     text: root.hoveredTooltipText
-                    font.pixelSize: Appearance.font.pixelSize.tiny ?? 11
-                    color: Appearance.colors.colText
+                    font.pixelSize: Appearance.font.pixelSize.smallest
+                    color: Appearance.colors.colOnLayer2
                 }
             }
         }

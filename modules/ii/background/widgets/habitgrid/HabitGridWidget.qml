@@ -16,8 +16,8 @@ AbstractBackgroundWidget {
     configEntryName: "habitGrid"
     hoverEnabled: true
 
-    readonly property real cardWidth: 350
-    readonly property real cardHeight: 280
+    readonly property real cardWidth: 300
+    readonly property real cardHeight: 252
     implicitWidth: root.cardWidth
     implicitHeight: root.cardHeight
 
@@ -221,8 +221,8 @@ AbstractBackgroundWidget {
         Rectangle {
             id: contentRect
             anchors.fill: parent
-            color: Appearance.colors.colLayer0
-            radius: Appearance.rounding.large
+            color: Appearance.colors.colPrimaryContainer
+            radius: Appearance.rounding?.verylarge ?? 30
             border.width: 1
             border.color: root.widgetBorderColor
 
@@ -231,15 +231,15 @@ AbstractBackgroundWidget {
                 blurSource: root.wallpaperItem
                 cardRadius: contentRect.radius
                 tint: Appearance.colors.colLayer1
-                tintOpacity: 0.65
+                tintOpacity: 0.55
                 trackX: root.x  
                 trackY: root.y
                 visible: Config.options.background.widgets.blurWidgets 
             }
 
             ColumnLayout {
-                anchors { fill: parent; margins: 12 }
-                spacing: 8
+                anchors { fill: parent; margins: 14 }
+                spacing: 6
 
                 // Header
                 RowLayout {
@@ -248,7 +248,7 @@ AbstractBackgroundWidget {
 
                     Rectangle {
                         width: 26; height: 26; radius: 13
-                        color: Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.2)
+                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
@@ -263,12 +263,12 @@ AbstractBackgroundWidget {
                         spacing: 0
                         StyledText {
                             text: Translation.tr("Habit Grid")
-                            font.pixelSize: Appearance.font.pixelSize.medium
+                            font.pixelSize: Appearance.font.pixelSize.normal
                             font.weight: Font.DemiBold
-                            color: Appearance.colors.colText
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                         StyledText {
-                            text: `${root.completedTodayCount}/${root.habits.length} done today (${Math.round(root.completionRatio * 100)}%)`
+                            text: `${root.completedTodayCount}/${root.habits.length} done (${Math.round(root.completionRatio * 100)}%)`
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             color: Appearance.colors.colSubtext
                         }
@@ -279,7 +279,7 @@ AbstractBackgroundWidget {
                     // Add Habit Toggle Button
                     Rectangle {
                         width: 24; height: 24; radius: 12
-                        color: addMouse.containsMouse ? Appearance.colors.colLayer2 : "transparent"
+                        color: addMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7) : "transparent"
                         border.width: 1
                         border.color: addMouse.containsMouse ? root.widgetBorderColor : "transparent"
                         MaterialSymbol {
@@ -302,9 +302,9 @@ AbstractBackgroundWidget {
                 Rectangle {
                     visible: root.isAddingHabit
                     Layout.fillWidth: true
-                    implicitHeight: 32
+                    implicitHeight: 30
                     radius: Appearance.rounding.small
-                    color: Appearance.colors.colLayer2
+                    color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                     border.width: 1
                     border.color: Appearance.colors.colPrimary
 
@@ -315,7 +315,7 @@ AbstractBackgroundWidget {
                         TextInput {
                             id: newHabitInput
                             Layout.fillWidth: true
-                            color: Appearance.colors.colText
+                            color: Appearance.colors.colOnPrimaryContainer
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             selectByMouse: true
                             clip: true
@@ -331,7 +331,7 @@ AbstractBackgroundWidget {
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 text: "check"
-                                iconSize: 14
+                                iconSize: 13
                                 color: Appearance.colors.colOnPrimary
                             }
                             MouseArea {
@@ -349,7 +349,7 @@ AbstractBackgroundWidget {
                     spacing: 4
 
                     Item {
-                        implicitWidth: 120 // Space for habit title
+                        implicitWidth: 96 // Space for habit title
                     }
 
                     Repeater {
@@ -357,18 +357,18 @@ AbstractBackgroundWidget {
                         delegate: Item {
                             required property var modelData
                             Layout.fillWidth: true
-                            implicitHeight: 16
+                            implicitHeight: 14
                             StyledText {
                                 anchors.centerIn: parent
                                 text: parent.modelData.label
-                                font.pixelSize: 10
+                                font.pixelSize: Appearance.font.pixelSize.smallest
                                 font.weight: parent.modelData.isToday ? Font.Bold : Font.Normal
                                 color: parent.modelData.isToday ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
                             }
                         }
                     }
 
-                    Item { implicitWidth: 24 } // Space for streak / delete
+                    Item { implicitWidth: 22 } // Space for streak / delete
                 }
 
                 // Habit List Rows
@@ -376,7 +376,7 @@ AbstractBackgroundWidget {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    spacing: 6
+                    spacing: 4
                     model: root.habits
 
                     delegate: Rectangle {
@@ -384,11 +384,11 @@ AbstractBackgroundWidget {
                         required property var modelData
                         required property int index
                         width: ListView.view.width
-                        implicitHeight: 34
+                        implicitHeight: 32
                         radius: Appearance.rounding.small
                         color: habitMouseArea.containsMouse 
-                            ? Qt.rgba(1, 1, 1, 0.05) 
-                            : Qt.rgba(0, 0, 0, 0.12)
+                            ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                            : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         border.width: 1
                         border.color: root.widgetBorderColor
 
@@ -400,27 +400,27 @@ AbstractBackgroundWidget {
                         }
 
                         RowLayout {
-                            anchors { fill: parent; margins: 4; leftMargin: 8; rightMargin: 8 }
+                            anchors { fill: parent; margins: 3; leftMargin: 6; rightMargin: 6 }
                             spacing: 4
 
                             // Icon & Title
                             RowLayout {
-                                implicitWidth: 110
-                                spacing: 6
+                                implicitWidth: 96
+                                spacing: 4
 
                                 MaterialSymbol {
-                                    text: habitRow.modelData.icon ?? "check_circle"
-                                    iconSize: 16
-                                    color: habitRow.modelData.color ?? Appearance.colors.colPrimary
+                                    text: habitRow.modelData?.icon ?? "check_circle"
+                                    iconSize: 15
+                                    color: habitRow.modelData?.color ?? Appearance.colors.colPrimary
                                 }
 
                                 StyledText {
                                     Layout.fillWidth: true
-                                    text: habitRow.modelData.title ?? ""
+                                    text: habitRow.modelData?.title ?? ""
                                     elide: Text.ElideRight
-                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    font.pixelSize: Appearance.font.pixelSize.smallest
                                     font.weight: Font.DemiBold
-                                    color: Appearance.colors.colText
+                                    color: Appearance.colors.colOnPrimaryContainer
                                 }
                             }
 
@@ -431,19 +431,19 @@ AbstractBackgroundWidget {
                                     id: dotItem
                                     required property var modelData
                                     Layout.fillWidth: true
-                                    implicitHeight: 24
+                                    implicitHeight: 22
 
-                                    readonly property bool isDone: (habitRow.modelData.history && habitRow.modelData.history[dotItem.modelData.dateStr]) === true
+                                    readonly property bool isDone: (habitRow.modelData?.history && habitRow.modelData.history[dotItem.modelData.dateStr]) === true
 
                                     Rectangle {
                                         id: checkCircle
                                         anchors.centerIn: parent
-                                        width: dotItem.modelData.isToday ? 18 : 14
+                                        width: dotItem.modelData.isToday ? 16 : 13
                                         height: width
                                         radius: width / 2
                                         color: dotItem.isDone
-                                            ? (habitRow.modelData.color ?? Appearance.colors.colPrimary)
-                                            : (dotItem.modelData.isToday ? Qt.rgba(1, 1, 1, 0.15) : Qt.rgba(1, 1, 1, 0.06))
+                                            ? (habitRow.modelData?.color ?? Appearance.colors.colPrimary)
+                                            : (dotItem.modelData.isToday ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.7) : Qt.rgba(1, 1, 1, 0.1))
                                         border.width: dotItem.modelData.isToday ? 1.5 : 1
                                         border.color: dotItem.modelData.isToday ? Appearance.colors.colPrimary : root.widgetBorderColor
 
@@ -455,7 +455,7 @@ AbstractBackgroundWidget {
                                         MaterialSymbol {
                                             anchors.centerIn: parent
                                             text: "check"
-                                            iconSize: dotItem.modelData.isToday ? 13 : 10
+                                            iconSize: dotItem.modelData.isToday ? 11 : 9
                                             color: "#ffffff"
                                             visible: dotItem.isDone
                                         }
@@ -481,8 +481,8 @@ AbstractBackgroundWidget {
 
                             // Streak Counter or Delete on Hover
                             Item {
-                                implicitWidth: 26
-                                implicitHeight: 24
+                                implicitWidth: 22
+                                implicitHeight: 22
 
                                 // Streak Badge
                                 RowLayout {
@@ -495,8 +495,8 @@ AbstractBackgroundWidget {
                                         color: "#ff7043"
                                     }
                                     StyledText {
-                                        text: `${habitRow.modelData.streak ?? 0}`
-                                        font.pixelSize: 10
+                                        text: `${habitRow.modelData?.streak ?? 0}`
+                                        font.pixelSize: Appearance.font.pixelSize.smallest
                                         font.weight: Font.Bold
                                         color: "#ff7043"
                                     }
@@ -506,12 +506,12 @@ AbstractBackgroundWidget {
                                 Rectangle {
                                     anchors.centerIn: parent
                                     visible: habitMouseArea.containsMouse
-                                    width: 20; height: 20; radius: 10
-                                    color: delMouse.containsMouse ? Qt.rgba(1, 0, 0, 0.2) : "transparent"
+                                    width: 18; height: 18; radius: 9
+                                    color: delMouse.containsMouse ? Qt.rgba(1, 0, 0, 0.25) : "transparent"
                                     MaterialSymbol {
                                         anchors.centerIn: parent
                                         text: "delete"
-                                        iconSize: 14
+                                        iconSize: 13
                                         color: Appearance.colors.colSubtext
                                     }
                                     MouseArea {

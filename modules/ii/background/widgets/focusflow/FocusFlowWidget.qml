@@ -16,8 +16,8 @@ AbstractBackgroundWidget {
     configEntryName: "focusFlow"
     hoverEnabled: true
 
-    readonly property real cardWidth: 320
-    readonly property real cardHeight: 280
+    readonly property real cardWidth: 280
+    readonly property real cardHeight: 252
     implicitWidth: root.cardWidth
     implicitHeight: root.cardHeight
 
@@ -39,48 +39,22 @@ AbstractBackgroundWidget {
 
     // Audio Engine
     property string activeSound: "off" // "off" | "rain" | "waves" | "alpha" | "theta"
-    property real soundVolume: 0.5 // 0.0 - 1.0
-
-    function getLavfiString(sound) {
-        switch(sound) {
-            case "rain":  return "anoisesrc=color=pink:amplitude=0.04,lowpass=f=2500";
-            case "waves": return "anoisesrc=color=brown:amplitude=0.07,lowpass=f=1200";
-            case "alpha": return "sine=frequency=200[l];sine=frequency=210[r];[l][r]amerge=inputs=2";
-            case "theta": return "sine=frequency=200[l];sine=frequency=206[r];[l][r]amerge=inputs=2";
-            default: return "";
-        }
-    }
+    property real soundVolume: 0.8 // default audible volume
 
     function updateAudio() {
-        if (soundProcess.running) {
-            soundProcess.running = false;
-        }
-        if (activeSound !== "off") {
-            const lav = getLavfiString(activeSound);
-            if (lav !== "") {
-                const volPct = Math.round(soundVolume * 100);
-                soundProcess.command = [
-                    "mpv", "--no-video",
-                    `--volume=${volPct}`,
-                    `av://lavfi:${lav}`
-                ];
-                soundProcess.running = true;
-            }
+        if (activeSound === "off") {
+            Quickshell.execDetached([`${Directories.scriptPath}/audio/focus-ambient.sh`, "stop"]);
+        } else {
+            const volPct = Math.round(soundVolume * 100);
+            Quickshell.execDetached([`${Directories.scriptPath}/audio/focus-ambient.sh`, "play", activeSound, String(volPct)]);
         }
     }
 
     onActiveSoundChanged: updateAudio()
     onSoundVolumeChanged: updateAudio()
 
-    Process {
-        id: soundProcess
-        command: []
-    }
-
     Component.onDestruction: {
-        if (soundProcess.running) {
-            soundProcess.running = false;
-        }
+        Quickshell.execDetached([`${Directories.scriptPath}/audio/focus-ambient.sh`, "stop"]);
     }
 
     function togglePlay() {
@@ -123,6 +97,10 @@ AbstractBackgroundWidget {
         } else {
             switchMode("focus");
         }
+
+        // Play gentle completion chime
+        Quickshell.execDetached([`${Directories.scriptPath}/audio/focus-ambient.sh`, "chime"]);
+
         // Send notification
         Notifications.notify({
             "appName": "Focus Flow",
@@ -165,8 +143,8 @@ AbstractBackgroundWidget {
         Rectangle {
             id: contentRect
             anchors.fill: parent
-            color: Appearance.colors.colLayer0
-            radius: Appearance.rounding.large
+            color: Appearance.colors.colPrimaryContainer
+            radius: Appearance.rounding?.verylarge ?? 30
             border.width: 1
             border.color: root.widgetBorderColor
 
@@ -175,7 +153,7 @@ AbstractBackgroundWidget {
                 blurSource: root.wallpaperItem
                 cardRadius: contentRect.radius
                 tint: Appearance.colors.colLayer1
-                tintOpacity: 0.65
+                tintOpacity: 0.55
                 trackX: root.x  
                 trackY: root.y
                 visible: Config.options.background.widgets.blurWidgets 
@@ -183,7 +161,7 @@ AbstractBackgroundWidget {
 
             ColumnLayout {
                 anchors { fill: parent; margins: 12 }
-                spacing: 8
+                spacing: 6
 
                 // Header
                 RowLayout {
@@ -192,7 +170,7 @@ AbstractBackgroundWidget {
 
                     Rectangle {
                         width: 26; height: 26; radius: 13
-                        color: Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.2)
+                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
@@ -205,9 +183,9 @@ AbstractBackgroundWidget {
 
                     StyledText {
                         text: Translation.tr("Focus Flow")
-                        font.pixelSize: Appearance.font.pixelSize.medium
+                        font.pixelSize: Appearance.font.pixelSize.normal
                         font.weight: Font.DemiBold
-                        color: Appearance.colors.colText
+                        color: Appearance.colors.colOnPrimaryContainer
                     }
 
                     Item { Layout.fillWidth: true }
@@ -222,7 +200,7 @@ AbstractBackgroundWidget {
                                 width: 7; height: 7; radius: 3.5
                                 color: (index < (root.completedCycles % 4))
                                     ? Appearance.colors.colPrimary
-                                    : Qt.rgba(1, 1, 1, 0.18)
+                                    : Qt.rgba(1, 1, 1, 0.2)
                                 border.width: 1
                                 border.color: root.widgetBorderColor
                             }
@@ -237,15 +215,15 @@ AbstractBackgroundWidget {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        implicitHeight: 24
-                        radius: 12
+                        implicitHeight: 22
+                        radius: 11
                         color: root.currentMode === "focus" 
                             ? Appearance.colors.colPrimary
-                            : Qt.rgba(1, 1, 1, 0.08)
+                            : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         StyledText {
                             anchors.centerIn: parent
                             text: Translation.tr("Focus")
-                            font.pixelSize: Appearance.font.pixelSize.tiny ?? 11
+                            font.pixelSize: Appearance.font.pixelSize.smallest
                             font.weight: root.currentMode === "focus" ? Font.Bold : Font.Normal
                             color: root.currentMode === "focus" ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
                         }
@@ -258,15 +236,15 @@ AbstractBackgroundWidget {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        implicitHeight: 24
-                        radius: 12
+                        implicitHeight: 22
+                        radius: 11
                         color: root.currentMode === "short_break" 
                             ? Appearance.colors.colPrimary
-                            : Qt.rgba(1, 1, 1, 0.08)
+                            : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         StyledText {
                             anchors.centerIn: parent
                             text: Translation.tr("Short Break")
-                            font.pixelSize: Appearance.font.pixelSize.tiny ?? 11
+                            font.pixelSize: Appearance.font.pixelSize.smallest
                             font.weight: root.currentMode === "short_break" ? Font.Bold : Font.Normal
                             color: root.currentMode === "short_break" ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
                         }
@@ -279,15 +257,15 @@ AbstractBackgroundWidget {
 
                     Rectangle {
                         Layout.fillWidth: true
-                        implicitHeight: 24
-                        radius: 12
+                        implicitHeight: 22
+                        radius: 11
                         color: root.currentMode === "long_break" 
                             ? Appearance.colors.colPrimary
-                            : Qt.rgba(1, 1, 1, 0.08)
+                            : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         StyledText {
                             anchors.centerIn: parent
                             text: Translation.tr("Long Break")
-                            font.pixelSize: Appearance.font.pixelSize.tiny ?? 11
+                            font.pixelSize: Appearance.font.pixelSize.smallest
                             font.weight: root.currentMode === "long_break" ? Font.Bold : Font.Normal
                             color: root.currentMode === "long_break" ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
                         }
@@ -302,14 +280,14 @@ AbstractBackgroundWidget {
                 // Center Timer Display with Circular Dial
                 Item {
                     Layout.fillWidth: true
-                    implicitHeight: 110
+                    implicitHeight: 100
 
                     // Breathing guide glow circle
                     Rectangle {
                         id: breathingGlow
                         anchors.centerIn: parent
-                        width: 104; height: 104; radius: 52
-                        color: Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.12)
+                        width: 96; height: 96; radius: 48
+                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                         visible: root.isRunning
 
                         SequentialAnimation on scale {
@@ -329,7 +307,7 @@ AbstractBackgroundWidget {
                     Canvas {
                         id: progressCanvas
                         anchors.centerIn: parent
-                        width: 100; height: 100
+                        width: 92; height: 92
 
                         onPaint: {
                             const ctx = getContext("2d");
@@ -341,7 +319,7 @@ AbstractBackgroundWidget {
                             // Background Track
                             ctx.beginPath();
                             ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-                            ctx.strokeStyle = "rgba(255, 255, 255, 0.1)";
+                            ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
                             ctx.lineWidth = 4;
                             ctx.stroke();
 
@@ -365,9 +343,9 @@ AbstractBackgroundWidget {
                         StyledText {
                             Layout.alignment: Qt.AlignHCenter
                             text: root.formatTime(root.remainingSeconds)
-                            font.pixelSize: 24
+                            font.pixelSize: 22
                             font.weight: Font.Bold
-                            color: Appearance.colors.colText
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                         StyledText {
                             Layout.alignment: Qt.AlignHCenter
@@ -386,14 +364,14 @@ AbstractBackgroundWidget {
 
                     // Reset
                     Rectangle {
-                        width: 30; height: 30; radius: 15
-                        color: resetMouse.containsMouse ? Appearance.colors.colLayer2 : Qt.rgba(1, 1, 1, 0.08)
+                        width: 28; height: 28; radius: 14
+                        color: resetMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.6) : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: "replay"
-                            iconSize: 16
+                            iconSize: 15
                             color: Appearance.colors.colSubtext
                         }
                         MouseArea {
@@ -407,7 +385,7 @@ AbstractBackgroundWidget {
 
                     // Main Play/Pause
                     Rectangle {
-                        width: 40; height: 40; radius: 20
+                        width: 36; height: 36; radius: 18
                         color: Appearance.colors.colPrimary
                         border.width: 1
                         border.color: root.widgetBorderColor
@@ -415,7 +393,7 @@ AbstractBackgroundWidget {
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: root.isRunning ? "pause" : "play_arrow"
-                            iconSize: 22
+                            iconSize: 20
                             color: Appearance.colors.colOnPrimary
                         }
                         MouseArea {
@@ -427,14 +405,14 @@ AbstractBackgroundWidget {
 
                     // Skip
                     Rectangle {
-                        width: 30; height: 30; radius: 15
-                        color: skipMouse.containsMouse ? Appearance.colors.colLayer2 : Qt.rgba(1, 1, 1, 0.08)
+                        width: 28; height: 28; radius: 14
+                        color: skipMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.6) : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: "skip_next"
-                            iconSize: 16
+                            iconSize: 15
                             color: Appearance.colors.colSubtext
                         }
                         MouseArea {
@@ -450,11 +428,11 @@ AbstractBackgroundWidget {
                 // Soundscape Mixer Section
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 4
+                    spacing: 3
 
                     MaterialSymbol {
                         text: root.activeSound === "off" ? "volume_off" : "graphic_eq"
-                        iconSize: 16
+                        iconSize: 15
                         color: root.activeSound === "off" ? Appearance.colors.colSubtext : Appearance.colors.colPrimary
                     }
 
@@ -473,23 +451,25 @@ AbstractBackgroundWidget {
                             implicitHeight: 20
                             radius: 10
                             color: root.activeSound === soundPill.modelData.id 
-                                ? Qt.rgba(Appearance.colors.colPrimary.r, Appearance.colors.colPrimary.g, Appearance.colors.colPrimary.b, 0.25)
-                                : Qt.rgba(1, 1, 1, 0.06)
+                                ? Appearance.colors.colPrimary
+                                : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                             border.width: 1
-                            border.color: root.activeSound === soundPill.modelData.id ? Appearance.colors.colPrimary : "transparent"
+                            border.color: root.activeSound === soundPill.modelData.id ? Appearance.colors.colPrimary : root.widgetBorderColor
 
                             StyledText {
                                 anchors.centerIn: parent
                                 text: soundPill.modelData.label
-                                font.pixelSize: 10
+                                font.pixelSize: Appearance.font.pixelSize.smallest
                                 font.weight: root.activeSound === soundPill.modelData.id ? Font.Bold : Font.Normal
-                                color: root.activeSound === soundPill.modelData.id ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                color: root.activeSound === soundPill.modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
                             }
 
                             MouseArea {
                                 anchors.fill: parent
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.activeSound = soundPill.modelData.id
+                                onClicked: {
+                                    root.activeSound = soundPill.modelData.id;
+                                }
                             }
                         }
                     }
