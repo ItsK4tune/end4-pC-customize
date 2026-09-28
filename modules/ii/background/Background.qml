@@ -170,6 +170,7 @@ Variants {
                 bgRoot.previousWallpaperSource = ""
                 bgRoot.transitionProgress = 1.0
                 bgRoot.videoRevealed = bgRoot.wallpaperIsVideo
+                sharedDesktopBlur.scheduleUpdate()
             }
         }
 
@@ -240,13 +241,26 @@ Variants {
                     && (bgRoot.wallpaperAnimation === "" || bgRoot.transitionProgress >= 1.0)
                     && !centeredWallpaper.centeredHidesFullWallpaper
                 opacity: centeredWallpaper.centeredFullWallpaperOpacity()
+                readonly property Item sharedBlurTexture: sharedDesktopBlur.blurTexture
+
                 onStatusChanged: {
-                    if (status === Image.Ready && bgRoot.transitionPending) {
-                        bgRoot.transitionPending = false
-                        bgRoot.transitionProgress = 0.0
-                        transitionAnim.restart()
+                    if (status === Image.Ready) {
+                        sharedDesktopBlur.scheduleUpdate()
+                        if (bgRoot.transitionPending) {
+                            bgRoot.transitionPending = false
+                            bgRoot.transitionProgress = 0.0
+                            transitionAnim.restart()
+                        }
                     }
                 }
+            }
+
+            SharedDesktopBlur {
+                id: sharedDesktopBlur
+                anchors.fill: parent
+                z: -50
+                sourceItem: bgRoot.wallpaperAnimation === "" || bgRoot.transitionProgress >= 1.0 ? wallpaper : transitionEffect
+                isDynamic: bgRoot.transitionProgress < 1.0 || bgRoot.videoRevealed
             }
 
             ShaderEffect {
@@ -328,11 +342,11 @@ Variants {
                         NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
                     }
 
-                    FastBlur {
+                    ShaderEffectSource {
                         id: blurLayer
                         anchors.fill: parent
-                        source: bgRoot.wallpaperAnimation === "" || bgRoot.transitionProgress >= 1.0 ? wallpaper : transitionEffect
-                        radius: Config.options.background.blurRadius
+                        sourceItem: sharedDesktopBlur.blurTexture
+                        live: bgRoot.transitionProgress < 1.0 || bgRoot.videoRevealed
 
                         layer.enabled: !bgRoot.blurFullScreen
                         layer.effect: OpacityMask {

@@ -255,6 +255,7 @@ Singleton {
                 property JsonObject widgets: JsonObject {
                     property bool blurWidgets: false
                     property real blurRadius: 32
+                    property bool useSharedBlur: true
                     property bool shadow: true
                     property JsonObject clock: JsonObject {
                         property bool enable: true

@@ -5,12 +5,16 @@ import qs.modules.common
 Item {
     id: root
     required property Item blurSource
+    property Item sharedBlurSource: null
     property real cardRadius: 30
     property color tint: "white"
     property real tintOpacity: 0.15
     property real blurRadius: Config.options.background.widgets.blurRadius ?? 32
     property real trackX: 0
     property real trackY: 0
+
+    readonly property Item effectiveSharedBlur: root.sharedBlurSource ?? root.blurSource?.sharedBlurTexture ?? null
+    readonly property bool useSharedBlur: (effectiveSharedBlur !== null) && (Config.options.background.widgets.useSharedBlur ?? true)
 
     readonly property real oversample: blurRadius * 1.5
 
@@ -24,6 +28,25 @@ Item {
         }
     }
 
+    // High performance Shared Desktop Blur Pipeline (Dual-Kawase pass, 0 extra GPU blur passes)
+    ShaderEffectSource {
+        id: sharedSourceCrop
+        anchors.fill: parent
+        visible: root.isEffectActive && root.useSharedBlur
+        sourceItem: root.useSharedBlur ? root.effectiveSharedBlur : null
+        sourceRect: {
+            if (!root.isEffectActive || !root.effectiveSharedBlur) return Qt.rect(0, 0, 0, 0)
+            var _fx = root.trackX
+            var _fy = root.trackY
+            var pt = root.mapToItem(root.effectiveSharedBlur, 0, 0)
+            return Qt.rect(pt.x, pt.y, root.width, root.height)
+        }
+        hideSource: false
+        smooth: true
+        live: root.effectiveSharedBlur?.isDynamic ?? false
+    }
+
+    // Fallback local FastBlur path (used when shared blur is unavailable)
     FastBlur {
         id: blur
         x: -root.oversample
@@ -31,21 +54,21 @@ Item {
         width: root.width + root.oversample * 2
         height: root.height + root.oversample * 2
         radius: root.blurRadius
-        visible: root.isEffectActive
-        source: root.isEffectActive ? shaderSource : null
+        visible: root.isEffectActive && !root.useSharedBlur
+        source: (root.isEffectActive && !root.useSharedBlur) ? shaderSource : null
 
         ShaderEffectSource {
             id: shaderSource
-            sourceItem: root.isEffectActive ? root.blurSource : null
+            sourceItem: (root.isEffectActive && !root.useSharedBlur) ? root.blurSource : null
             sourceRect: {
-                if (!root.isEffectActive) return Qt.rect(0, 0, 0, 0)
+                if (!root.isEffectActive || root.useSharedBlur) return Qt.rect(0, 0, 0, 0)
                 var _fx = root.trackX
                 var _fy = root.trackY
                 var pt = root.mapToItem(root.blurSource, -root.oversample, -root.oversample)
                 return Qt.rect(pt.x, pt.y, blur.width, blur.height)
             }
             hideSource: false
-            live: root.isEffectActive
+            live: root.isEffectActive && !root.useSharedBlur
         }
     }
 
