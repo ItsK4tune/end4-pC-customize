@@ -142,8 +142,8 @@ AbstractBackgroundWidget {
         property bool showHoverOverlay: true
         radius: avatarRadius
         color: Appearance.colors.colPrimaryContainer
-        border.width: 3
-        border.color: Appearance.colors.colLayer1
+        border.width: 2
+        border.color: Appearance.colors.colLayer0Border
 
         AvatarImage {
             id: innerAvatarImg
@@ -391,7 +391,7 @@ AbstractBackgroundWidget {
                         radius: 12
                         color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                         border.width: 1
-                        border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
+                        border.color: Appearance.colors.colLayer0Border
                         clip: true
 
                         readonly property bool musicAvailable: (MprisController.activePlayer?.trackTitle ?? "").length > 0
@@ -510,7 +510,7 @@ AbstractBackgroundWidget {
                             radius: 10
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
+                            border.color: Appearance.colors.colLayer0Border
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -535,7 +535,7 @@ AbstractBackgroundWidget {
                             radius: 10
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
+                            border.color: Appearance.colors.colLayer0Border
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -560,7 +560,7 @@ AbstractBackgroundWidget {
                             radius: 10
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
+                            border.color: Appearance.colors.colLayer0Border
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -621,7 +621,7 @@ AbstractBackgroundWidget {
                             radius: 19
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
+                            border.color: Appearance.colors.colLayer0Border
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
@@ -642,7 +642,7 @@ AbstractBackgroundWidget {
                             radius: 19
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
+                            border.color: Appearance.colors.colLayer0Border
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
@@ -663,7 +663,7 @@ AbstractBackgroundWidget {
                             radius: 19
                             color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
+                            border.color: Appearance.colors.colLayer0Border
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
