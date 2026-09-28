@@ -2458,17 +2458,18 @@ ContentPage {
                     }
 
                     ConfigSlider {
+                        Layout.fillWidth: true
                         buttonIcon: "crop_free"
                         text: Translation.tr("Pet scale")
                         value: Config.options.background.widgets.pet?.petScale ?? 1.0
-                        minimum: 0.7
-                        maximum: 1.6
-                        stepSize: 0.05
+                        usePercentTooltip: false
+                        from: 0.7
+                        to: 1.6
                         onValueChanged: {
                             if (Config.options.background.widgets.pet)
-                                Config.options.background.widgets.pet.petScale = value;
+                                Config.options.background.widgets.pet.petScale = Math.round(value * 20) / 20;
                             else
-                                Config.setNestedValue("background.widgets.pet.petScale", value);
+                                Config.setNestedValue("background.widgets.pet.petScale", Math.round(value * 20) / 20);
                         }
                     }
 
