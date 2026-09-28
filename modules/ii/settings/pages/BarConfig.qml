@@ -65,18 +65,23 @@ ContentPage {
             ...Config.options.bar.layouts.middleLayout,
             ...Config.options.bar.layouts.rightLayout
         ]
-        if (section === "middle" && Config.options.bar.layouts.middleLayout.length > 0) {
-            return Config.options.bar.layouts.middleLayout.includes("dynamicIsland") ? [] : allWidgets.filter(w => {
-                if (w.id === "dynamicIsland") return false
+        if (section === "middle") {
+            if (Config.options.bar.layouts.middleLayout.includes("dynamicIsland")) {
+                return []
+            }
+            const multipleAllowed = ["visualizer", "divisor"]
+            return allWidgets.filter(w => {
                 if (w.id === "divisor" && Config.options.bar.borderless !== "transparent") return false
-                const multipleAllowed = ["visualizer", "divisor"]
+                if (w.id === "dynamicIsland") {
+                    return !Config.options.bar.vertical
+                }
                 return !used.includes(w.id) || multipleAllowed.includes(w.id)
             })
         }
         const multipleAllowed = ["visualizer", "divisor"]
         return allWidgets.filter(w => {
             if (w.id === "divisor" && Config.options.bar.borderless !== "transparent") return false
-            if (w.id === "dynamicIsland" && (Config.options.bar.vertical || section !== "middle")) return false
+            if (w.id === "dynamicIsland") return false
             return !used.includes(w.id) || multipleAllowed.includes(w.id)
         })
     }
@@ -197,7 +202,13 @@ ContentPage {
                     layout: Config.options.bar.layouts.middleLayout
                     availableWidgets: page.availableFor("middle")
                     getWidgetName: page.getWidgetName
-                    onUpdate: list => Config.options.bar.layouts.middleLayout = list
+                    onUpdate: list => {
+                        if (list.length > 0 && list[list.length - 1] === "dynamicIsland") {
+                            Config.options.bar.layouts.middleLayout = ["dynamicIsland"]
+                        } else {
+                            Config.options.bar.layouts.middleLayout = list
+                        }
+                    }
                 }
 
                 LayoutSection {
