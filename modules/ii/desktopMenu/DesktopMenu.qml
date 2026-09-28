@@ -84,12 +84,18 @@ Scope {
             exclusiveZone: 0
             WlrLayershell.namespace: "quickshell:desktopMenu"
             WlrLayershell.layer: WlrLayer.Overlay
+            WlrLayershell.keyboardFocus: WlrKeyboardFocus.OnDemand
 
             anchors {
                 top: true
                 bottom: true
                 left: true
                 right: true
+            }
+
+            Item {
+                focus: true
+                Keys.onEscapePressed: GlobalStates.desktopMenuOpen = false
             }
 
             property Component openSubmenuComponent: null
@@ -113,8 +119,12 @@ Scope {
                 id: menuCard
                 width: 348
                 implicitHeight: menuCol.implicitHeight + 16
-                x: Math.min(Math.max(GlobalStates.desktopMenuX - width / 2, 8), menuWindow.width - width - 8)
-                y: Math.min(Math.max(GlobalStates.desktopMenuY - implicitHeight / 2, 8), menuWindow.height - implicitHeight - 8)
+                x: (GlobalStates.desktopMenuX + width + 12 > menuWindow.width)
+                    ? Math.max(12, GlobalStates.desktopMenuX - width)
+                    : Math.max(12, GlobalStates.desktopMenuX)
+                y: (GlobalStates.desktopMenuY + implicitHeight + 12 > menuWindow.height)
+                    ? Math.max(12, GlobalStates.desktopMenuY - implicitHeight)
+                    : Math.max(12, GlobalStates.desktopMenuY)
                 radius: Appearance.rounding.verylarge
                 color: "transparent"
 
@@ -160,6 +170,69 @@ Scope {
                             onWallpaperSelected: (path) => {
                                 Wallpapers.select(path, Appearance.m3colors.darkmode)
                                 GlobalStates.desktopMenuOpen = false
+                            }
+                        }
+                    }
+
+                    // Quick Actions: Random wallpaper button
+                    RippleButton {
+                        Layout.fillWidth: true
+                        implicitHeight: 36
+                        colBackground: Appearance.colors.colLayer0
+                        colBackgroundHover: Appearance.colors.colLayer2
+                        contentItem: RowLayout {
+                            anchors { fill: parent; leftMargin: 12; rightMargin: 12 }
+                            spacing: 10
+                            MaterialSymbol { text: "casino"; iconSize: Appearance.font.pixelSize.larger; color: Appearance.colors.colPrimary }
+                            StyledText { Layout.fillWidth: true; text: "Random Wallpaper"; font.pixelSize: Appearance.font.pixelSize.normal; color: Appearance.colors.colOnLayer1 }
+                        }
+                        onClicked: {
+                            GlobalStates.desktopMenuOpen = false
+                            Wallpapers.randomFromCurrentFolder(Appearance.m3colors.darkmode)
+                        }
+                    }
+
+                    // Quick Actions: Monet Palette Scheme Selector
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: 36
+                        radius: Appearance.rounding.large
+                        color: Appearance.colors.colLayer0
+
+                        RowLayout {
+                            anchors.centerIn: parent
+                            spacing: 12
+
+                            Repeater {
+                                model: [
+                                    { name: "Tonal Spot", type: "scheme-tonal-spot", color: Appearance.colors.colPrimary },
+                                    { name: "Expressive", type: "scheme-expressive", color: Appearance.colors.colSecondary },
+                                    { name: "Rainbow", type: "scheme-rainbow", color: "#FF5722" },
+                                    { name: "Fruit Salad", type: "scheme-fruit-salad", color: "#4CAF50" },
+                                    { name: "Monochrome", type: "scheme-monochrome", color: "#9E9E9E" }
+                                ]
+
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    width: 22; height: 22; radius: 11
+                                    color: modelData.color
+                                    border.width: Config.options.appearance.palette.type === modelData.type ? 2.5 : 0
+                                    border.color: Appearance.colors.colOnPrimary
+
+                                    scale: paletteMouse.containsMouse ? 1.2 : 1.0
+                                    Behavior on scale { NumberAnimation { duration: 150 } }
+
+                                    MouseArea {
+                                        id: paletteMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: {
+                                            Config.options.appearance.palette.type = modelData.type;
+                                            Quickshell.execDetached(["bash", "-c", `${Directories.wallpaperSwitchScriptPath} --noswitch`]);
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -318,13 +391,18 @@ Scope {
                 sourceComponent: menuWindow.openSubmenuComponent
 
                 x: (menuCard.x + menuCard.width + 8 + menuWindow.submenuWidth > menuWindow.width)
-                    ? menuCard.x - menuWindow.submenuWidth - 8
-                    : menuCard.x + menuCard.width + 8
+                    ? Math.max(8, menuCard.x - menuWindow.submenuWidth - 8)
+                    : Math.min(menuWindow.width - menuWindow.submenuWidth - 8, menuCard.x + menuCard.width + 8)
 
                 y: Math.min(
                     Math.max(menuWindow.submenuAnchorY, 8),
                     menuWindow.height - (item?.implicitHeight ?? 0) - 8
                 )
+
+                MouseArea {
+                    anchors.fill: parent
+                    acceptedButtons: Qt.AllButtons
+                }
 
                 scale: active ? 1.0 : 0.9
                 opacity: active ? 1.0 : 0.0
