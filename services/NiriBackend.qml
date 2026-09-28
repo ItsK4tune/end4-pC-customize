@@ -155,12 +155,17 @@ Scope {
     Process {
         id: eventStream
         command: ["niri", "msg", "-j", "event-stream"]
+        running: WM.compositor === "niri"
         stdout: SplitParser {
             splitMarker: "\n"
             onRead: (line) => { if (line.trim().length > 0) refreshDebounce.restart() }
         }
-        onExited: restartTimer.restart()
+        onExited: (exitCode, exitStatus) => {
+            if (WM.compositor === "niri") {
+                restartTimer.restart()
+            }
+        }
     }
-    Timer { id: restartTimer; interval: 1000; onTriggered: eventStream.running = true }
+    Timer { id: restartTimer; interval: 2000; onTriggered: { if (WM.compositor === "niri") eventStream.running = true } }
     Timer { id: refreshDebounce; interval: 80; onTriggered: root.updateAll() }
 }

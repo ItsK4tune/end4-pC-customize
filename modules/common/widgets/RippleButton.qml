@@ -138,21 +138,13 @@ Button {
         id: buttonBackground
         radius: root.buttonEffectiveRadius
         implicitHeight: 30
+        clip: true
 
         color: root.buttonColor
         border.width: root.border ? root.borderWidth : 0
         border.color: root.colBorder
         Behavior on color {
             animation: Appearance?.animation.elementMoveFast.colorAnimation.createObject(this)
-        }
-
-        layer.enabled: true
-        layer.effect: OpacityMask {
-            maskSource: Rectangle {
-                width: buttonBackground.width
-                height: buttonBackground.height
-                radius: root.buttonEffectiveRadius
-            }
         }
 
         Item {

@@ -102,7 +102,7 @@ Singleton {
             root.startNiriSunset(root.colorTemperature);
         } else {
             root.startHyprsunset();
-            Quickshell.execDetached(["bash", "-c", `hyprctl hyprsunset temperature ${root.colorTemperature}`]);
+            Quickshell.execDetached(["hyprctl", "hyprsunset", "temperature", String(root.colorTemperature)]);
         }
         root.temperatureActive = true;
     }
@@ -124,7 +124,7 @@ Singleton {
             return;
         }
         root.startHyprsunset();
-        Quickshell.execDetached(["bash", "-c", `hyprctl hyprsunset gamma ${root.gamma}`]);
+        Quickshell.execDetached(["hyprctl", "hyprsunset", "gamma", String(root.gamma)]);
     }
 
     function startNiriSunset(temp) {
@@ -190,7 +190,7 @@ Singleton {
     }
 
     Connections {
-        target: Config.options.light.night
+        target: Config.ready ? (Config.options?.light?.night ?? null) : null
         function onColorTemperatureChanged() {
             if (!root.temperatureActive) return;
             if (root.isNiri) {
