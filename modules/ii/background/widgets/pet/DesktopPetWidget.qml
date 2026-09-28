@@ -33,9 +33,9 @@ AbstractBackgroundWidget {
     property bool isDancing: reactToMusic && MprisController.isPlaying
     property bool isSweating: reactToSystem && (ResourceUsage.cpuUsage > 0.75)
     property bool isRaining: reactToWeather && (
-        Weather.currentCondition.toLowerCase().includes("rain") ||
-        Weather.currentCondition.toLowerCase().includes("drizzle") ||
-        Weather.currentCondition.toLowerCase().includes("shower")
+        (Weather.currentCondition?.toLowerCase() ?? "").includes("rain") ||
+        (Weather.currentCondition?.toLowerCase() ?? "").includes("drizzle") ||
+        (Weather.currentCondition?.toLowerCase() ?? "").includes("shower")
     )
     property bool isSleeping: idleSeconds > 35 && !isDancing && !isPetted
 
