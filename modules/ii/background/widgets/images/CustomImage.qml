@@ -1048,9 +1048,9 @@ AbstractBackgroundWidget {
                             id: slotMouseArea
                             anchors.fill: parent
                             hoverEnabled: true
-                            preventStealing: true
-                            acceptedButtons: root.cropModeActive ? (Qt.LeftButton | Qt.RightButton) : Qt.RightButton
-                            cursorShape: slotCropDragging ? Qt.ClosedHandCursor : (root.cropModeActive && slotRoot.slotPath !== "" ? Qt.OpenHandCursor : (slotRoot.slotPath !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor))
+                            preventStealing: root.cropModeActive
+                            acceptedButtons: root.cropModeActive ? (Qt.LeftButton | Qt.RightButton) : Qt.NoButton
+                            cursorShape: root.cropModeActive ? (slotCropDragging ? Qt.ClosedHandCursor : (slotRoot.slotPath !== "" ? Qt.OpenHandCursor : Qt.ArrowCursor)) : (slotRoot.slotPath !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor)
 
                             property bool slotCropDragging: false
                             property real startMouseX: 0
@@ -1064,46 +1064,50 @@ AbstractBackgroundWidget {
                             }
 
                             onWheel: (wheel) => {
-                                if (slotRoot.slotPath !== "") {
-                                    let currentCrop = root.getSlotCrop(slotRoot.index);
-                                    let zoomDelta = wheel.angleDelta.y > 0 ? 0.1 : -0.1;
-                                    let newZoom = Math.max(1.0, Math.min(3.0, currentCrop.zoom + zoomDelta));
-                                    root.setSlotCrop(slotRoot.index, currentCrop.x, currentCrop.y, newZoom);
-                                    wheel.accepted = true;
+                                if (!root.cropModeActive || slotRoot.slotPath === "") {
+                                    wheel.accepted = false;
+                                    return;
                                 }
+                                let currentCrop = root.getSlotCrop(slotRoot.index);
+                                let zoomDelta = wheel.angleDelta.y > 0 ? 0.1 : -0.1;
+                                let newZoom = Math.max(1.0, Math.min(3.0, currentCrop.zoom + zoomDelta));
+                                root.setSlotCrop(slotRoot.index, currentCrop.x, currentCrop.y, newZoom);
+                                wheel.accepted = true;
                             }
 
                             onPressed: (mouse) => {
-                                if ((mouse.button === Qt.RightButton || (root.cropModeActive && mouse.button === Qt.LeftButton)) && slotRoot.slotPath !== "") {
-                                    slotCropDragging = true;
-                                    startMouseX = mouse.x;
-                                    startMouseY = mouse.y;
-                                    let crop = root.getSlotCrop(slotRoot.index);
-                                    startPanX = crop.x;
-                                    startPanY = crop.y;
-                                    mouse.accepted = true;
+                                if (!root.cropModeActive || slotRoot.slotPath === "") {
+                                    mouse.accepted = false;
+                                    return;
                                 }
+                                slotCropDragging = true;
+                                startMouseX = mouse.x;
+                                startMouseY = mouse.y;
+                                let crop = root.getSlotCrop(slotRoot.index);
+                                startPanX = crop.x;
+                                startPanY = crop.y;
+                                mouse.accepted = true;
                             }
 
                             onPositionChanged: (mouse) => {
-                                if (slotCropDragging) {
-                                    let dx = mouse.x - startMouseX;
-                                    let dy = mouse.y - startMouseY;
-                                    let ox = slotImage.overflowX;
-                                    let oy = slotImage.overflowY;
-                                    let sensX = ox > 0 ? ox : 100;
-                                    let sensY = oy > 0 ? oy : 100;
-                                    let newPx = ox > 0 ? Math.max(0.0, Math.min(1.0, startPanX - dx / sensX)) : 0.5;
-                                    let newPy = oy > 0 ? Math.max(0.0, Math.min(1.0, startPanY - dy / sensY)) : 0.5;
-                                    let currentCrop = root.getSlotCrop(slotRoot.index);
-                                    root.setSlotCrop(slotRoot.index, newPx, newPy, currentCrop.zoom);
-                                }
+                                if (!root.cropModeActive || !slotCropDragging) return;
+                                let dx = mouse.x - startMouseX;
+                                let dy = mouse.y - startMouseY;
+                                let ox = slotImage.overflowX;
+                                let oy = slotImage.overflowY;
+                                let sensX = ox > 0 ? ox : 100;
+                                let sensY = oy > 0 ? oy : 100;
+                                let newPx = ox > 0 ? Math.max(0.0, Math.min(1.0, startPanX - dx / sensX)) : 0.5;
+                                let newPy = oy > 0 ? Math.max(0.0, Math.min(1.0, startPanY - dy / sensY)) : 0.5;
+                                let currentCrop = root.getSlotCrop(slotRoot.index);
+                                root.setSlotCrop(slotRoot.index, newPx, newPy, currentCrop.zoom);
                             }
 
                             onReleased: (mouse) => {
                                 if (slotCropDragging) {
                                     slotCropDragging = false;
                                     if (!containsMouse) slotRoot.slotHover = false;
+                                    mouse.accepted = true;
                                 }
                             }
                         }
