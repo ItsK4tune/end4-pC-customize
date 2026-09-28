@@ -4,6 +4,8 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Io
+import qs.modules.common
+import qs.modules.common.functions
 
 Singleton {
     id: root
@@ -29,6 +31,64 @@ Singleton {
     property string packages: ""
     property string installAge: ""
     property string kernelVersion: ""
+
+    // Avatar Management System
+    signal avatarChanged()
+
+    readonly property string effectiveAvatar: {
+        const pic = Config.options?.profile?.avatarPicture ?? "";
+        if (pic.length > 0) {
+            return pic.startsWith("file://") ? pic : "file://" + pic;
+        }
+        const folder = Config.options?.profile?.avatarPath ?? "";
+        if (folder.length > 0) {
+            const trimmed = FileUtils.trimFileProtocol(folder);
+            if (/\.(png|jpe?g|webp|svg|gif|avif)$/i.test(trimmed)) {
+                return folder.startsWith("file://") ? folder : "file://" + folder;
+            }
+        }
+        return "file://" + Directories.home + "/.face";
+    }
+
+    function setAvatar(filePath) {
+        if (!filePath) return;
+        const cleanPath = FileUtils.trimFileProtocol(filePath.toString().trim());
+        if (cleanPath.length === 0) return;
+        Config.options.profile.avatarPicture = cleanPath;
+        const userFace = Directories.home + "/.face";
+        Quickshell.execDetached(["bash", "-c", `cp -f '${cleanPath}' '${userFace}' 2>/dev/null || true`]);
+        root.avatarChanged();
+    }
+
+    function clearAvatar() {
+        Config.options.profile.avatarPicture = "";
+        Config.options.profile.avatarPath = "";
+        root.avatarChanged();
+    }
+
+    function pickAvatar() {
+        avatarPickerProc.running = false;
+        avatarPickerProc.running = true;
+    }
+
+    Process {
+        id: avatarPickerProc
+        command: ["bash", "-c", `
+            if command -v kdialog >/dev/null 2>&1; then
+                kdialog --title "Select Avatar Image" --getopenfilename "$HOME" "Images (*.png *.jpg *.jpeg *.webp *.svg *.gif)" 2>/dev/null
+            elif command -v zenity >/dev/null 2>&1; then
+                zenity --file-selection --title="Select Avatar Image" --file-filter="Images | *.png *.jpg *.jpeg *.webp *.svg *.gif" 2>/dev/null
+            fi
+        `]
+        stdout: SplitParser {
+            onRead: data => {
+                const picked = data.trim();
+                if (picked.length > 0) {
+                    root.setAvatar(picked);
+                }
+            }
+        }
+    }
 
     function refresh() {
         getCpu.running = false;       getCpu.running = true

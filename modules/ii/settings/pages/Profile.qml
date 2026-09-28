@@ -293,6 +293,143 @@ ContentPage {
             title: Translation.tr("Avatar")
 
             GroupedList {
+                RowLayout {
+                    Layout.fillWidth: true
+                    Layout.margins: 10
+                    spacing: 16
+
+                    Rectangle {
+                        id: previewAvatarRect
+                        width: 72
+                        height: 72
+                        radius: 36
+                        color: Appearance.colors.colPrimaryContainer
+                        clip: true
+
+                        Image {
+                            id: previewAvatarImg
+                            anchors.fill: parent
+                            source: SystemInfo.effectiveAvatar
+                            sourceSize.width: 144
+                            sourceSize.height: 144
+                            fillMode: Image.PreserveAspectCrop
+                            onStatusChanged: if (status === Image.Error) visible = false
+                        }
+
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            text: "account_circle"
+                            iconSize: 40
+                            color: Appearance.colors.colOnPrimaryContainer
+                            visible: previewAvatarImg.status === Image.Error
+                        }
+
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: parent.radius
+                            color: ColorUtils.transparentize(Appearance.colors.colScrim, 0.4)
+                            visible: previewAvatarMouse.containsMouse
+
+                            MaterialSymbol {
+                                anchors.centerIn: parent
+                                text: "photo_camera"
+                                iconSize: 24
+                                color: Appearance.colors.colOnPrimary
+                            }
+                        }
+
+                        MouseArea {
+                            id: previewAvatarMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: SystemInfo.pickAvatar()
+                        }
+
+                        DropArea {
+                            anchors.fill: parent
+                            onDropped: (drop) => {
+                                if (drop.hasUrls && drop.urls.length > 0) {
+                                    const rawUrl = drop.urls[0].toString();
+                                    const clean = decodeURIComponent(rawUrl.replace(/^file:\/\//, ""));
+                                    if (/\.(png|jpe?g|webp|svg|gif|avif)$/i.test(clean)) {
+                                        SystemInfo.setAvatar(clean);
+                                        drop.accept();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    ColumnLayout {
+                        Layout.fillWidth: true
+                        spacing: 6
+
+                        StyledText {
+                            text: Config.options.profile.avatarPicture !== ""
+                                ? FileUtils.fileNameForPath(Config.options.profile.avatarPicture)
+                                : Translation.tr("Default System Avatar (~/.face)")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.DemiBold
+                            color: Appearance.colors.colOnLayer1
+                            elide: Text.ElideMiddle
+                            Layout.fillWidth: true
+                        }
+
+                        RowLayout {
+                            spacing: 8
+
+                            RippleButton {
+                                implicitHeight: 34
+                                implicitWidth: 140
+                                buttonRadius: Appearance.rounding.small
+                                colBackground: Appearance.colors.colPrimary
+                                colBackgroundHover: Appearance.colors.colPrimaryHover
+                                contentItem: RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 6
+                                    MaterialSymbol {
+                                        text: "folder_open"
+                                        iconSize: 18
+                                        color: Appearance.m3colors.m3onPrimary
+                                    }
+                                    StyledText {
+                                        text: Translation.tr("Choose Image")
+                                        font.pixelSize: Appearance.font.pixelSize.small
+                                        font.weight: Font.Medium
+                                        color: Appearance.m3colors.m3onPrimary
+                                    }
+                                }
+                                onClicked: SystemInfo.pickAvatar()
+                            }
+
+                            RippleButton {
+                                implicitHeight: 34
+                                implicitWidth: 100
+                                buttonRadius: Appearance.rounding.small
+                                visible: Config.options.profile.avatarPicture !== ""
+                                colBackground: Appearance.colors.colLayer2
+                                colBackgroundHover: Appearance.colors.colLayer2Hover
+                                contentItem: RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 4
+                                    MaterialSymbol {
+                                        text: "delete"
+                                        iconSize: 18
+                                        color: Appearance.colors.colError
+                                    }
+                                    StyledText {
+                                        text: Translation.tr("Reset")
+                                        font.pixelSize: Appearance.font.pixelSize.small
+                                        color: Appearance.colors.colError
+                                    }
+                                }
+                                onClicked: SystemInfo.clearAvatar()
+                            }
+                        }
+                    }
+                }
+
                 ConfigTextArea {
                     id: avatarField
                     Layout.fillWidth: true

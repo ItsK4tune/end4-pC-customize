@@ -216,24 +216,15 @@ Item {
                                     id: avatarRect
                                     width: 48; height: 48; radius: width / 2
                                     color: Appearance.colors.colPrimaryContainer
+                                    clip: true
 
                                     Image {
                                         id: avatarImage
                                         anchors.fill: parent
-                                        source: Config.options?.profile?.avatarPath
-                                            ? "file://" + Config.options.profile.avatarPath 
-                                            : "file://" + Directories.home + "/.face"
+                                        source: SystemInfo.effectiveAvatar
                                         sourceSize.width: avatarImage.width * 2
                                         sourceSize.height: avatarImage.height * 2
                                         fillMode: Image.PreserveAspectCrop
-                                        layer.enabled: true
-                                        layer.effect: OpacityMask {
-                                            maskSource: Rectangle {
-                                                width: avatarRect.width
-                                                height: avatarRect.height
-                                                radius: avatarRect.radius
-                                            }
-                                        }
                                         onStatusChanged: {
                                             if (status === Image.Error) visible = false
                                         }
@@ -245,6 +236,43 @@ Item {
                                         iconSize: 32
                                         color: Appearance.colors.colOnPrimaryContainer
                                         visible: avatarImage.status === Image.Error
+                                    }
+
+                                    Rectangle {
+                                        id: avatarHoverOverlay
+                                        anchors.fill: parent
+                                        radius: parent.radius
+                                        color: ColorUtils.transparentize(Appearance.colors.colScrim, 0.4)
+                                        visible: avatarMouseArea.containsMouse
+
+                                        MaterialSymbol {
+                                            anchors.centerIn: parent
+                                            text: "edit"
+                                            iconSize: 20
+                                            color: Appearance.colors.colOnPrimary
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: avatarMouseArea
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: SystemInfo.pickAvatar()
+                                    }
+
+                                    DropArea {
+                                        anchors.fill: parent
+                                        onDropped: (drop) => {
+                                            if (drop.hasUrls && drop.urls.length > 0) {
+                                                const rawUrl = drop.urls[0].toString();
+                                                const clean = decodeURIComponent(rawUrl.replace(/^file:\/\//, ""));
+                                                if (/\.(png|jpe?g|webp|svg|gif|avif)$/i.test(clean)) {
+                                                    SystemInfo.setAvatar(clean);
+                                                    drop.accept();
+                                                }
+                                            }
+                                        }
                                     }
                                 }
 
