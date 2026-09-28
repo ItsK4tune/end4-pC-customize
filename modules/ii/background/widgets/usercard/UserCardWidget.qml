@@ -325,13 +325,6 @@ AbstractBackgroundWidget {
                     visible: Config.options.background.widgets.blurWidgets 
                 }
 
-                Rectangle {
-                    anchors.fill: parent
-                    radius: card2x2.radius
-                    color: Appearance.colors.colLayer0
-                    opacity: 0.25
-                }
-
                 ColumnLayout {
                     anchors {
                         fill: parent
@@ -390,44 +383,101 @@ AbstractBackgroundWidget {
                         }
                     }
 
-                    // 2. Weather Quip / Live Media Player Pill
+                    // 2. Weather Quip / Live Media Player Pill with Animated Morphing Swap
                     Rectangle {
                         id: quipPill
                         Layout.fillWidth: true
-                        implicitHeight: 34
+                        implicitHeight: 36
                         radius: 12
-                        color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.45)
+                        color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                         border.width: 1
-                        border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.75)
+                        border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
+                        clip: true
 
-                        RowLayout {
-                            anchors {
-                                fill: parent
-                                leftMargin: 10
-                                rightMargin: 10
+                        readonly property bool musicAvailable: (MprisController.activePlayer?.trackTitle ?? "").length > 0
+                        readonly property bool musicPlaying: (MprisController.activePlayer?.isPlaying ?? false)
+                        property bool manualOverride: false
+                        readonly property bool isMusicMode: musicPlaying ? !manualOverride : manualOverride
+
+                        scale: 1.0
+                        Behavior on scale {
+                            NumberAnimation { duration: 250; easing.type: Easing.OutBack }
+                        }
+
+                        // Weather Quip view
+                        Item {
+                            id: quipItem
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            opacity: quipPill.isMusicMode ? 0 : 1
+                            y: quipPill.isMusicMode ? -quipPill.height : 0
+                            visible: opacity > 0
+
+                            Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+                            Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                spacing: 8
+
+                                MaterialSymbol {
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    text: root.currentQuip.icon
+                                    color: Appearance.colors.colPrimary
+                                }
+
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
+                                    text: root.currentQuip.text
+                                }
                             }
-                            spacing: 8
+                        }
 
-                            MaterialSymbol {
-                                iconSize: Appearance.font.pixelSize.normal
-                                text: (MprisController.activePlayer?.isPlaying) ? "music_note" : root.currentQuip.icon
-                                color: Appearance.colors.colOnPrimaryContainer
-                                opacity: 0.9
-                            }
+                        // Live Music Track view
+                        Item {
+                            id: musicItem
+                            anchors.fill: parent
+                            anchors.leftMargin: 10
+                            anchors.rightMargin: 10
+                            opacity: quipPill.isMusicMode ? 1 : 0
+                            y: quipPill.isMusicMode ? 0 : quipPill.height
+                            visible: opacity > 0
 
-                            StyledText {
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
-                                font.pixelSize: Appearance.font.pixelSize.small
-                                color: Appearance.colors.colOnPrimaryContainer
-                                opacity: 0.9
-                                text: {
-                                    if (MprisController.activePlayer?.isPlaying && MprisController.activePlayer?.trackTitle) {
-                                        const title = MprisController.activePlayer.trackTitle;
-                                        const artist = MprisController.activePlayer.trackArtist ? " • " + MprisController.activePlayer.trackArtist : "";
+                            Behavior on opacity { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+                            Behavior on y { NumberAnimation { duration: 280; easing.type: Easing.OutCubic } }
+
+                            RowLayout {
+                                anchors.fill: parent
+                                spacing: 8
+
+                                MaterialSymbol {
+                                    iconSize: Appearance.font.pixelSize.normal
+                                    text: quipPill.musicPlaying ? "graphic_eq" : "music_note"
+                                    color: Appearance.colors.colSecondary
+                                }
+
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
+                                    text: {
+                                        const title = MprisController.activePlayer?.trackTitle ?? "No media";
+                                        const artist = MprisController.activePlayer?.trackArtist ? " • " + MprisController.activePlayer.trackArtist : "";
                                         return title + artist;
                                     }
-                                    return root.currentQuip.text;
+                                }
+
+                                MaterialSymbol {
+                                    iconSize: 16
+                                    text: quipPill.musicPlaying ? "pause" : "play_arrow"
+                                    color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
+                                    opacity: 0.8
                                 }
                             }
                         }
@@ -436,9 +486,12 @@ AbstractBackgroundWidget {
                             anchors.fill: parent
                             cursorShape: Qt.PointingHandCursor
                             hoverEnabled: true
+                            onPressed: quipPill.scale = 0.96
+                            onReleased: quipPill.scale = 1.0
+                            onCanceled: quipPill.scale = 1.0
                             onClicked: {
-                                if (MprisController.activePlayer?.isPlaying) {
-                                    MprisController.activePlayer.playPause();
+                                if (quipPill.musicAvailable) {
+                                    quipPill.manualOverride = !quipPill.manualOverride;
                                 } else {
                                     WeatherQuips.shuffle();
                                 }
@@ -455,9 +508,9 @@ AbstractBackgroundWidget {
                             Layout.fillWidth: true
                             implicitHeight: 32
                             radius: 10
-                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.45)
+                            color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.8)
+                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -471,7 +524,7 @@ AbstractBackgroundWidget {
                                     text: Math.round(ResourceUsage.memoryUsedPercentage * 100) + "%"
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     font.weight: Font.DemiBold
-                                    color: Appearance.colors.colOnPrimaryContainer
+                                    color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
                                 }
                             }
                         }
@@ -480,9 +533,9 @@ AbstractBackgroundWidget {
                             Layout.fillWidth: true
                             implicitHeight: 32
                             radius: 10
-                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.45)
+                            color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.8)
+                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -496,7 +549,7 @@ AbstractBackgroundWidget {
                                     text: Math.round(ResourceUsage.cpuUsage * 100) + "%"
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     font.weight: Font.DemiBold
-                                    color: Appearance.colors.colOnPrimaryContainer
+                                    color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
                                 }
                             }
                         }
@@ -505,9 +558,9 @@ AbstractBackgroundWidget {
                             Layout.fillWidth: true
                             implicitHeight: 32
                             radius: 10
-                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.45)
+                            color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.8)
+                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -521,7 +574,7 @@ AbstractBackgroundWidget {
                                     text: Math.round(ResourceUsage.diskUsedPercentage * 100) + "%"
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     font.weight: Font.DemiBold
-                                    color: Appearance.colors.colOnPrimaryContainer
+                                    color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
                                 }
                             }
                         }
@@ -538,7 +591,7 @@ AbstractBackgroundWidget {
                             Layout.fillWidth: true
                             implicitHeight: 38
                             radius: Appearance.rounding.full
-                            color: Appearance.colors.colOnPrimaryContainer
+                            color: Appearance.colors.colPrimary
 
                             RowLayout {
                                 anchors.centerIn: parent
@@ -546,12 +599,12 @@ AbstractBackgroundWidget {
                                 MaterialSymbol {
                                     iconSize: Appearance.font.pixelSize.normal
                                     text: "lock"
-                                    color: Appearance.colors.colPrimaryContainer
+                                    color: Appearance.colors.colOnPrimary
                                 }
                                 StyledText {
                                     font.pixelSize: Appearance.font.pixelSize.small
                                     font.weight: Font.DemiBold
-                                    color: Appearance.colors.colPrimaryContainer
+                                    color: Appearance.colors.colOnPrimary
                                     text: GlobalStates.screenLocked ? "Locked" : "Lock"
                                 }
                             }
@@ -566,15 +619,15 @@ AbstractBackgroundWidget {
                             implicitWidth: 38
                             implicitHeight: 38
                             radius: 19
-                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.4)
+                            color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.7)
+                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 iconSize: Appearance.font.pixelSize.normal
                                 text: "casino"
-                                color: Appearance.colors.colOnPrimaryContainer
+                                color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -587,15 +640,15 @@ AbstractBackgroundWidget {
                             implicitWidth: 38
                             implicitHeight: 38
                             radius: 19
-                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.4)
+                            color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.7)
+                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 iconSize: Appearance.font.pixelSize.normal
                                 text: "settings"
-                                color: Appearance.colors.colOnPrimaryContainer
+                                color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -608,15 +661,15 @@ AbstractBackgroundWidget {
                             implicitWidth: 38
                             implicitHeight: 38
                             radius: 19
-                            color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.4)
+                            color: Appearance.colors.colSurfaceVariant ?? ColorUtils.transparentize(Appearance.colors.colLayer2, 0.5)
                             border.width: 1
-                            border.color: ColorUtils.transparentize(Appearance.colors.colLayer0Border, 0.7)
+                            border.color: Appearance.colors.colOutlineVariant ?? ColorUtils.transparentize(Appearance.colors.colOutline, 0.8)
 
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 iconSize: Appearance.font.pixelSize.normal
                                 text: "power_settings_new"
-                                color: Appearance.colors.colOnPrimaryContainer
+                                color: Appearance.colors.colOnSurfaceVariant ?? Appearance.colors.colOnPrimaryContainer
                             }
                             MouseArea {
                                 anchors.fill: parent
