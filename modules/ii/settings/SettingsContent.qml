@@ -27,6 +27,12 @@ Item {
             let pageName = parts[0];
             let searchTerm = parts.length > 1 ? parts.slice(1).join(":") : "";
 
+            if (pageName.toLowerCase() === "profile") {
+                root.showingProfile = true;
+                GlobalStates.settingsPage = "";
+                return;
+            }
+
             const idx = root.pages.findIndex(p => {
                 let pName = (p.name || "").toLowerCase();
                 let compUrl = (p.component ? p.component.toString() : "").toLowerCase();
@@ -130,25 +136,37 @@ Item {
                     spacing: 10
                     expanded: root.width > 900
 
-                    Item {
+                    Rectangle {
                         id: profileRowContainer
                         visible: true
-                        Layout.fillWidth: false
-                        Layout.margins: isMinimal ? 0 : 5
-                        Layout.topMargin: 15
+                        Layout.fillWidth: isMinimal ? false : true
+                        Layout.margins: isMinimal ? 0 : 4
+                        Layout.topMargin: 12
                         Layout.bottomMargin: isMinimal ? -30 : 0
-                        implicitHeight: profileRow.implicitHeight
-                        implicitWidth: profileRow.implicitWidth
+                        radius: Appearance.rounding.normal
+                        color: root.showingProfile 
+                            ? Appearance.colors.colSecondaryContainer 
+                            : (profileMouseArea.containsMouse ? Appearance.colors.colLayer2 : "transparent")
+                        border.width: root.showingProfile ? 1 : 0
+                        border.color: Appearance.colors.colPrimary
+                        implicitHeight: profileRow.implicitHeight + 12
+                        implicitWidth: isMinimal ? profileRow.implicitWidth : Math.max(160, profileRow.implicitWidth + 12)
+
+                        Behavior on color {
+                            animation: Appearance.animation.elementMoveFast.colorAnimation.createObject(this)
+                        }
 
                         RowLayout {
                             id: profileRow
-                            anchors.fill: parent
+                            anchors.centerIn: parent
+                            anchors.fill: isMinimal ? undefined : parent
+                            anchors.margins: isMinimal ? 0 : 6
                             spacing: 10
 
                             Rectangle {
                                 id: avatarRect
-                                width: 48
-                                height: 48
+                                width: 44
+                                height: 44
                                 radius: width / 2
                                 color: Appearance.colors.colPrimaryContainer
 
@@ -213,9 +231,15 @@ Item {
                         }
 
                         MouseArea {
+                            id: profileMouseArea
                             anchors.fill: parent
+                            hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.showingProfile = !root.showingProfile
+                            onClicked: root.showingProfile = true
+                        }
+
+                        StyledToolTip {
+                            text: Translation.tr("Customize profile, avatar & cards")
                         }
                     }
 
@@ -338,7 +362,7 @@ Item {
 
                     Loader {
                         id: profileLoader
-                        active: false
+                        active: Config.ready && (root.showingProfile || item !== null)
                         anchors.fill: parent
                         source: Qt.resolvedUrl("pages/Profile.qml")
 
@@ -347,6 +371,12 @@ Item {
                         enabled: isActive
                         visible: isActive
                         anchors.topMargin: isActive ? 0 : 12
+
+                        onLoaded: {
+                            if (root.showingProfile) {
+                                GlobalStates.currentPageInstance = item;
+                            }
+                        }
 
                         onIsActiveChanged: {
                             if (isActive && item) {
