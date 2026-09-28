@@ -29,6 +29,9 @@ Item {
         { key: "sticker",     icon: "sticker",            name: Translation.tr("Sticker") },
         { key: "customText",  icon: "title",              name: Translation.tr("Custom Text") },
         { key: "pet",         icon: "pets",               name: Translation.tr("Desktop Pet") },
+        { key: "gitRadar",    icon: "terminal",           name: Translation.tr("Git Radar") },
+        { key: "focusFlow",   icon: "psychology",         name: Translation.tr("Focus Flow") },
+        { key: "habitGrid",   icon: "checklist",          name: Translation.tr("Habit Grid") },
     ]
 
     Rectangle {
