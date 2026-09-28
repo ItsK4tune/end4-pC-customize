@@ -109,7 +109,9 @@ def edit_idle(file_path, values):
 
         found[name] = True
         timeout = values.get(name)
-        if timeout is None or timeout <= 0:
+        if timeout is None:
+            new_lines.extend(block["lines"])
+        elif timeout <= 0:
             while new_lines and new_lines[-1].strip() == "":
                 new_lines.pop()
             print(f"Removed listener: {name}")

@@ -33,9 +33,20 @@ ApplicationWindow {
     }
     title: Translation.tr("Shell conflicts killer")
 
+    Timer {
+        id: initialCheckTimer
+        interval: 300
+        running: true
+        repeat: false
+        onTriggered: {
+            if (root.conflictCount === 0) {
+                root.close();
+            }
+        }
+    }
+
     Component.onCompleted: {
         Config.readWriteDelay = 0;
-        Config.blockWrites = true;
         MaterialThemeLoader.reapplyTheme();
     }
 

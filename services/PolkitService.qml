@@ -18,7 +18,7 @@ Singleton {
             : root.flow.message
     }
     property string cleanPrompt: {
-        const inputPrompt = PolkitService.flow?.inputPrompt.trim() ?? "";
+        const inputPrompt = PolkitService.flow?.inputPrompt?.trim() ?? "";
         const cleanedInputPrompt = inputPrompt.endsWith(":") ? inputPrompt.slice(0, -1) : inputPrompt;
         const usePasswordChars = !PolkitService.flow?.responseVisible ?? true
         return cleanedInputPrompt || (usePasswordChars ? Translation.tr("Password") : Translation.tr("Input"))

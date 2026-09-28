@@ -814,11 +814,14 @@ Singleton {
         } else if (name === "set_shell_config") {
             if (!args.key || !args.value) {
                 addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Must provide `key` and `value`."));
+                requester.makeRequest();
                 return;
             }
             const key = args.key;
             const value = args.value;
             Config.setNestedValue(key, value);
+            addFunctionOutputMessage(name, JSON.stringify({ success: true, key: key, value: value }));
+            requester.makeRequest();
         } else if (name === "run_shell_command") {
             if (!args.command || args.command.length === 0) {
                 addFunctionOutputMessage(name, Translation.tr("Invalid arguments. Must provide `command`."));

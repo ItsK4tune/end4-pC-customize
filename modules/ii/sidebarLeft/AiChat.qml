@@ -386,9 +386,7 @@ Inline w/ backslash and round brackets \\(e^{i\\pi} + 1 = 0\\)
                     required property var modelData
                     required property int index
                     messageIndex: index
-                    messageData: {
-                        Ai.messageByID[modelData];
-                    }
+                    messageData: Ai.messageByID[modelData] ?? null
                     messageInputField: root.inputField
                 }
             }

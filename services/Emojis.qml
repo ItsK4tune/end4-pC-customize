@@ -19,9 +19,12 @@ Singleton {
         name: Fuzzy.prepare(`${a}`),
         entry: a
     }))
+    property bool sloppySearch: Config.options?.search?.sloppy ?? false
+    property real scoreThreshold: 0.2
     function fuzzyQuery(search: string): var {
+        if (!search || search.trim() === "") return root.list;
         if (root.sloppySearch) {
-            const results = entries.slice(0, 100).map(str => ({
+            const results = (root.list || []).slice(0, 100).map(str => ({
                 entry: str,
                 score: Levendist.computeTextMatchScore(str.toLowerCase(), search.toLowerCase())
             })).filter(item => item.score > root.scoreThreshold)
