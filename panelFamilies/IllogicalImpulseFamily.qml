@@ -56,5 +56,6 @@ Scope {
     PanelLoader { extraCondition: GlobalStates.dropShelfOpen; component: DropShelfPanel {} }
     PanelLoader { extraCondition: WM.compositor === "niri"; component: NiriBackdrop {} }
     PanelLoader { extraCondition: Config.options.bar.showFrame; component: ScreenFrame {} }
+    PanelLoader { extraCondition: Config.options.appearance?.ambientEdgeGlow?.enable ?? true; component: AmbientEdgeGlow {} }
     PanelLoader { extraCondition: (Config.options?.background?.widgets?.particles?.enable ?? false) && (Config.options?.background?.widgets?.particles?.layerMode === "window"); component: ParticlesOverlayWindow {} }
 }

@@ -107,6 +107,13 @@ Singleton {
             property JsonObject appearance: JsonObject {
                 property bool extraBackgroundTint: true
                 property int fakeScreenRounding: 2 // 0: None | 1: Always | 2: When not fullscreen
+                property JsonObject ambientEdgeGlow: JsonObject {
+                    property bool enable: true
+                    property real thickness: 18
+                    property real opacity: 0.45
+                    property bool syncWithMusic: true
+                    property bool pulseEffect: true
+                }
                 property JsonObject fonts: JsonObject {
                     property string main: "Google Sans Flex"
                     property string numbers: "Google Sans Flex"
