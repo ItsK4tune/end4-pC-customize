@@ -53,8 +53,8 @@ void main() {
     vec3 warmYellow = hasPrimary ? primaryColor.rgb : vec3(0.95, 0.95, 0.35);
     vec3 limeGlow = hasSecondary ? secondaryColor.rgb : (hasPrimary ? mix(primaryColor.rgb, vec3(1.0), 0.3) : vec3(0.65, 1.0, 0.25));
 
-    for (int y = -2; y <= 2; y++) {
-        for (int x = -2; x <= 2; x++) {
+    for (int y = -1; y <= 1; y++) {
+        for (int x = -1; x <= 1; x++) {
             vec2 cell = currentCell + vec2(float(x), float(y));
             float spawn = hash11(dot(cell, vec2(37.1, 71.9)));
 

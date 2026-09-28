@@ -164,9 +164,34 @@ Item {
         return WM.hasWindowsOnActiveWorkspace(root.monitorName);
     }
 
+    readonly property bool isOccludedByWindows: {
+        root.stateRevision;
+        if (root.isFullscreenActive) return true;
+        const screenArea = root.screenWidth * root.screenHeight;
+        if (screenArea <= 0) return false;
+
+        if (WM.compositor === "hyprland") {
+            const activeId = Hyprland.focusedWorkspace?.id ?? HyprlandData.activeWorkspace?.id ?? WM.activeWorkspace?.id;
+            if (activeId === undefined || activeId === null) return false;
+            const wins = (HyprlandData.windowList || []).filter(w => w?.workspace?.id === activeId && !w.hidden);
+            return wins.some(w => {
+                if (w.fullscreen) return true;
+                const winArea = (w.size?.[0] ?? 0) * (w.size?.[1] ?? 0);
+                return winArea >= (screenArea * 0.85);
+            });
+        }
+        return false;
+    }
+
     readonly property bool isAnimationPaused: {
+        // Always pause background particles when screen is locked unless running in overlay window mode
+        if (GlobalStates.screenLocked && !root.isOverlayWindow) return true;
+
         if (root.pauseModeValue === "hasWindows") return root.hasWindowsOnWorkspace || root.isFullscreenActive;
-        if (root.pauseModeValue === "fullscreen") return root.isFullscreenActive;
+        if (root.pauseModeValue === "occluded" || root.pauseModeValue === "smart" || root.pauseModeValue === "auto") {
+            return root.isOccludedByWindows;
+        }
+        if (root.pauseModeValue === "fullscreen") return root.isFullscreenActive || root.isOccludedByWindows;
         return false;
     }
 

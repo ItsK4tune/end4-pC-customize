@@ -58,8 +58,8 @@ void main() {
         vec2 grid = layerCoord / cellSize;
         vec2 currentCell = floor(grid);
 
-        for (int y = -2; y <= 2; y++) {
-            for (int x = -2; x <= 2; x++) {
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
                 vec2 cell = currentCell + vec2(float(x), float(y));
                 float spawn = hash11(dot(cell, vec2(19.1, 53.7)) + l * 17.3);
 
