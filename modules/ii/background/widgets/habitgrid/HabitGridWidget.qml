@@ -16,7 +16,7 @@ AbstractBackgroundWidget {
     configEntryName: "habitGrid"
     hoverEnabled: true
 
-    readonly property real cardWidth: 300
+    readonly property real cardWidth: 320
     readonly property real cardHeight: 252
     implicitWidth: root.cardWidth
     implicitHeight: root.cardHeight
@@ -349,26 +349,29 @@ AbstractBackgroundWidget {
                     spacing: 4
 
                     Item {
-                        implicitWidth: 96 // Space for habit title
+                        Layout.fillWidth: true
                     }
 
-                    Repeater {
-                        model: root.weekDays
-                        delegate: Item {
-                            required property var modelData
-                            Layout.fillWidth: true
-                            implicitHeight: 14
-                            StyledText {
-                                anchors.centerIn: parent
-                                text: parent.modelData.label
-                                font.pixelSize: Appearance.font.pixelSize.smallest
-                                font.weight: parent.modelData.isToday ? Font.Bold : Font.Normal
-                                color: parent.modelData.isToday ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                    Row {
+                        spacing: 3
+                        Repeater {
+                            model: root.weekDays
+                            delegate: Item {
+                                required property var modelData
+                                width: 17
+                                implicitHeight: 14
+                                StyledText {
+                                    anchors.centerIn: parent
+                                    text: parent.modelData.label
+                                    font.pixelSize: Appearance.font.pixelSize.smallest
+                                    font.weight: parent.modelData.isToday ? Font.Bold : Font.Normal
+                                    color: parent.modelData.isToday ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                }
                             }
                         }
                     }
 
-                    Item { implicitWidth: 22 } // Space for streak / delete
+                    Item { width: 26; height: 14 } // Space for streak / delete
                 }
 
                 // Habit List Rows
@@ -400,13 +403,13 @@ AbstractBackgroundWidget {
                         }
 
                         RowLayout {
-                            anchors { fill: parent; margins: 3; leftMargin: 6; rightMargin: 6 }
+                            anchors { fill: parent; margins: 3; leftMargin: 8; rightMargin: 8 }
                             spacing: 4
 
                             // Icon & Title
                             RowLayout {
-                                implicitWidth: 96
-                                spacing: 4
+                                Layout.fillWidth: true
+                                spacing: 6
 
                                 MaterialSymbol {
                                     text: habitRow.modelData?.icon ?? "check_circle"
@@ -424,56 +427,59 @@ AbstractBackgroundWidget {
                                 }
                             }
 
-                            // 7 Check-in Dots for the 7 days
-                            Repeater {
-                                model: root.weekDays
-                                delegate: Item {
-                                    id: dotItem
-                                    required property var modelData
-                                    Layout.fillWidth: true
-                                    implicitHeight: 22
+                            // 7 Check-in Dots for the 7 days (Fixed Row)
+                            Row {
+                                spacing: 3
+                                Repeater {
+                                    model: root.weekDays
+                                    delegate: Item {
+                                        id: dotItem
+                                        required property var modelData
+                                        width: 17
+                                        height: 22
 
-                                    readonly property bool isDone: (habitRow.modelData?.history && habitRow.modelData.history[dotItem.modelData.dateStr]) === true
+                                        readonly property bool isDone: (habitRow.modelData?.history && habitRow.modelData.history[dotItem.modelData.dateStr]) === true
 
-                                    Rectangle {
-                                        id: checkCircle
-                                        anchors.centerIn: parent
-                                        width: dotItem.modelData.isToday ? 16 : 13
-                                        height: width
-                                        radius: width / 2
-                                        color: dotItem.isDone
-                                            ? (habitRow.modelData?.color ?? Appearance.colors.colPrimary)
-                                            : (dotItem.modelData.isToday ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.7) : Qt.rgba(1, 1, 1, 0.1))
-                                        border.width: dotItem.modelData.isToday ? 1.5 : 1
-                                        border.color: dotItem.modelData.isToday ? Appearance.colors.colPrimary : root.widgetBorderColor
-
-                                        scale: 1.0
-                                        Behavior on scale {
-                                            NumberAnimation { duration: 150; easing.type: Easing.OutBack }
-                                        }
-
-                                        MaterialSymbol {
+                                        Rectangle {
+                                            id: checkCircle
                                             anchors.centerIn: parent
-                                            text: "check"
-                                            iconSize: dotItem.modelData.isToday ? 11 : 9
-                                            color: "#ffffff"
-                                            visible: dotItem.isDone
-                                        }
+                                            width: dotItem.modelData.isToday ? 15 : 12
+                                            height: width
+                                            radius: width / 2
+                                            color: dotItem.isDone
+                                                ? (habitRow.modelData?.color ?? Appearance.colors.colPrimary)
+                                                : (dotItem.modelData.isToday ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.7) : Qt.rgba(1, 1, 1, 0.1))
+                                            border.width: dotItem.modelData.isToday ? 1.5 : 1
+                                            border.color: dotItem.modelData.isToday ? Appearance.colors.colPrimary : root.widgetBorderColor
 
-                                        MouseArea {
-                                            anchors.fill: parent
-                                            cursorShape: Qt.PointingHandCursor
-                                            onClicked: {
-                                                checkCircle.scale = 1.35;
-                                                resetScaleTimer.start();
-                                                root.toggleHabit(habitRow.index, dotItem.modelData.dateStr);
+                                            scale: 1.0
+                                            Behavior on scale {
+                                                NumberAnimation { duration: 150; easing.type: Easing.OutBack }
                                             }
-                                        }
 
-                                        Timer {
-                                            id: resetScaleTimer
-                                            interval: 120
-                                            onTriggered: checkCircle.scale = 1.0
+                                            MaterialSymbol {
+                                                anchors.centerIn: parent
+                                                text: "check"
+                                                iconSize: dotItem.modelData.isToday ? 11 : 9
+                                                color: "#ffffff"
+                                                visible: dotItem.isDone
+                                            }
+
+                                            MouseArea {
+                                                anchors.fill: parent
+                                                cursorShape: Qt.PointingHandCursor
+                                                onClicked: {
+                                                    checkCircle.scale = 1.35;
+                                                    resetScaleTimer.start();
+                                                    root.toggleHabit(habitRow.index, dotItem.modelData.dateStr);
+                                                }
+                                            }
+
+                                            Timer {
+                                                id: resetScaleTimer
+                                                interval: 120
+                                                onTriggered: checkCircle.scale = 1.0
+                                            }
                                         }
                                     }
                                 }
@@ -481,8 +487,8 @@ AbstractBackgroundWidget {
 
                             // Streak Counter or Delete on Hover
                             Item {
-                                implicitWidth: 22
-                                implicitHeight: 22
+                                width: 26
+                                height: 22
 
                                 // Streak Badge
                                 RowLayout {
