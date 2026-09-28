@@ -466,9 +466,11 @@ Singleton {
     function removeMessage(index) {
         if (index < 0 || index >= messageIDs.length) return;
         const id = root.messageIDs[index];
+        const msg = root.messageByID[id];
         root.messageIDs.splice(index, 1);
         root.messageIDs = [...root.messageIDs];
         delete root.messageByID[id];
+        if (msg && typeof msg.destroy === "function") msg.destroy();
     }
 
     function addApiKeyAdvice(model) {
@@ -566,6 +568,10 @@ Singleton {
     }
 
     function clearMessages() {
+        for (let id in root.messageByID) {
+            const msg = root.messageByID[id];
+            if (msg && typeof msg.destroy === "function") msg.destroy();
+        }
         root.messageIDs = [];
         root.messageByID = ({});
         root.tokenCount.input = -1;

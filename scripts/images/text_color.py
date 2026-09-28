@@ -38,7 +38,13 @@ def get_color_from_stdin():
     bg_color = np.median(corners, axis=0).astype(int)
 
     # 3. Find the Text Color
-    pixels = img_rgb.reshape(-1, 3).astype(int)
+    # Downsample for fast calculation (reduces 4K from 8.3M pixels to ~57K pixels, saving 99% CPU/RAM)
+    if h > 180 or w > 320:
+        small_img = cv2.resize(img_rgb, (320, 180), interpolation=cv2.INTER_AREA)
+    else:
+        small_img = img_rgb
+
+    pixels = small_img.reshape(-1, 3).astype(int)
     distances = np.linalg.norm(pixels - bg_color, axis=1)
     
     # Take the 95th percentile of pixels furthest from background

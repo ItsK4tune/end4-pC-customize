@@ -157,6 +157,13 @@ Singleton {
         }
     }
 
+    Timer {
+        id: nmcliDebounceTimer
+        interval: 1500
+        repeat: false
+        onTriggered: root.update()
+    }
+
     // Status update
     function update() {
         updateConnectionType.startCheck();
@@ -164,7 +171,6 @@ Singleton {
         updateNetworkName.running = true;
         updateNetworkStrength.running = true;
         updateNetworkDetails.running = true;
-        updatePublicIp.running = true;
     }
 
     Process {
@@ -172,7 +178,7 @@ Singleton {
         running: true
         command: ["nmcli", "monitor"]
         stdout: SplitParser {
-            onRead: root.update()
+            onRead: nmcliDebounceTimer.restart()
         }
     }
 
@@ -359,12 +365,16 @@ Singleton {
                 }
 
                 const wifiNetworks = Array.from(networkMap.values());
-
-                const rNetworks = root.wifiNetworks;
+                let rNetworks = [...root.wifiNetworks];
 
                 const destroyed = rNetworks.filter(rn => !wifiNetworks.find(n => n.frequency === rn.frequency && n.ssid === rn.ssid && n.bssid === rn.bssid));
-                for (const network of destroyed)
-                    rNetworks.splice(rNetworks.indexOf(network), 1).forEach(n => n.destroy());
+                for (const network of destroyed) {
+                    const idx = rNetworks.indexOf(network);
+                    if (idx !== -1) {
+                        rNetworks.splice(idx, 1);
+                        network.destroy();
+                    }
+                }
 
                 for (const network of wifiNetworks) {
                     const match = rNetworks.find(n => n.frequency === network.frequency && n.ssid === network.ssid && n.bssid === network.bssid);
@@ -376,6 +386,7 @@ Singleton {
                         }));
                     }
                 }
+                root.wifiNetworks = rNetworks;
             }
         }
     }

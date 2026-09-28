@@ -28,42 +28,66 @@ colorlist=($colornames)     # Array of color names
 colorvalues=($colorstrings) # Array of color values
 
 apply_kitty() {  
-  # Check if terminal escape sequence template exists
-  if [ ! -f "$SCRIPT_DIR/terminal/kitty-theme.conf" ]; then
-    echo "Template file not found for Kitty theme. Skipping that."
+  if [ ! -f "$SCRIPT_DIR/terminal/kitty-theme.conf" ] || [ ! -f "$STATE_DIR/user/generated/material_colors.scss" ]; then
     return
   fi
-  # Copy template to a temporary file first to prevent partial/corrupted config on interrupt
-  mkdir -p "$STATE_DIR"/user/generated/terminal
-  local tmp_file="$STATE_DIR/user/generated/terminal/kitty-theme.conf.tmp"
-  cp "$SCRIPT_DIR/terminal/kitty-theme.conf" "$tmp_file"
-  # Apply colors
-  for i in "${!colorlist[@]}"; do
-    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$tmp_file"
-  done
-  mv -f "$tmp_file" "$STATE_DIR"/user/generated/terminal/kitty-theme.conf
+  mkdir -p "$STATE_DIR/user/generated/terminal"
+  python3 -c '
+import sys, os
+scss_path, tpl_path, out_path = sys.argv[1:4]
+colors = {}
+with open(scss_path, "r") as f:
+    for line in f:
+        line = line.strip()
+        if ":" in line and line.endswith(";"):
+            p = line.split(":", 1)
+            colors[p[0].strip() + " #"] = p[1].split(";")[0].strip().lstrip("#")
+
+with open(tpl_path, "r") as f:
+    content = f.read()
+
+for k, v in colors.items():
+    content = content.replace(k, v)
+
+tmp_path = out_path + ".tmp"
+with open(tmp_path, "w") as f:
+    f.write(content)
+os.replace(tmp_path, out_path)
+' "$STATE_DIR/user/generated/material_colors.scss" "$SCRIPT_DIR/terminal/kitty-theme.conf" "$STATE_DIR/user/generated/terminal/kitty-theme.conf"
 
   # Reload
   pkill -SIGUSR1 -x kitty 2>/dev/null || true
 }
 
 apply_anyterm() {
-  # Check if terminal escape sequence template exists
-  if [ ! -f "$SCRIPT_DIR/terminal/sequences.txt" ]; then
-    echo "Template file not found for Terminal. Skipping that."
+  if [ ! -f "$SCRIPT_DIR/terminal/sequences.txt" ] || [ ! -f "$STATE_DIR/user/generated/material_colors.scss" ]; then
     return
   fi
-  # Copy template to a temporary file first
-  mkdir -p "$STATE_DIR"/user/generated/terminal
-  local tmp_file="$STATE_DIR/user/generated/terminal/sequences.txt.tmp"
-  cp "$SCRIPT_DIR/terminal/sequences.txt" "$tmp_file"
-  # Apply colors
-  for i in "${!colorlist[@]}"; do
-    sed -i "s/${colorlist[$i]} #/${colorvalues[$i]#\#}/g" "$tmp_file"
-  done
+  mkdir -p "$STATE_DIR/user/generated/terminal"
+  python3 -c '
+import sys, os
+scss_path, tpl_path, out_path, alpha = sys.argv[1:5]
+colors = {}
+with open(scss_path, "r") as f:
+    for line in f:
+        line = line.strip()
+        if ":" in line and line.endswith(";"):
+            p = line.split(":", 1)
+            colors[p[0].strip() + " #"] = p[1].split(";")[0].strip().lstrip("#")
 
-  sed -i "s/\$alpha/$term_alpha/g" "$tmp_file"
-  mv -f "$tmp_file" "$STATE_DIR/user/generated/terminal/sequences.txt"
+with open(tpl_path, "r") as f:
+    content = f.read()
+
+for k, v in colors.items():
+    content = content.replace(k, v)
+
+content = content.replace("$alpha", alpha)
+
+tmp_path = out_path + ".tmp"
+with open(tmp_path, "w") as f:
+    f.write(content)
+os.replace(tmp_path, out_path)
+' "$STATE_DIR/user/generated/material_colors.scss" "$SCRIPT_DIR/terminal/sequences.txt" "$STATE_DIR/user/generated/terminal/sequences.txt" "$term_alpha"
 
   for file in /dev/pts/*; do
     if [[ $file =~ ^/dev/pts/[0-9]+$ ]]; then

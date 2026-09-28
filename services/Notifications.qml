@@ -219,9 +219,11 @@ Singleton {
     function discardNotifications(ids) {
         console.log("[Notifications] Discarding notifications with IDs: " + ids.join(", "));
         const idSet = new Set(ids);
-        // Assign a new array instead of splicing: on a list<> property, splice()
-        // shifts the following elements one by one and emits listChanged for each,
-        // re-running the grouping and every model bound to the list each time.
+        const toDiscard = root.list.filter((notif) => idSet.has(notif.notificationId));
+        toDiscard.forEach((notif) => {
+            if (notif.timer) notif.timer.destroy();
+            notif.destroy();
+        });
         const remaining = root.list.filter((notif) => !idSet.has(notif.notificationId));
         if (remaining.length !== root.list.length) {
             root.list = remaining;
@@ -234,6 +236,10 @@ Singleton {
     }
 
     function discardAllNotifications() {
+        root.list.forEach((notif) => {
+            if (notif.timer) notif.timer.destroy();
+            notif.destroy();
+        });
         root.list = []
         triggerListChange()
         saveNotifDebounce.restart();
