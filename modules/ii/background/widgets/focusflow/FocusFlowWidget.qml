@@ -287,7 +287,7 @@ AbstractBackgroundWidget {
                                 text: modelData.label
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 font.weight: root.currentMode === modelData.id ? Font.Bold : Font.Normal
-                                color: root.currentMode === modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
+                                color: root.currentMode === modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -377,7 +377,7 @@ AbstractBackgroundWidget {
                                 text: modelData.label
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 font.weight: root.currentMode === modelData.id ? Font.Bold : Font.Normal
-                                color: root.currentMode === modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
+                                color: root.currentMode === modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -469,7 +469,7 @@ AbstractBackgroundWidget {
                                 text: root.currentMode.replace("_", " ").toUpperCase()
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 font.weight: Font.DemiBold
-                                color: Appearance.colors.colSubtext
+                                color: Appearance.colors.colPrimary
                             }
                         }
                     }
@@ -485,7 +485,7 @@ AbstractBackgroundWidget {
                             text: Translation.tr("Ambient Sound")
                             font.pixelSize: Appearance.font.pixelSize.smaller
                             font.weight: Font.DemiBold
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
 
                         ColumnLayout {
@@ -551,7 +551,7 @@ AbstractBackgroundWidget {
                             anchors.centerIn: parent
                             text: "replay"
                             iconSize: 17
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                         MouseArea {
                             id: resetMouse
@@ -592,7 +592,7 @@ AbstractBackgroundWidget {
                             anchors.centerIn: parent
                             text: "skip_next"
                             iconSize: 17
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                         MouseArea {
                             id: skipMouse
@@ -608,12 +608,14 @@ AbstractBackgroundWidget {
                 RowLayout {
                     visible: root.sizeMode === "2x2"
                     Layout.fillWidth: true
+                    Layout.rightMargin: 20
+                    Layout.bottomMargin: 4
                     spacing: 4
 
                     MaterialSymbol {
                         text: root.activeSound === "off" ? "volume_off" : "graphic_eq"
                         iconSize: 16
-                        color: root.activeSound === "off" ? Appearance.colors.colSubtext : Appearance.colors.colPrimary
+                        color: root.activeSound === "off" ? Appearance.colors.colOnPrimaryContainer : Appearance.colors.colPrimary
                     }
 
                     Repeater {
@@ -641,7 +643,7 @@ AbstractBackgroundWidget {
                                 text: soundPill.modelData.label
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 font.weight: root.activeSound === soundPill.modelData.id ? Font.Bold : Font.Normal
-                                color: root.activeSound === soundPill.modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
+                                color: root.activeSound === soundPill.modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
                             }
 
                             MouseArea {
@@ -659,6 +661,7 @@ AbstractBackgroundWidget {
 
         ResizeHandler {
             anchorItem: contentRect
+            handleSize: 28
             hoverActive: root.containsMouse
             locked: Config.options.background.widgetsLocked
             currentWidth: root.widgetWidth

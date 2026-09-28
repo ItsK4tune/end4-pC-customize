@@ -91,6 +91,36 @@ AbstractBackgroundWidget {
         onTriggered: root.isPetted = false
     }
 
+    // Easter Egg: Rapid Affection Combo
+    property int rapidClickCount: 0
+    property bool isEasterEggActive: false
+
+    Timer {
+        id: rapidClickTimer
+        interval: 2200
+        onTriggered: root.rapidClickCount = 0
+    }
+
+    function triggerEasterEgg() {
+        root.isEasterEggActive = true;
+        root.rapidClickCount = 0;
+        easterEggAnim.restart();
+
+        const easterEggQuotes = [
+            "(^◕ᴥ◕^) PETTING OVERLOAD!! +9999 Aura Points!",
+            "meow~ compiling your dreams with 0 errors! 🚀",
+            "git commit -m 'pet the cat until it purrs' --force ✨",
+            "sudo systemctl restart happiness.service 💖",
+            "₍ᐢ. .ᐢ₎ You're doing incredible today! Keep shining!",
+            "☕ Hydrate, stretch, and take over the world! 🌸"
+        ];
+        root.customSpeechText = easterEggQuotes[Math.floor(Math.random() * easterEggQuotes.length)];
+        bubbleDisplayTimer.interval = 6000;
+        bubbleDisplayTimer.restart();
+
+        Quickshell.execDetached([`${Directories.scriptPath}/audio/focus-ambient.sh`, "chime"]);
+    }
+
     function pet() {
         root.resetIdle();
         root.isPetted = true;
@@ -247,7 +277,13 @@ AbstractBackgroundWidget {
         onPressed: (mouse) => {
             root.resetIdle();
             if (!root.dragging) {
-                root.pet();
+                root.rapidClickCount++;
+                rapidClickTimer.restart();
+                if (root.rapidClickCount >= 5) {
+                    root.triggerEasterEgg();
+                } else {
+                    root.pet();
+                }
             }
         }
         onPositionChanged: root.resetIdle()
@@ -388,7 +424,8 @@ AbstractBackgroundWidget {
                 Text {
                     anchors.fill: parent
                     text: Translation.tr("Talk to pet...")
-                    color: Appearance.colors.colSubtext
+                    color: Appearance.colors.colOnPrimaryContainer
+                    opacity: 0.6
                     font.pixelSize: petInput.font.pixelSize
                     font.italic: true
                     visible: !petInput.text && !petInput.activeFocus
@@ -925,4 +962,41 @@ AbstractBackgroundWidget {
         NumberAnimation { target: petContainer; property: "scale"; from: 1.0; to: 1.15; duration: 120; easing.type: Easing.OutBack }
         NumberAnimation { target: petContainer; property: "scale"; from: 1.15; to: 1.0; duration: 150; easing.type: Easing.InOutQuad }
     }
+
+    SequentialAnimation {
+        id: easterEggAnim
+        ParallelAnimation {
+            NumberAnimation { target: petContainer; property: "rotation"; from: 0; to: 360; duration: 650; easing.type: Easing.OutBack }
+            SequentialAnimation {
+                NumberAnimation { target: petContainer; property: "scale"; from: 1.0; to: 1.45; duration: 300; easing.type: Easing.OutBack }
+                NumberAnimation { target: petContainer; property: "scale"; from: 1.45; to: 1.0; duration: 350; easing.type: Easing.InOutQuad }
+            }
+        }
+        ScriptAction { script: root.isEasterEggActive = false }
+    }
+
+    // Easter Egg Celebratory Sparkles Burst
+    Repeater {
+        model: ["💖", "✨", "🐾", "⭐", "🌸", "🚀"]
+        delegate: Text {
+            required property var modelData
+            required property int index
+            text: modelData
+            font.pixelSize: 18 * root.petScale
+            visible: root.isEasterEggActive
+            x: (root.width / 2) - 10 + (index - 2.5) * 16
+            y: root.height / 2
+            opacity: 0
+
+            SequentialAnimation on y {
+                running: root.isEasterEggActive
+                NumberAnimation { from: root.height / 2; to: (root.height / 2) - 50 - (index % 3) * 15; duration: 800; easing.type: Easing.OutQuad }
+            }
+            SequentialAnimation on opacity {
+                running: root.isEasterEggActive
+                NumberAnimation { from: 1.0; to: 0; duration: 800; easing.type: Easing.InQuad }
+            }
+        }
+    }
 }
+

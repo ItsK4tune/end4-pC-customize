@@ -156,7 +156,7 @@ AbstractBackgroundWidget {
                         StyledText {
                             text: `${root.radarData.total_commits ?? 0} commits · ${root.radarData.streak ?? 0}d streak`
                             font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                     }
 
@@ -242,7 +242,7 @@ AbstractBackgroundWidget {
                                 text: topRepo ? (topRepo.last_commit ?? "") : "Start hacking to populate git activity"
                                 elide: Text.ElideRight
                                 font.pixelSize: Appearance.font.pixelSize.smaller
-                                color: Appearance.colors.colSubtext
+                                color: Appearance.colors.colOnPrimaryContainer
                             }
                         }
                     }
@@ -297,7 +297,7 @@ AbstractBackgroundWidget {
                         StyledText {
                             text: `${root.radarData.total_commits ?? 0} commits · ${root.radarData.repo_count ?? 0} repos`
                             font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                     }
 
@@ -342,7 +342,7 @@ AbstractBackgroundWidget {
                             anchors.centerIn: parent
                             text: "refresh"
                             iconSize: 17
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnPrimaryContainer
                             rotation: root.isRefreshing ? 360 : 0
                             Behavior on rotation {
                                 NumberAnimation { duration: 600; easing.type: Easing.InOutQuad }
@@ -440,12 +440,14 @@ AbstractBackgroundWidget {
                     text: Translation.tr("Active Repositories")
                     font.pixelSize: Appearance.font.pixelSize.smaller
                     font.weight: Font.DemiBold
-                    color: Appearance.colors.colSubtext
+                    color: Appearance.colors.colOnPrimaryContainer
                     Layout.topMargin: 1
                 }
 
                 ColumnLayout {
                     Layout.fillWidth: true
+                    Layout.rightMargin: 16
+                    Layout.bottomMargin: 8
                     spacing: 5
 
                     Repeater {
@@ -502,7 +504,7 @@ AbstractBackgroundWidget {
                                         text: repoCard.modelData.last_commit ?? "No commits"
                                         elide: Text.ElideRight
                                         font.pixelSize: Appearance.font.pixelSize.smaller
-                                        color: Appearance.colors.colSubtext
+                                        color: Appearance.colors.colOnPrimaryContainer
                                     }
                                 }
 
@@ -584,6 +586,7 @@ AbstractBackgroundWidget {
 
         ResizeHandler {
             anchorItem: contentRect
+            handleSize: 28
             hoverActive: root.containsMouse
             locked: Config.options.background.widgetsLocked
             currentWidth: root.widgetWidth

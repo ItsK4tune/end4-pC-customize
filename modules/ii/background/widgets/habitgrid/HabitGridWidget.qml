@@ -294,7 +294,7 @@ AbstractBackgroundWidget {
                         StyledText {
                             text: `${root.completedTodayCount}/${root.habits.length} done (${Math.round(root.completionRatio * 100)}%)`
                             font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                     }
 
@@ -311,7 +311,7 @@ AbstractBackgroundWidget {
                             anchors.centerIn: parent
                             text: root.isAddingHabit ? "close" : "add"
                             iconSize: 18
-                            color: Appearance.colors.colSubtext
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
                         MouseArea {
                             id: addMouse
@@ -463,7 +463,7 @@ AbstractBackgroundWidget {
                                     text: parent.modelData.label
                                     font.pixelSize: Appearance.font.pixelSize.smaller
                                     font.weight: parent.modelData.isToday ? Font.Bold : Font.Normal
-                                    color: parent.modelData.isToday ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
+                                    color: parent.modelData.isToday ? Appearance.colors.colPrimary : Appearance.colors.colOnPrimaryContainer
                                 }
                             }
                         }
@@ -478,6 +478,8 @@ AbstractBackgroundWidget {
                     visible: root.sizeMode !== "1x2"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    Layout.rightMargin: 16
+                    Layout.bottomMargin: 8
                     clip: true
                     spacing: 5
                     model: root.habits
@@ -616,7 +618,7 @@ AbstractBackgroundWidget {
                                         anchors.centerIn: parent
                                         text: "delete"
                                         iconSize: 15
-                                        color: delMouse.containsMouse ? "#ef5350" : Appearance.colors.colSubtext
+                                        color: delMouse.containsMouse ? "#ef5350" : Appearance.colors.colOnPrimaryContainer
                                     }
 
                                     MouseArea {
@@ -636,6 +638,7 @@ AbstractBackgroundWidget {
 
         ResizeHandler {
             anchorItem: contentRect
+            handleSize: 28
             hoverActive: root.containsMouse
             locked: Config.options.background.widgetsLocked
             currentWidth: root.widgetWidth

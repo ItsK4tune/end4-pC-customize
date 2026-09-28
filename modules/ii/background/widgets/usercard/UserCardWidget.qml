@@ -16,7 +16,28 @@ AbstractBackgroundWidget {
     configEntryName: "userCard"
     hoverEnabled: true
 
-    readonly property color widgetBorderColor: Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(0, 0, 0, 0.12)
+    // Easter Egg: Cyber God Mode
+    property bool isCyberGodMode: false
+    property real cyberHue: 0.0
+    NumberAnimation on cyberHue {
+        running: root.isCyberGodMode
+        from: 0.0; to: 1.0; duration: 3500; loops: Animation.Infinite
+    }
+    readonly property color cyberBorderColor: Qt.hsla(cyberHue, 0.95, 0.65, 0.95)
+
+    readonly property color widgetBorderColor: root.isCyberGodMode 
+        ? root.cyberBorderColor 
+        : (Appearance.m3colors.darkmode ? Qt.rgba(1, 1, 1, 0.22) : Qt.rgba(0, 0, 0, 0.12))
+
+    function triggerCyberGodMode() {
+        root.isCyberGodMode = !root.isCyberGodMode;
+        Quickshell.execDetached([`${Directories.scriptPath}/audio/focus-ambient.sh`, "chime"]);
+        Notifications.notify({
+            "appName": "Quickshell System",
+            "summary": root.isCyberGodMode ? "⚡ 10X ARCHITECT MODE ACTIVATED!" : "Standard Mode Restored",
+            "body": root.isCyberGodMode ? "Overclocking desktop neurons. Neural sync 100%. +9999 Aura." : "Normal desktop parameters active."
+        });
+    }
 
     readonly property real snapWidth1: 132
     readonly property real snapWidth2: 276
@@ -184,12 +205,39 @@ AbstractBackgroundWidget {
             }
         }
 
+        property int rapidClicks: 0
+        Timer {
+            id: avatarClickTimer
+            interval: 2200
+            onTriggered: avatarContainer.rapidClicks = 0
+        }
+        Timer {
+            id: singleClickDelay
+            interval: 380
+            onTriggered: {
+                if (avatarContainer.rapidClicks === 1) {
+                    SystemInfo.pickAvatar();
+                    avatarContainer.rapidClicks = 0;
+                }
+            }
+        }
+
         MouseArea {
             id: avatarMouse
             anchors.fill: parent
             hoverEnabled: true
             cursorShape: Qt.PointingHandCursor
-            onClicked: SystemInfo.pickAvatar()
+            onClicked: {
+                avatarContainer.rapidClicks++;
+                avatarClickTimer.restart();
+                if (avatarContainer.rapidClicks >= 5) {
+                    singleClickDelay.stop();
+                    avatarContainer.rapidClicks = 0;
+                    root.triggerCyberGodMode();
+                } else if (avatarContainer.rapidClicks === 1) {
+                    singleClickDelay.restart();
+                }
+            }
         }
 
         DropArea {

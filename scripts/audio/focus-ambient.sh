@@ -60,7 +60,7 @@ case "$action" in
         esac
 
         if [[ -n "$audio_file" && -f "$audio_file" ]]; then
-            mpv --no-video --loop=inf --volume="$vol" --title="focus-ambient-loop" \
+            mpv --no-video --loop=inf --gapless-audio=yes --volume="$vol" --title="focus-ambient-loop" \
                 "$audio_file" >/dev/null 2>&1 &
             echo $! > "$PIDFILE"
         elif [[ -n "$lavfi" ]]; then

@@ -18,13 +18,14 @@ Canvas {
     signal rotated(real newAngle)
     signal rotateFinished()
 
-    width: 62
-    height: 62
+    property real handleSize: 34
+    width: handleSize
+    height: handleSize
     anchors {
         right: anchorItem.right
         bottom: anchorItem.bottom
-        rightMargin: -8
-        bottomMargin: -8
+        rightMargin: -4
+        bottomMargin: -4
     }
     opacity: (hoverActive || resizeArea.containsMouse || resizeArea.pressed) ? 0.85 : 0
     visible: opacity > 0 && !locked
@@ -51,7 +52,6 @@ Canvas {
     MouseArea {
         id: resizeArea
         anchors.fill: parent
-        anchors.margins: -6
         hoverEnabled: true
         cursorShape: root.resizeMode === "diagonal" ? Qt.SizeFDiagCursor : Qt.SizeHorCursor
         preventStealing: true
