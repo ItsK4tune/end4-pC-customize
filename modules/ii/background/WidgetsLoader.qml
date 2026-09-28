@@ -23,6 +23,9 @@ import qs.modules.ii.background.widgets.timers
 import qs.modules.ii.background.widgets.customtext
 import qs.modules.ii.background.widgets.particles
 import qs.modules.ii.background.widgets.pet
+import qs.modules.ii.background.widgets.gitradar
+import qs.modules.ii.background.widgets.focusflow
+import qs.modules.ii.background.widgets.habitgrid
 
 Item {
     id: root
@@ -94,6 +97,9 @@ Item {
             { key: "timers" },
             { key: "customText" },
             { key: "pet" },
+            { key: "gitRadar" },
+            { key: "focusFlow" },
+            { key: "habitGrid" },
         ]
 
         delegate: FadeLoader {
@@ -127,6 +133,9 @@ Item {
                     case "timers":      return timersComp
                     case "customText":  return customTextComp
                     case "pet":         return petComp
+                    case "gitRadar":    return gitRadarComp
+                    case "focusFlow":   return focusFlowComp
+                    case "habitGrid":   return habitGridComp
                 }
                 return null
             }
@@ -383,6 +392,39 @@ Item {
     Component {
         id: petComp
         DesktopPetWidget {
+            screenWidth: root.screen.width
+            screenHeight: root.screen.height
+            scaledScreenWidth: root.screen.width
+            scaledScreenHeight: root.screen.height
+            wallpaperScale: 1
+            wallpaperItem: root.wallpaperItem
+        }
+    }
+    Component {
+        id: gitRadarComp
+        GitRadarWidget {
+            screenWidth: root.screen.width
+            screenHeight: root.screen.height
+            scaledScreenWidth: root.screen.width
+            scaledScreenHeight: root.screen.height
+            wallpaperScale: 1
+            wallpaperItem: root.wallpaperItem
+        }
+    }
+    Component {
+        id: focusFlowComp
+        FocusFlowWidget {
+            screenWidth: root.screen.width
+            screenHeight: root.screen.height
+            scaledScreenWidth: root.screen.width
+            scaledScreenHeight: root.screen.height
+            wallpaperScale: 1
+            wallpaperItem: root.wallpaperItem
+        }
+    }
+    Component {
+        id: habitGridComp
+        HabitGridWidget {
             screenWidth: root.screen.width
             screenHeight: root.screen.height
             scaledScreenWidth: root.screen.width

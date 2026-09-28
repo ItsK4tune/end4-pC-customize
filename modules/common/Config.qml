@@ -512,6 +512,33 @@ Singleton {
                         property bool reactToSystem: true
                         property bool reactToWeather: true
                     }
+
+                    property JsonObject gitRadar: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 300
+                        property real y: 400
+                        property real z: 0
+                    }
+
+                    property JsonObject focusFlow: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 680
+                        property real y: 400
+                        property real z: 0
+                        property int focusDuration: 25
+                        property int shortBreakDuration: 5
+                        property int longBreakDuration: 15
+                    }
+
+                    property JsonObject habitGrid: JsonObject {
+                        property bool enable: false
+                        property string placementStrategy: "free"
+                        property real x: 1020
+                        property real y: 400
+                        property real z: 0
+                    }
                 }
                 property list<string> screenList: [] 
                 property string wallpaperPath: ""

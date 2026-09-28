@@ -2504,6 +2504,21 @@ ContentPage {
                             name: Translation.tr("Desktop Pet"),
                             enabled: Config.options.background.widgets.pet?.enable ?? false
                         },
+                        {
+                            icon: "terminal",
+                            name: Translation.tr("Git Radar"),
+                            enabled: Config.options.background.widgets.gitRadar?.enable ?? false
+                        },
+                        {
+                            icon: "psychology",
+                            name: Translation.tr("Focus Flow"),
+                            enabled: Config.options.background.widgets.focusFlow?.enable ?? false
+                        },
+                        {
+                            icon: "checklist",
+                            name: Translation.tr("Habit Grid"),
+                            enabled: Config.options.background.widgets.habitGrid?.enable ?? false
+                        },
                     ]
                     delegate: Rectangle {
                         Layout.fillWidth: true
@@ -2561,6 +2576,24 @@ ContentPage {
                                                 Config.options.background.widgets.pet.enable = checked
                                             else
                                                 Config.setNestedValue("background.widgets.pet.enable", checked)
+                                        }
+                                        else if (modelData.icon === "terminal") {
+                                            if (Config.options.background.widgets.gitRadar)
+                                                Config.options.background.widgets.gitRadar.enable = checked
+                                            else
+                                                Config.setNestedValue("background.widgets.gitRadar.enable", checked)
+                                        }
+                                        else if (modelData.icon === "psychology") {
+                                            if (Config.options.background.widgets.focusFlow)
+                                                Config.options.background.widgets.focusFlow.enable = checked
+                                            else
+                                                Config.setNestedValue("background.widgets.focusFlow.enable", checked)
+                                        }
+                                        else if (modelData.icon === "checklist") {
+                                            if (Config.options.background.widgets.habitGrid)
+                                                Config.options.background.widgets.habitGrid.enable = checked
+                                            else
+                                                Config.setNestedValue("background.widgets.habitGrid.enable", checked)
                                         }
                                     }
                                 }
