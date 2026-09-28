@@ -16,10 +16,34 @@ AbstractBackgroundWidget {
     configEntryName: "focusFlow"
     hoverEnabled: true
 
-    readonly property real cardWidth: 280
-    readonly property real cardHeight: 252
-    implicitWidth: root.cardWidth
-    implicitHeight: root.cardHeight
+    readonly property real snapWidth1: 300
+    readonly property real snapWidth2: 420
+    readonly property real cardHeight1: 120
+    readonly property real cardHeight2: 252
+
+    property string sizeMode: root.configEntry?.sizeMode ?? "2x2"
+
+    property real widgetWidth: root.sizeMode === "2x3" ? snapWidth2 : snapWidth1
+    property real widgetHeight: root.sizeMode === "1x2" ? cardHeight1 : cardHeight2
+
+    implicitWidth: widgetWidth
+    implicitHeight: widgetHeight
+
+    Behavior on widgetWidth {
+        NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+    }
+    Behavior on widgetHeight {
+        NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+    }
+
+    function modeForDrag(dx, dy, startWidth) {
+        const mid = (snapWidth1 + snapWidth2) / 2;
+        const newWidth = startWidth + dx;
+        if (newWidth >= mid) return "2x3";
+        if (dy < -40) return "1x2";
+        if (dy > 40) return "2x2";
+        return root.sizeMode;
+    }
 
     readonly property color widgetBorderColor: Appearance.m3colors.darkmode 
         ? Qt.rgba(1, 1, 1, 0.22) 
@@ -38,8 +62,8 @@ AbstractBackgroundWidget {
     property int completedCycles: 0 // completed focus sessions
 
     // Audio Engine
-    property string activeSound: "off" // "off" | "rain" | "waves" | "alpha" | "theta"
-    property real soundVolume: 0.8 // default audible volume
+    property string activeSound: "off" // "off" | "rain" | "waves" | "brook" | "fireplace"
+    property real soundVolume: 0.8
 
     function updateAudio() {
         if (activeSound === "off") {
@@ -98,10 +122,10 @@ AbstractBackgroundWidget {
             switchMode("focus");
         }
 
-        // Play gentle completion chime
+        // Play gentle authentic completion singing bowl chime
         Quickshell.execDetached([`${Directories.scriptPath}/audio/focus-ambient.sh`, "chime"]);
 
-        // Send notification
+        // Send desktop notification
         Notifications.notify({
             "appName": "Focus Flow",
             "summary": currentMode === "focus" ? "Time to Focus!" : "Break Time!",
@@ -159,9 +183,127 @@ AbstractBackgroundWidget {
                 visible: Config.options.background.widgets.blurWidgets 
             }
 
+            // Compact 1x2 Mode Layout
             ColumnLayout {
-                anchors { fill: parent; margins: 12 }
+                visible: root.sizeMode === "1x2"
+                anchors { fill: parent; margins: 14 }
                 spacing: 6
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Rectangle {
+                        width: 28; height: 28; radius: 14
+                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                        border.width: 1
+                        border.color: root.widgetBorderColor
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            text: "psychology"
+                            iconSize: 18
+                            color: Appearance.colors.colPrimary
+                        }
+                    }
+
+                    ColumnLayout {
+                        spacing: 0
+                        StyledText {
+                            text: Translation.tr("Focus Flow")
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.DemiBold
+                            color: Appearance.colors.colOnPrimaryContainer
+                        }
+                        StyledText {
+                            text: root.currentMode.replace("_", " ").toUpperCase()
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            font.weight: Font.DemiBold
+                            color: Appearance.colors.colPrimary
+                        }
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    // Big Compact Timer Digits
+                    StyledText {
+                        text: root.formatTime(root.remainingSeconds)
+                        font.pixelSize: 26
+                        font.weight: Font.Bold
+                        color: Appearance.colors.colOnPrimaryContainer
+                    }
+
+                    // Compact Play/Pause
+                    Rectangle {
+                        width: 32; height: 32; radius: 16
+                        color: Appearance.colors.colPrimary
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            text: root.isRunning ? "pause" : "play_arrow"
+                            iconSize: 18
+                            color: Appearance.colors.colOnPrimary
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.togglePlay()
+                        }
+                    }
+                }
+
+                // Horizontal Progress Bar
+                Rectangle {
+                    Layout.fillWidth: true
+                    implicitHeight: 6
+                    radius: 3
+                    color: Qt.rgba(1, 1, 1, 0.12)
+
+                    Rectangle {
+                        width: parent.width * (root.totalSeconds > 0 ? (root.remainingSeconds / root.totalSeconds) : 0)
+                        height: parent.height
+                        radius: 3
+                        color: Appearance.colors.colPrimary
+                    }
+                }
+
+                // Quick Mode Switch Buttons
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Repeater {
+                        model: [
+                            { id: "focus", label: "Focus" },
+                            { id: "short_break", label: "Short" },
+                            { id: "long_break", label: "Long" }
+                        ]
+                        delegate: Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            implicitHeight: 22
+                            radius: 11
+                            color: root.currentMode === modelData.id ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
+                            StyledText {
+                                anchors.centerIn: parent
+                                text: modelData.label
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: root.currentMode === modelData.id ? Font.Bold : Font.Normal
+                                color: root.currentMode === modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.switchMode(modelData.id)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Standard 2x2 and 2x3 Modes Layout
+            ColumnLayout {
+                visible: root.sizeMode !== "1x2"
+                anchors { fill: parent; margins: 14 }
+                spacing: 8
 
                 // Header
                 RowLayout {
@@ -169,14 +311,14 @@ AbstractBackgroundWidget {
                     spacing: 8
 
                     Rectangle {
-                        width: 26; height: 26; radius: 13
+                        width: 28; height: 28; radius: 14
                         color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: "psychology"
-                            iconSize: 16
+                            iconSize: 18
                             color: Appearance.colors.colPrimary
                         }
                     }
@@ -197,7 +339,7 @@ AbstractBackgroundWidget {
                             model: 4
                             delegate: Rectangle {
                                 required property int index
-                                width: 7; height: 7; radius: 3.5
+                                width: 8; height: 8; radius: 4
                                 color: (index < (root.completedCycles % 4))
                                     ? Appearance.colors.colPrimary
                                     : Qt.rgba(1, 1, 1, 0.2)
@@ -208,151 +350,188 @@ AbstractBackgroundWidget {
                     }
                 }
 
-                // Mode Tabs
+                // Mode Tabs (Enlarged for readability & ergonomics)
                 RowLayout {
                     Layout.fillWidth: true
-                    spacing: 4
+                    spacing: 5
 
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 22
-                        radius: 11
-                        color: root.currentMode === "focus" 
-                            ? Appearance.colors.colPrimary
-                            : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
-                        StyledText {
-                            anchors.centerIn: parent
-                            text: Translation.tr("Focus")
-                            font.pixelSize: Appearance.font.pixelSize.smallest
-                            font.weight: root.currentMode === "focus" ? Font.Bold : Font.Normal
-                            color: root.currentMode === "focus" ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.switchMode("focus")
-                        }
-                    }
+                    Repeater {
+                        model: [
+                            { id: "focus", label: Translation.tr("Focus") },
+                            { id: "short_break", label: Translation.tr("Short Break") },
+                            { id: "long_break", label: Translation.tr("Long Break") }
+                        ]
+                        delegate: Rectangle {
+                            required property var modelData
+                            Layout.fillWidth: true
+                            implicitHeight: 26
+                            radius: 13
+                            color: root.currentMode === modelData.id 
+                                ? Appearance.colors.colPrimary
+                                : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
+                            border.width: 1
+                            border.color: root.currentMode === modelData.id ? Appearance.colors.colPrimary : root.widgetBorderColor
 
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 22
-                        radius: 11
-                        color: root.currentMode === "short_break" 
-                            ? Appearance.colors.colPrimary
-                            : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
-                        StyledText {
-                            anchors.centerIn: parent
-                            text: Translation.tr("Short Break")
-                            font.pixelSize: Appearance.font.pixelSize.smallest
-                            font.weight: root.currentMode === "short_break" ? Font.Bold : Font.Normal
-                            color: root.currentMode === "short_break" ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.switchMode("short_break")
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        implicitHeight: 22
-                        radius: 11
-                        color: root.currentMode === "long_break" 
-                            ? Appearance.colors.colPrimary
-                            : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
-                        StyledText {
-                            anchors.centerIn: parent
-                            text: Translation.tr("Long Break")
-                            font.pixelSize: Appearance.font.pixelSize.smallest
-                            font.weight: root.currentMode === "long_break" ? Font.Bold : Font.Normal
-                            color: root.currentMode === "long_break" ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.switchMode("long_break")
+                            StyledText {
+                                anchors.centerIn: parent
+                                text: modelData.label
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: root.currentMode === modelData.id ? Font.Bold : Font.Normal
+                                color: root.currentMode === modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.switchMode(modelData.id)
+                            }
                         }
                     }
                 }
 
-                // Center Timer Display with Circular Dial
-                Item {
+                // Main Content Body (Adapts in 2x3 dashboard mode)
+                RowLayout {
                     Layout.fillWidth: true
-                    implicitHeight: 100
+                    Layout.fillHeight: true
+                    spacing: 12
 
-                    // Breathing guide glow circle
-                    Rectangle {
-                        id: breathingGlow
-                        anchors.centerIn: parent
-                        width: 96; height: 96; radius: 48
-                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
-                        visible: root.isRunning
+                    // Center Timer Display with Circular Dial
+                    Item {
+                        Layout.fillWidth: true
+                        Layout.fillHeight: true
 
-                        SequentialAnimation on scale {
-                            running: root.isRunning
-                            loops: Animation.Infinite
-                            NumberAnimation { to: 1.15; duration: 4000; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 1.0; duration: 4000; easing.type: Easing.InOutSine }
+                        // Breathing guide glow circle
+                        Rectangle {
+                            id: breathingGlow
+                            anchors.centerIn: parent
+                            width: 104; height: 104; radius: 52
+                            color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                            visible: root.isRunning
+
+                            SequentialAnimation on scale {
+                                running: root.isRunning
+                                loops: Animation.Infinite
+                                NumberAnimation { to: 1.15; duration: 4000; easing.type: Easing.InOutSine }
+                                NumberAnimation { to: 1.0; duration: 4000; easing.type: Easing.InOutSine }
+                            }
+                            SequentialAnimation on opacity {
+                                running: root.isRunning
+                                loops: Animation.Infinite
+                                NumberAnimation { to: 0.85; duration: 4000; easing.type: Easing.InOutSine }
+                                NumberAnimation { to: 0.2; duration: 4000; easing.type: Easing.InOutSine }
+                            }
                         }
-                        SequentialAnimation on opacity {
-                            running: root.isRunning
-                            loops: Animation.Infinite
-                            NumberAnimation { to: 0.8; duration: 4000; easing.type: Easing.InOutSine }
-                            NumberAnimation { to: 0.2; duration: 4000; easing.type: Easing.InOutSine }
+
+                        Canvas {
+                            id: progressCanvas
+                            anchors.centerIn: parent
+                            width: 100; height: 100
+
+                            onPaint: {
+                                const ctx = getContext("2d");
+                                ctx.clearRect(0, 0, width, height);
+                                const cx = width / 2;
+                                const cy = height / 2;
+                                const r = (width / 2) - 6;
+
+                                // Background Track
+                                ctx.beginPath();
+                                ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                                ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
+                                ctx.lineWidth = 5;
+                                ctx.stroke();
+
+                                // Progress Arc
+                                const fraction = root.totalSeconds > 0 ? (root.remainingSeconds / root.totalSeconds) : 0;
+                                const startAngle = -Math.PI / 2;
+                                const endAngle = startAngle + (2 * Math.PI * fraction);
+
+                                ctx.beginPath();
+                                ctx.arc(cx, cy, r, startAngle, endAngle, false);
+                                ctx.strokeStyle = Appearance.colors.colPrimary;
+                                ctx.lineWidth = 5;
+                                ctx.lineCap = "round";
+                                ctx.stroke();
+                            }
+                        }
+
+                        ColumnLayout {
+                            anchors.centerIn: parent
+                            spacing: 1
+                            StyledText {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: root.formatTime(root.remainingSeconds)
+                                font.pixelSize: 28
+                                font.weight: Font.Bold
+                                color: Appearance.colors.colOnPrimaryContainer
+                            }
+                            StyledText {
+                                Layout.alignment: Qt.AlignHCenter
+                                text: root.currentMode.replace("_", " ").toUpperCase()
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: Font.DemiBold
+                                color: Appearance.colors.colSubtext
+                            }
                         }
                     }
 
-                    Canvas {
-                        id: progressCanvas
-                        anchors.centerIn: parent
-                        width: 92; height: 92
-
-                        onPaint: {
-                            const ctx = getContext("2d");
-                            ctx.clearRect(0, 0, width, height);
-                            const cx = width / 2;
-                            const cy = height / 2;
-                            const r = (width / 2) - 5;
-
-                            // Background Track
-                            ctx.beginPath();
-                            ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-                            ctx.strokeStyle = "rgba(255, 255, 255, 0.12)";
-                            ctx.lineWidth = 4;
-                            ctx.stroke();
-
-                            // Progress Arc
-                            const fraction = root.totalSeconds > 0 ? (root.remainingSeconds / root.totalSeconds) : 0;
-                            const startAngle = -Math.PI / 2;
-                            const endAngle = startAngle + (2 * Math.PI * fraction);
-
-                            ctx.beginPath();
-                            ctx.arc(cx, cy, r, startAngle, endAngle, false);
-                            ctx.strokeStyle = Appearance.colors.colPrimary;
-                            ctx.lineWidth = 4;
-                            ctx.lineCap = "round";
-                            ctx.stroke();
-                        }
-                    }
-
+                    // Extra Side Panel for 2x3 Mode (Soundscape Controls & Stats)
                     ColumnLayout {
-                        anchors.centerIn: parent
-                        spacing: 0
+                        visible: root.sizeMode === "2x3"
+                        implicitWidth: 150
+                        Layout.fillHeight: true
+                        spacing: 8
+
                         StyledText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: root.formatTime(root.remainingSeconds)
-                            font.pixelSize: 22
-                            font.weight: Font.Bold
-                            color: Appearance.colors.colOnPrimaryContainer
-                        }
-                        StyledText {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: root.currentMode.replace("_", " ").toUpperCase()
-                            font.pixelSize: 9
+                            text: Translation.tr("Ambient Sound")
+                            font.pixelSize: Appearance.font.pixelSize.smaller
                             font.weight: Font.DemiBold
                             color: Appearance.colors.colSubtext
+                        }
+
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            spacing: 4
+                            Repeater {
+                                model: [
+                                    { id: "off",       label: "Off",       icon: "volume_off" },
+                                    { id: "rain",      label: "Rain",      icon: "water_drop" },
+                                    { id: "waves",     label: "Ocean",     icon: "tsunami" },
+                                    { id: "brook",     label: "Brook",     icon: "waves" },
+                                    { id: "fireplace", label: "Fireplace", icon: "local_fire_department" }
+                                ]
+                                delegate: Rectangle {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    implicitHeight: 24
+                                    radius: 12
+                                    color: root.activeSound === modelData.id ? Appearance.colors.colPrimary : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
+                                    border.width: 1
+                                    border.color: root.activeSound === modelData.id ? Appearance.colors.colPrimary : root.widgetBorderColor
+
+                                    RowLayout {
+                                        anchors { fill: parent; margins: 4; leftMargin: 8; rightMargin: 8 }
+                                        spacing: 6
+                                        MaterialSymbol {
+                                            text: modelData.icon
+                                            iconSize: 14
+                                            color: root.activeSound === modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
+                                        }
+                                        StyledText {
+                                            Layout.fillWidth: true
+                                            text: modelData.label
+                                            font.pixelSize: Appearance.font.pixelSize.smaller
+                                            font.weight: root.activeSound === modelData.id ? Font.Bold : Font.Normal
+                                            color: root.activeSound === modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colOnPrimaryContainer
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.activeSound = modelData.id
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -360,18 +539,18 @@ AbstractBackgroundWidget {
                 // Action Controls: Play/Pause, Reset, Skip
                 RowLayout {
                     Layout.alignment: Qt.AlignHCenter
-                    spacing: 12
+                    spacing: 14
 
-                    // Reset
+                    // Reset Button
                     Rectangle {
-                        width: 28; height: 28; radius: 14
+                        width: 32; height: 32; radius: 16
                         color: resetMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.6) : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: "replay"
-                            iconSize: 15
+                            iconSize: 17
                             color: Appearance.colors.colSubtext
                         }
                         MouseArea {
@@ -383,9 +562,9 @@ AbstractBackgroundWidget {
                         }
                     }
 
-                    // Main Play/Pause
+                    // Main Play/Pause Button
                     Rectangle {
-                        width: 36; height: 36; radius: 18
+                        width: 40; height: 40; radius: 20
                         color: Appearance.colors.colPrimary
                         border.width: 1
                         border.color: root.widgetBorderColor
@@ -393,7 +572,7 @@ AbstractBackgroundWidget {
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: root.isRunning ? "pause" : "play_arrow"
-                            iconSize: 20
+                            iconSize: 22
                             color: Appearance.colors.colOnPrimary
                         }
                         MouseArea {
@@ -403,16 +582,16 @@ AbstractBackgroundWidget {
                         }
                     }
 
-                    // Skip
+                    // Skip Button
                     Rectangle {
-                        width: 28; height: 28; radius: 14
+                        width: 32; height: 32; radius: 16
                         color: skipMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.6) : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: "skip_next"
-                            iconSize: 15
+                            iconSize: 17
                             color: Appearance.colors.colSubtext
                         }
                         MouseArea {
@@ -425,31 +604,32 @@ AbstractBackgroundWidget {
                     }
                 }
 
-                // Soundscape Mixer Section
+                // Soundscape Mixer Section (Shown in 2x2 mode)
                 RowLayout {
+                    visible: root.sizeMode === "2x2"
                     Layout.fillWidth: true
-                    spacing: 3
+                    spacing: 4
 
                     MaterialSymbol {
                         text: root.activeSound === "off" ? "volume_off" : "graphic_eq"
-                        iconSize: 15
+                        iconSize: 16
                         color: root.activeSound === "off" ? Appearance.colors.colSubtext : Appearance.colors.colPrimary
                     }
 
                     Repeater {
                         model: [
-                            { id: "off",   label: "Off" },
-                            { id: "rain",  label: "Rain" },
-                            { id: "waves", label: "Waves" },
-                            { id: "alpha", label: "α 10Hz" },
-                            { id: "theta", label: "θ 6Hz" }
+                            { id: "off",       label: "Off" },
+                            { id: "rain",      label: "Rain" },
+                            { id: "waves",     label: "Ocean" },
+                            { id: "brook",     label: "Brook" },
+                            { id: "fireplace", label: "Fire" }
                         ]
                         delegate: Rectangle {
                             id: soundPill
                             required property var modelData
                             Layout.fillWidth: true
-                            implicitHeight: 20
-                            radius: 10
+                            implicitHeight: 24
+                            radius: 12
                             color: root.activeSound === soundPill.modelData.id 
                                 ? Appearance.colors.colPrimary
                                 : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
@@ -459,7 +639,7 @@ AbstractBackgroundWidget {
                             StyledText {
                                 anchors.centerIn: parent
                                 text: soundPill.modelData.label
-                                font.pixelSize: Appearance.font.pixelSize.smallest
+                                font.pixelSize: Appearance.font.pixelSize.smaller
                                 font.weight: root.activeSound === soundPill.modelData.id ? Font.Bold : Font.Normal
                                 color: root.activeSound === soundPill.modelData.id ? Appearance.colors.colOnPrimary : Appearance.colors.colSubtext
                             }
@@ -473,6 +653,20 @@ AbstractBackgroundWidget {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        ResizeHandler {
+            anchorItem: contentRect
+            hoverActive: root.containsMouse
+            locked: Config.options.background.widgetsLocked
+            currentWidth: root.widgetWidth
+            resizeMode: "diagonal"
+            onResizedXY: (dx, dy, startWidth) => { root.sizeMode = root.modeForDrag(dx, dy, startWidth) }
+            onResizeFinished: {
+                if (root.configEntry) {
+                    root.configEntry.sizeMode = root.sizeMode
                 }
             }
         }

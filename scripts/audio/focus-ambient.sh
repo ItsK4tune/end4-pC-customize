@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 PIDFILE="/tmp/focus_ambient_mpv.pid"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
+SOUNDS_DIR="$SCRIPT_DIR/assets/sounds"
 
 kill_existing() {
     if [[ -f "$PIDFILE" ]]; then
@@ -9,7 +11,7 @@ kill_existing() {
         fi
         rm -f "$PIDFILE"
     fi
-    pkill -f "mpv.*focus-ambient-lavfi" 2>/dev/null
+    pkill -f "mpv.*focus-ambient" 2>/dev/null
 }
 
 action="${1:-stop}"
@@ -21,20 +23,30 @@ case "$action" in
         kill_existing
         ;;
     chime)
-        # Play a soft 528Hz Solfeggio bell chime that fades out
-        mpv --no-video --keep-open=no --title="focus-chime" \
-            "av://lavfi:sine=frequency=528:duration=1.8,afade=t=out:st=0.8:d=1.0,volume=0.5" >/dev/null 2>&1 &
+        if [[ -f "$SOUNDS_DIR/chime.ogg" ]]; then
+            mpv --no-video --keep-open=no --volume=85 --title="focus-ambient-chime" \
+                "$SOUNDS_DIR/chime.ogg" >/dev/null 2>&1 &
+        else
+            mpv --no-video --keep-open=no --volume=60 --title="focus-ambient-chime" \
+                "av://lavfi:sine=frequency=528:duration=1.8,afade=t=out:st=0.8:d=1.0" >/dev/null 2>&1 &
+        fi
         ;;
     play)
         kill_existing
 
-        lavfi=""
+        audio_file=""
         case "$sound" in
             rain)
-                lavfi="anoisesrc=color=pink:amplitude=0.32,lowpass=f=2600"
+                audio_file="$SOUNDS_DIR/rain.ogg"
                 ;;
-            waves)
-                lavfi="anoisesrc=color=brown:amplitude=0.45,lowpass=f=1800"
+            waves|ocean)
+                audio_file="$SOUNDS_DIR/waves.ogg"
+                ;;
+            brook|stream)
+                audio_file="$SOUNDS_DIR/brook.ogg"
+                ;;
+            fireplace|fire)
+                audio_file="$SOUNDS_DIR/fireplace.ogg"
                 ;;
             alpha)
                 lavfi="sine=frequency=216:sample_rate=44100[l];sine=frequency=226:sample_rate=44100[r];[l][r]amerge=inputs=2,volume=0.4"
@@ -47,10 +59,15 @@ case "$action" in
                 ;;
         esac
 
-        if [[ -n "$lavfi" ]]; then
+        if [[ -n "$audio_file" && -f "$audio_file" ]]; then
+            mpv --no-video --loop=inf --volume="$vol" --title="focus-ambient-loop" \
+                "$audio_file" >/dev/null 2>&1 &
+            echo $! > "$PIDFILE"
+        elif [[ -n "$lavfi" ]]; then
             mpv --no-video --volume="$vol" --title="focus-ambient-lavfi" \
                 "av://lavfi:${lavfi}" >/dev/null 2>&1 &
             echo $! > "$PIDFILE"
         fi
         ;;
 esac
+

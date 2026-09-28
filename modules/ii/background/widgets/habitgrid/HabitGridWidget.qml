@@ -16,10 +16,34 @@ AbstractBackgroundWidget {
     configEntryName: "habitGrid"
     hoverEnabled: true
 
-    readonly property real cardWidth: 320
-    readonly property real cardHeight: 252
-    implicitWidth: root.cardWidth
-    implicitHeight: root.cardHeight
+    readonly property real snapWidth1: 320
+    readonly property real snapWidth2: 420
+    readonly property real cardHeight1: 120
+    readonly property real cardHeight2: 252
+
+    property string sizeMode: root.configEntry?.sizeMode ?? "2x2"
+
+    property real widgetWidth: root.sizeMode === "2x3" ? snapWidth2 : snapWidth1
+    property real widgetHeight: root.sizeMode === "1x2" ? cardHeight1 : cardHeight2
+
+    implicitWidth: widgetWidth
+    implicitHeight: widgetHeight
+
+    Behavior on widgetWidth {
+        NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+    }
+    Behavior on widgetHeight {
+        NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+    }
+
+    function modeForDrag(dx, dy, startWidth) {
+        const mid = (snapWidth1 + snapWidth2) / 2;
+        const newWidth = startWidth + dx;
+        if (newWidth >= mid) return "2x3";
+        if (dy < -40) return "1x2";
+        if (dy > 40) return "2x2";
+        return root.sizeMode;
+    }
 
     readonly property color widgetBorderColor: Appearance.m3colors.darkmode 
         ? Qt.rgba(1, 1, 1, 0.22) 
@@ -247,14 +271,14 @@ AbstractBackgroundWidget {
                     spacing: 8
 
                     Rectangle {
-                        width: 26; height: 26; radius: 13
+                        width: 28; height: 28; radius: 14
                         color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                         border.width: 1
                         border.color: root.widgetBorderColor
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: "checklist"
-                            iconSize: 16
+                            iconSize: 18
                             color: Appearance.colors.colPrimary
                         }
                     }
@@ -276,16 +300,17 @@ AbstractBackgroundWidget {
 
                     Item { Layout.fillWidth: true }
 
-                    // Add Habit Toggle Button
+                    // Add Habit Toggle Button (shown in 2x2 and 2x3 modes)
                     Rectangle {
-                        width: 24; height: 24; radius: 12
+                        visible: root.sizeMode !== "1x2"
+                        width: 26; height: 26; radius: 13
                         color: addMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7) : "transparent"
                         border.width: 1
                         border.color: addMouse.containsMouse ? root.widgetBorderColor : "transparent"
                         MaterialSymbol {
                             anchors.centerIn: parent
                             text: root.isAddingHabit ? "close" : "add"
-                            iconSize: 16
+                            iconSize: 18
                             color: Appearance.colors.colSubtext
                         }
                         MouseArea {
@@ -300,9 +325,9 @@ AbstractBackgroundWidget {
 
                 // Quick Add Habit Bar (when toggled)
                 Rectangle {
-                    visible: root.isAddingHabit
+                    visible: root.isAddingHabit && root.sizeMode !== "1x2"
                     Layout.fillWidth: true
-                    implicitHeight: 30
+                    implicitHeight: 32
                     radius: Appearance.rounding.small
                     color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                     border.width: 1
@@ -316,7 +341,7 @@ AbstractBackgroundWidget {
                             id: newHabitInput
                             Layout.fillWidth: true
                             color: Appearance.colors.colOnPrimaryContainer
-                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            font.pixelSize: Appearance.font.pixelSize.small
                             selectByMouse: true
                             clip: true
                             text: root.newHabitTitle
@@ -326,12 +351,12 @@ AbstractBackgroundWidget {
                         }
 
                         Rectangle {
-                            implicitWidth: 20; implicitHeight: 20; radius: 10
+                            implicitWidth: 24; implicitHeight: 24; radius: 12
                             color: Appearance.colors.colPrimary
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 text: "check"
-                                iconSize: 13
+                                iconSize: 14
                                 color: Appearance.colors.colOnPrimary
                             }
                             MouseArea {
@@ -343,27 +368,100 @@ AbstractBackgroundWidget {
                     }
                 }
 
-                // Days of week header row (labels)
+                // Compact 1x2 Mode: Horizontal Today List
+                ListView {
+                    visible: root.sizeMode === "1x2"
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    orientation: ListView.Horizontal
+                    spacing: 8
+                    clip: true
+                    model: root.habits
+
+                    delegate: Rectangle {
+                        id: compactCard
+                        required property var modelData
+                        required property int index
+                        width: 130
+                        height: ListView.view.height
+                        radius: Appearance.rounding.small
+                        color: compactHover.hovered 
+                            ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                            : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
+                        border.width: 1
+                        border.color: root.widgetBorderColor
+
+                        HoverHandler { id: compactHover }
+
+                        readonly property bool isTodayDone: (compactCard.modelData?.history && compactCard.modelData.history[root.todayDateStr]) === true
+
+                        RowLayout {
+                            anchors { fill: parent; margins: 8 }
+                            spacing: 8
+
+                            Rectangle {
+                                width: 26; height: 26; radius: 13
+                                color: compactCard.isTodayDone 
+                                    ? (compactCard.modelData?.color ?? Appearance.colors.colPrimary)
+                                    : Qt.rgba(1, 1, 1, 0.1)
+                                border.width: 1.5
+                                border.color: compactCard.modelData?.color ?? Appearance.colors.colPrimary
+
+                                MaterialSymbol {
+                                    anchors.centerIn: parent
+                                    text: compactCard.isTodayDone ? "check" : (compactCard.modelData?.icon ?? "check_circle")
+                                    iconSize: 14
+                                    color: compactCard.isTodayDone ? "#ffffff" : (compactCard.modelData?.color ?? Appearance.colors.colPrimary)
+                                }
+
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.toggleHabit(compactCard.index, root.todayDateStr)
+                                }
+                            }
+
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 1
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    text: compactCard.modelData?.title ?? ""
+                                    elide: Text.ElideRight
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    font.weight: Font.DemiBold
+                                    color: Appearance.colors.colOnPrimaryContainer
+                                }
+                                StyledText {
+                                    text: `${compactCard.modelData?.streak ?? 0}d streak`
+                                    font.pixelSize: Appearance.font.pixelSize.smallest
+                                    color: "#ff7043"
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Standard 2x2 and 2x3 Modes: 7-Day Matrix Header
                 RowLayout {
+                    visible: root.sizeMode !== "1x2"
                     Layout.fillWidth: true
                     spacing: 4
 
-                    Item {
-                        Layout.fillWidth: true
-                    }
+                    Item { Layout.fillWidth: true }
 
                     Row {
-                        spacing: 3
+                        spacing: root.sizeMode === "2x3" ? 6 : 4
                         Repeater {
                             model: root.weekDays
                             delegate: Item {
                                 required property var modelData
-                                width: 17
-                                implicitHeight: 14
+                                width: root.sizeMode === "2x3" ? 22 : 18
+                                implicitHeight: 16
                                 StyledText {
                                     anchors.centerIn: parent
                                     text: parent.modelData.label
-                                    font.pixelSize: Appearance.font.pixelSize.smallest
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
                                     font.weight: parent.modelData.isToday ? Font.Bold : Font.Normal
                                     color: parent.modelData.isToday ? Appearance.colors.colPrimary : Appearance.colors.colSubtext
                                 }
@@ -371,15 +469,17 @@ AbstractBackgroundWidget {
                         }
                     }
 
-                    Item { width: 26; height: 14 } // Space for streak / delete
+                    // Space reservation for streak & delete
+                    Item { width: 56; height: 16 }
                 }
 
-                // Habit List Rows
+                // Habit List Rows (2x2 and 2x3 Modes)
                 ListView {
+                    visible: root.sizeMode !== "1x2"
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     clip: true
-                    spacing: 4
+                    spacing: 5
                     model: root.habits
 
                     delegate: Rectangle {
@@ -387,23 +487,20 @@ AbstractBackgroundWidget {
                         required property var modelData
                         required property int index
                         width: ListView.view.width
-                        implicitHeight: 32
+                        implicitHeight: 34
                         radius: Appearance.rounding.small
-                        color: habitMouseArea.containsMouse 
+                        color: rowHover.hovered 
                             ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                             : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         border.width: 1
                         border.color: root.widgetBorderColor
 
-                        MouseArea {
-                            id: habitMouseArea
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            acceptedButtons: Qt.NoButton
+                        HoverHandler {
+                            id: rowHover
                         }
 
                         RowLayout {
-                            anchors { fill: parent; margins: 3; leftMargin: 8; rightMargin: 8 }
+                            anchors { fill: parent; margins: 3; leftMargin: 8; rightMargin: 6 }
                             spacing: 4
 
                             // Icon & Title
@@ -413,7 +510,7 @@ AbstractBackgroundWidget {
 
                                 MaterialSymbol {
                                     text: habitRow.modelData?.icon ?? "check_circle"
-                                    iconSize: 15
+                                    iconSize: 17
                                     color: habitRow.modelData?.color ?? Appearance.colors.colPrimary
                                 }
 
@@ -421,29 +518,29 @@ AbstractBackgroundWidget {
                                     Layout.fillWidth: true
                                     text: habitRow.modelData?.title ?? ""
                                     elide: Text.ElideRight
-                                    font.pixelSize: Appearance.font.pixelSize.smallest
+                                    font.pixelSize: Appearance.font.pixelSize.small
                                     font.weight: Font.DemiBold
                                     color: Appearance.colors.colOnPrimaryContainer
                                 }
                             }
 
-                            // 7 Check-in Dots for the 7 days (Fixed Row)
+                            // 7 Check-in Dots for the 7 days (Fixed Row with generous hitboxes)
                             Row {
-                                spacing: 3
+                                spacing: root.sizeMode === "2x3" ? 6 : 4
                                 Repeater {
                                     model: root.weekDays
                                     delegate: Item {
                                         id: dotItem
                                         required property var modelData
-                                        width: 17
-                                        height: 22
+                                        width: root.sizeMode === "2x3" ? 22 : 18
+                                        height: 28
 
                                         readonly property bool isDone: (habitRow.modelData?.history && habitRow.modelData.history[dotItem.modelData.dateStr]) === true
 
                                         Rectangle {
                                             id: checkCircle
                                             anchors.centerIn: parent
-                                            width: dotItem.modelData.isToday ? 15 : 12
+                                            width: dotItem.modelData.isToday ? 16 : 13
                                             height: width
                                             radius: width / 2
                                             color: dotItem.isDone
@@ -464,62 +561,64 @@ AbstractBackgroundWidget {
                                                 color: "#ffffff"
                                                 visible: dotItem.isDone
                                             }
+                                        }
 
-                                            MouseArea {
-                                                anchors.fill: parent
-                                                cursorShape: Qt.PointingHandCursor
-                                                onClicked: {
-                                                    checkCircle.scale = 1.35;
-                                                    resetScaleTimer.start();
-                                                    root.toggleHabit(habitRow.index, dotItem.modelData.dateStr);
-                                                }
+                                        // Clickable hitbox filling the entire 18-22px column
+                                        MouseArea {
+                                            anchors.fill: parent
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                checkCircle.scale = 1.35;
+                                                resetScaleTimer.start();
+                                                root.toggleHabit(habitRow.index, dotItem.modelData.dateStr);
                                             }
+                                        }
 
-                                            Timer {
-                                                id: resetScaleTimer
-                                                interval: 120
-                                                onTriggered: checkCircle.scale = 1.0
-                                            }
+                                        Timer {
+                                            id: resetScaleTimer
+                                            interval: 120
+                                            onTriggered: checkCircle.scale = 1.0
                                         }
                                     }
                                 }
                             }
 
-                            // Streak Counter or Delete on Hover
-                            Item {
-                                width: 26
-                                height: 22
+                            // Streak Counter & Independent Delete Target
+                            RowLayout {
+                                spacing: 2
 
-                                // Streak Badge
+                                // Streak Badge (Always visible)
                                 RowLayout {
-                                    anchors.centerIn: parent
-                                    visible: !habitMouseArea.containsMouse
                                     spacing: 1
                                     MaterialSymbol {
                                         text: "local_fire_department"
-                                        iconSize: 12
+                                        iconSize: 13
                                         color: "#ff7043"
                                     }
                                     StyledText {
                                         text: `${habitRow.modelData?.streak ?? 0}`
-                                        font.pixelSize: Appearance.font.pixelSize.smallest
+                                        font.pixelSize: Appearance.font.pixelSize.smaller
                                         font.weight: Font.Bold
                                         color: "#ff7043"
                                     }
                                 }
 
-                                // Delete icon on hover
+                                // Delete Button: Generous 28x28 Hitbox with Smooth Fade
                                 Rectangle {
-                                    anchors.centerIn: parent
-                                    visible: habitMouseArea.containsMouse
-                                    width: 18; height: 18; radius: 9
-                                    color: delMouse.containsMouse ? Qt.rgba(1, 0, 0, 0.25) : "transparent"
+                                    width: 26; height: 26; radius: 13
+                                    color: delMouse.containsMouse ? Qt.rgba(1, 0.2, 0.2, 0.25) : "transparent"
+                                    opacity: rowHover.hovered ? 1.0 : 0.25
+                                    Behavior on opacity {
+                                        NumberAnimation { duration: 150 }
+                                    }
+
                                     MaterialSymbol {
                                         anchors.centerIn: parent
                                         text: "delete"
-                                        iconSize: 13
-                                        color: Appearance.colors.colSubtext
+                                        iconSize: 15
+                                        color: delMouse.containsMouse ? "#ef5350" : Appearance.colors.colSubtext
                                     }
+
                                     MouseArea {
                                         id: delMouse
                                         anchors.fill: parent
@@ -531,6 +630,20 @@ AbstractBackgroundWidget {
                             }
                         }
                     }
+                }
+            }
+        }
+
+        ResizeHandler {
+            anchorItem: contentRect
+            hoverActive: root.containsMouse
+            locked: Config.options.background.widgetsLocked
+            currentWidth: root.widgetWidth
+            resizeMode: "diagonal"
+            onResizedXY: (dx, dy, startWidth) => { root.sizeMode = root.modeForDrag(dx, dy, startWidth) }
+            onResizeFinished: {
+                if (root.configEntry) {
+                    root.configEntry.sizeMode = root.sizeMode
                 }
             }
         }

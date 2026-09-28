@@ -519,6 +519,7 @@ Singleton {
                         property real x: 300
                         property real y: 400
                         property real z: 0
+                        property string sizeMode: "2x2"
                     }
 
                     property JsonObject focusFlow: JsonObject {
@@ -527,6 +528,7 @@ Singleton {
                         property real x: 680
                         property real y: 400
                         property real z: 0
+                        property string sizeMode: "2x2"
                         property int focusDuration: 25
                         property int shortBreakDuration: 5
                         property int longBreakDuration: 15
@@ -538,6 +540,7 @@ Singleton {
                         property real x: 1020
                         property real y: 400
                         property real z: 0
+                        property string sizeMode: "2x2"
                     }
                 }
                 property list<string> screenList: [] 
