@@ -125,8 +125,14 @@ AbstractBackgroundWidget {
         blurSource: root.wallpaperItem
         tint: Appearance.colors.colLayer0
         tintOpacity: 0.35
-        border.color: Appearance.colors.colOutlineVariant
-        border.width: 1
+
+        Rectangle {
+            anchors.fill: parent
+            radius: podBg.cardRadius
+            color: "transparent"
+            border.color: Appearance.colors.colOutlineVariant
+            border.width: 1
+        }
     }
 
     // Main Interactive Area

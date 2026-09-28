@@ -102,7 +102,7 @@ Item {
 
             property bool enableLoading: true
 
-            shown: Config.options.background.widgets[loaderDelegate.modelData.key]?.enable ?? false
+            shown: (Config.options.background.widgets[loaderDelegate.modelData.key]?.enable ?? false)
                 && loaderDelegate.enableLoading
                 && (loaderDelegate.modelData.alwaysOnLock
                     ? (GlobalStates.screenLocked || root.onThisScreen)
