@@ -27,6 +27,8 @@ MouseArea {
 
     onPressed: (mouse) => {
         if (mouse.button !== Qt.LeftButton) return
+        dragProxy.x = root.x
+        dragProxy.y = root.y
         var canvas = findCanvas(root.parent)
         if (canvas) {
             canvas.bringToFront(root)
@@ -94,9 +96,34 @@ MouseArea {
     function commitPosition() {}
     function requestDelete() {}
 
-    Component.onCompleted: { var canvas = findCanvas(root.parent); if (canvas) canvas.registerWidget(root) }
+    function ensureRegistered() {
+        var canvas = findCanvas(root.parent)
+        if (canvas) {
+            canvas.registerWidget(root)
+        }
+    }
+
+    onParentChanged: root.ensureRegistered()
+
+    Timer {
+        id: registrationRetryTimer
+        interval: 100
+        running: !root.canvasInstance
+        repeat: true
+        onTriggered: {
+            root.ensureRegistered()
+            if (root.canvasInstance) {
+                registrationRetryTimer.stop()
+            }
+        }
+    }
+
+    Component.onCompleted: {
+        root.ensureRegistered()
+    }
 
     Component.onDestruction: {
+        registrationRetryTimer.stop()
         var canvas = findCanvas(root.parent)
         if (canvas) {
             if (root.dragging) canvas.setDragging(false)
@@ -130,12 +157,12 @@ MouseArea {
     }
 
     onXChanged: {
-        if (!root.dragging || !root.selected) return
+        if (!root.dragging) return
         var canvas = findCanvas(root.parent)
         if (canvas) canvas.updateGroupDrag(root)
     }
     onYChanged: {
-        if (!root.dragging || !root.selected) return
+        if (!root.dragging) return
         var canvas = findCanvas(root.parent)
         if (canvas) canvas.updateGroupDrag(root)
     }

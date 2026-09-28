@@ -49,7 +49,9 @@ MouseArea {
     }
 
     function registerWidget(widget) {
-        root.registeredWidgets = root.registeredWidgets.concat([widget])
+        if (!root.registeredWidgets.includes(widget)) {
+            root.registeredWidgets = root.registeredWidgets.concat([widget])
+        }
     }
 
     function unregisterWidget(widget) {
@@ -106,8 +108,8 @@ MouseArea {
 
     function endGroupDrag() {
         for (const entry of root.groupDragMemberStarts) {
-            entry.widget.groupDragActive = false
             entry.widget.commitPosition()
+            entry.widget.groupDragActive = false
         }
         root.groupDragMemberStarts = []
     }

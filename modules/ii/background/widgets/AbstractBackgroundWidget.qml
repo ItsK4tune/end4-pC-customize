@@ -58,12 +58,12 @@ AbstractWidget {
 
     function commitPosition() {
         if (configEntry) {
-            configEntry.x = root.x;
-            configEntry.y = root.y;
-            configEntry.z = root.z;
+            configEntry.x = Math.round(root.x);
+            configEntry.y = Math.round(root.y);
+            configEntry.z = Math.round(root.targetZ);
         }
-        root.targetX = Qt.binding(() => Math.max(0, Math.min(configEntry?.x ?? 0, scaledScreenWidth - width)));
-        root.targetY = Qt.binding(() => Math.max(0, Math.min(configEntry?.y ?? 0, scaledScreenHeight - height)));
+        root.targetX = Qt.binding(() => Math.max(0, Math.min(configEntry?.x ?? root.x, scaledScreenWidth - width)));
+        root.targetY = Qt.binding(() => Math.max(0, Math.min(configEntry?.y ?? root.y, scaledScreenHeight - height)));
         root.targetZ = Qt.binding(() => configEntry?.z ?? 0);
         root.restoreXYBinding();
         root.positionCommitted();

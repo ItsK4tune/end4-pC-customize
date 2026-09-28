@@ -19,6 +19,9 @@ AbstractBackgroundWidget {
     hoverEnabled: true
     visible: (Config.options.background.widgets.customImage.enable ?? false)
     scale: 1
+    width: widgetSize
+    height: widgetSize
+    draggable: placementStrategy === "free" && !Config.options.background.widgetsLocked && !root.cropModeActive
 
     property int instanceIndex: -1
     property var instanceConfig: null
@@ -31,6 +34,9 @@ AbstractBackgroundWidget {
     property real padding: (instanceConfig?.padding ?? (instanceConfig?.gap ?? Config.options.background.widgets.customImage.padding ?? Config.options.background.widgets.customImage.gap)) ?? 4
     property real gap: padding
     property var imagesList: (instanceConfig?.images ?? Config.options.background.widgets.customImage.images) ?? []
+    property int imagesRevision: 0
+    onImagesListChanged: root.imagesRevision++
+    onImagePathChanged: root.imagesRevision++
     property string shapeName: (instanceConfig?.shape ?? Config.options.background.widgets.customImage.shape) ?? "Cookie4Sided"
     property string bgPath: (instanceConfig?.bgPath ?? Config.options.background.widgets.customImage.bgPath) ?? ""
     property real bgOpacity: (instanceConfig?.bgOpacity ?? Config.options.background.widgets.customImage.bgOpacity) ?? 1.0
@@ -38,11 +44,26 @@ AbstractBackgroundWidget {
     property real bgBlur: (instanceConfig?.bgBlur ?? Config.options.background.widgets.customImage.bgBlur) ?? 0.0
     property real widgetRotation: (instanceConfig?.rotation ?? Config.options.background.widgets.customImage.rotation) ?? 0
     property string loopMode: (instanceConfig?.loopMode ?? Config.options.background.widgets.customImage.loopMode) ?? "end to front"
+    function parseCrops(raw) {
+        let result = [];
+        if (!raw) return result;
+        let len = raw.length;
+        if (typeof len !== "number") return result;
+        for (let i = 0; i < len; i++) {
+            let item = raw[i];
+            let x = (item && item.x !== undefined && !isNaN(Number(item.x))) ? Number(item.x) : 0.5;
+            let y = (item && item.y !== undefined && !isNaN(Number(item.y))) ? Number(item.y) : 0.5;
+            let z = (item && item.zoom !== undefined && !isNaN(Number(item.zoom))) ? Number(item.zoom) : 1.0;
+            result.push({ x: x, y: y, zoom: z });
+        }
+        return result;
+    }
+
     property var slotCrops: {
         let raw = (instanceConfig?.crops ?? Config.options.background.widgets.customImage.crops);
-        if (Array.isArray(raw)) return raw;
-        return [];
+        return root.parseCrops(raw);
     }
+    property int cropRevision: 0
     property int selectedCropSlot: 0
     property bool cropModeActive: false
     onDivisionChanged: {
@@ -51,22 +72,64 @@ AbstractBackgroundWidget {
             root.selectedCropSlot = 0;
         }
     }
+    onCropModeActiveChanged: {
+        if (!cropModeActive) {
+            if (root.instanceIndex >= 0) {
+                root.updateInstanceProperty({
+                    crops: JSON.parse(JSON.stringify(root.slotCrops))
+                });
+            } else {
+                Config.options.background.widgets.customImage.crops = JSON.parse(JSON.stringify(root.slotCrops));
+            }
+        }
+    }
 
     implicitWidth: contentItem.implicitWidth
     implicitHeight: contentItem.implicitHeight
 
+    function saveAllInstancePositions() {
+        let list = Config.options.background.widgets.customImage.instances;
+        if (!list) return;
+        let newList = [];
+        let delegates = root.parent?.children ?? [];
+        for (let i = 0; i < list.length; i++) {
+            let item = Object.assign({}, list[i]);
+            let foundDelegate = null;
+            for (let d = 0; d < delegates.length; d++) {
+                if (delegates[d] && delegates[d].instanceIndex === i) {
+                    foundDelegate = delegates[d];
+                    break;
+                }
+            }
+            if (foundDelegate) {
+                item.x = Math.round(foundDelegate.x);
+                item.y = Math.round(foundDelegate.y);
+                item.z = Math.round(foundDelegate.targetZ);
+                item.size = foundDelegate.widgetSize;
+                if (foundDelegate.slotCrops && typeof foundDelegate.slotCrops.length === "number" && foundDelegate.slotCrops.length > 0) {
+                    item.crops = JSON.parse(JSON.stringify(foundDelegate.slotCrops));
+                }
+            } else if (i === root.instanceIndex) {
+                item.x = Math.round(root.x);
+                item.y = Math.round(root.y);
+                item.z = Math.round(root.targetZ);
+                item.size = root.widgetSize;
+                if (root.slotCrops && typeof root.slotCrops.length === "number" && root.slotCrops.length > 0) {
+                    item.crops = JSON.parse(JSON.stringify(root.slotCrops));
+                }
+            }
+            newList.push(item);
+        }
+        Config.options.background.widgets.customImage.instances = newList;
+    }
+
     Timer {
         id: savePositionTimer
-        interval: 350
+        interval: 0
         repeat: false
         onTriggered: {
             if (root.instanceIndex >= 0) {
-                root.updateInstanceProperty({
-                    x: Math.round(root.x),
-                    y: Math.round(root.y),
-                    z: Math.round(root.z),
-                    size: root.widgetSize
-                });
+                root.saveAllInstancePositions();
             }
         }
     }
@@ -76,14 +139,26 @@ AbstractBackgroundWidget {
             if (root.instanceConfig) {
                 root.instanceConfig.x = Math.round(root.x);
                 root.instanceConfig.y = Math.round(root.y);
-                root.instanceConfig.z = Math.round(root.z);
+                root.instanceConfig.z = Math.round(root.targetZ);
             }
-            savePositionTimer.restart();
+            root.saveAllInstancePositions();
+        } else {
+            Config.options.background.widgets.customImage.x = Math.round(root.x);
+            Config.options.background.widgets.customImage.y = Math.round(root.y);
+            Config.options.background.widgets.customImage.z = Math.round(root.targetZ);
         }
     }
 
     onInstanceConfigChanged: {
         root.restorePropertyBindings();
+    }
+
+    function restoreXYBinding() {
+        root.x = Qt.binding(() => root.targetX);
+        root.y = Qt.binding(() => root.targetY);
+        // Don't restore z to targetZ — CustomImage uses its own z binding
+        // that raises the widget when controls (settings/crop) are active
+        root.z = Qt.binding(() => root.controlsActive && !Config.options.background.widgetsLocked ? 9999 : root.targetZ);
     }
 
     function restorePropertyBindings() {
@@ -101,11 +176,19 @@ AbstractBackgroundWidget {
         root.bgBlur = Qt.binding(() => (instanceConfig?.bgBlur ?? Config.options.background.widgets.customImage.bgBlur) ?? 0.0);
         root.widgetRotation = Qt.binding(() => (instanceConfig?.rotation ?? Config.options.background.widgets.customImage.rotation) ?? 0);
         root.loopMode = Qt.binding(() => (instanceConfig?.loopMode ?? Config.options.background.widgets.customImage.loopMode) ?? "end to front");
-        root.slotCrops = Qt.binding(() => {
-            let raw = (instanceConfig?.crops ?? Config.options.background.widgets.customImage.crops);
-            return Array.isArray(raw) ? raw : [];
-        });
-        root.restoreXYBinding();
+        if (!root.cropModeActive) {
+            root.slotCrops = Qt.binding(() => {
+                let raw = (instanceConfig?.crops ?? Config.options.background.widgets.customImage.crops);
+                return root.parseCrops(raw);
+            });
+        }
+        root.imagesRevision++;
+        root.cropRevision++;
+        // Don't restore X/Y bindings during dragging or group drag — it would
+        // override the position being set by updateGroupDrag or the drag proxy.
+        if (!root.dragging && !root.groupDragActive) {
+            root.restoreXYBinding();
+        }
     }
 
     function requestDelete() {
@@ -373,6 +456,11 @@ AbstractBackgroundWidget {
         }
         currentImages[index] = path;
 
+        // Update local properties first so bindings trigger immediately
+        root.imagesList = currentImages;
+        if (index === 0) root.imagePath = path;
+        root.imagesRevision++;
+
         if (root.instanceIndex >= 0) {
             let updates = { images: currentImages };
             if (index === 0) updates.path = path;
@@ -386,12 +474,12 @@ AbstractBackgroundWidget {
     }
 
     function getSlotCrop(idx) {
-        if (root.slotCrops && root.slotCrops.length > idx && root.slotCrops[idx]) {
+        if (root.slotCrops && typeof root.slotCrops.length === "number" && root.slotCrops.length > idx && root.slotCrops[idx]) {
             let c = root.slotCrops[idx];
             return {
-                x: (c && typeof c.x === "number") ? c.x : 0.5,
-                y: (c && typeof c.y === "number") ? c.y : 0.5,
-                zoom: (c && typeof c.zoom === "number") ? c.zoom : 1.0
+                x: (c && c.x !== undefined && !isNaN(Number(c.x))) ? Number(c.x) : 0.5,
+                y: (c && c.y !== undefined && !isNaN(Number(c.y))) ? Number(c.y) : 0.5,
+                zoom: (c && c.zoom !== undefined && !isNaN(Number(c.zoom))) ? Number(c.zoom) : 1.0
             };
         }
         return { x: 0.5, y: 0.5, zoom: 1.0 };
@@ -399,26 +487,27 @@ AbstractBackgroundWidget {
 
     function setSlotCrop(idx, px, py, pz) {
         let currentCrops = [];
-        if (root.slotCrops && Array.isArray(root.slotCrops)) {
-            for (let i = 0; i < root.slotCrops.length; i++) {
-                let item = root.slotCrops[i];
-                currentCrops.push({
-                    x: (item && typeof item.x === "number") ? item.x : 0.5,
-                    y: (item && typeof item.y === "number") ? item.y : 0.5,
-                    zoom: (item && typeof item.zoom === "number") ? item.zoom : 1.0
-                });
-            }
+        let existing = root.slotCrops;
+        let len = (existing && typeof existing.length === "number") ? existing.length : 0;
+        for (let i = 0; i < len; i++) {
+            let item = existing[i];
+            currentCrops.push({
+                x: (item && item.x !== undefined && !isNaN(Number(item.x))) ? Number(item.x) : 0.5,
+                y: (item && item.y !== undefined && !isNaN(Number(item.y))) ? Number(item.y) : 0.5,
+                zoom: (item && item.zoom !== undefined && !isNaN(Number(item.zoom))) ? Number(item.zoom) : 1.0
+            });
         }
         while (currentCrops.length <= idx) {
             currentCrops.push({ x: 0.5, y: 0.5, zoom: 1.0 });
         }
         let cur = currentCrops[idx];
         currentCrops[idx] = {
-            x: px !== undefined && px !== null ? Math.max(0.0, Math.min(1.0, px)) : cur.x,
-            y: py !== undefined && py !== null ? Math.max(0.0, Math.min(1.0, py)) : cur.y,
-            zoom: pz !== undefined && pz !== null ? Math.max(1.0, Math.min(3.0, pz)) : cur.zoom
+            x: px !== undefined && px !== null ? Math.max(0.0, Math.min(1.0, Number(px))) : cur.x,
+            y: py !== undefined && py !== null ? Math.max(0.0, Math.min(1.0, Number(py))) : cur.y,
+            zoom: pz !== undefined && pz !== null ? Math.max(1.0, Math.min(3.0, Number(pz))) : cur.zoom
         };
         root.slotCrops = currentCrops;
+        root.cropRevision++;
 
         if (root.instanceIndex >= 0) {
             if (root.instanceConfig) {
@@ -503,16 +592,30 @@ AbstractBackgroundWidget {
         let list = Config.options.background.widgets.customImage.instances;
         if (!list || root.instanceIndex < 0 || root.instanceIndex >= list.length) return;
         let newList = [];
+        let delegates = root.parent?.children ?? [];
         for (let i = 0; i < list.length; i++) {
+            let item = Object.assign({}, list[i]);
+            let foundDelegate = null;
+            for (let d = 0; d < delegates.length; d++) {
+                if (delegates[d] && delegates[d].instanceIndex === i) {
+                    foundDelegate = delegates[d];
+                    break;
+                }
+            }
+            if (foundDelegate) {
+                item.x = Math.round(foundDelegate.x);
+                item.y = Math.round(foundDelegate.y);
+                item.z = Math.round(foundDelegate.targetZ);
+            }
             if (i === root.instanceIndex) {
-                let item = Object.assign({}, list[i]);
+                item.x = Math.round(root.x);
+                item.y = Math.round(root.y);
+                item.z = Math.round(root.targetZ);
                 for (let k in props) {
                     item[k] = props[k];
                 }
-                newList.push(item);
-            } else {
-                newList.push(list[i]);
             }
+            newList.push(item);
         }
         Config.options.background.widgets.customImage.instances = newList;
     }
@@ -552,8 +655,7 @@ AbstractBackgroundWidget {
                     bgOpacity: root.bgOpacity,
                     bgDim: root.bgDim,
                     bgBlur: root.bgBlur,
-                    crops: root.slotCrops,
-                    showSettings: root.showSettingsPopup
+                    crops: JSON.parse(JSON.stringify(root.slotCrops))
                 });
             } else {
                 Config.options.background.widgets.customImage.shape = root.shapeName;
@@ -567,7 +669,7 @@ AbstractBackgroundWidget {
                 Config.options.background.widgets.customImage.bgOpacity = root.bgOpacity;
                 Config.options.background.widgets.customImage.bgDim = root.bgDim;
                 Config.options.background.widgets.customImage.bgBlur = root.bgBlur;
-                Config.options.background.widgets.customImage.crops = root.slotCrops;
+                Config.options.background.widgets.customImage.crops = JSON.parse(JSON.stringify(root.slotCrops));
             }
         }
     }
@@ -660,11 +762,27 @@ AbstractBackgroundWidget {
     }
 
     property bool controlBarVisible: false
-    property bool showSettingsPopup: instanceConfig?.showSettings ?? false
-
-    onShowSettingsPopupChanged: {
-        if (root.instanceConfig) {
-            root.instanceConfig.showSettings = root.showSettingsPopup;
+    property bool showSettingsPopup: false
+    readonly property bool controlsActive: controlBarVisible || showSettingsPopup || cropModeActive
+    // Raise widget z above siblings when controls are visible
+    z: controlsActive && !Config.options.background.widgetsLocked ? 9999 : targetZ
+    onControlsActiveChanged: updateWrapperZ()
+    function updateWrapperZ() {
+        if (!root.parent) return;
+        if (root.controlsActive && !Config.options.background.widgetsLocked) {
+            root.parent.z = 99999;
+        } else {
+            let maxZ = Config.options.background.widgets.customImage.z ?? 0;
+            if (root.parent.children) {
+                for (let i = 0; i < root.parent.children.length; i++) {
+                    let child = root.parent.children[i];
+                    if (child && child.controlsActive) {
+                        root.parent.z = 99999;
+                        return;
+                    }
+                }
+            }
+            root.parent.z = maxZ;
         }
     }
 
@@ -690,6 +808,7 @@ AbstractBackgroundWidget {
 
     Item {
         id: contentItem
+        anchors.fill: parent
         implicitWidth: root.widgetSize
         implicitHeight: root.widgetSize
         rotation: root.widgetRotation
@@ -749,7 +868,7 @@ AbstractBackgroundWidget {
             layer.enabled: root.shapeName !== "Square"
             layer.effect: OpacityMask {
                 maskSource: outerMaskShape
-                cached: true
+                cached: false
             }
 
             Rectangle {
@@ -798,7 +917,7 @@ AbstractBackgroundWidget {
                 layer.enabled: root.margin > 0 && root.shapeName !== "Square"
                 layer.effect: OpacityMask {
                     maskSource: innerMaskShape
-                    cached: true
+                    cached: false
                 }
 
                 Repeater {
@@ -817,7 +936,12 @@ AbstractBackgroundWidget {
                         height: slotLayout.height
 
                         property bool slotHover: false
-                        property string slotPath: root.getSlotPath(index)
+                        property string slotPath: {
+                            let rev = root.imagesRevision;
+                            let imgs = root.imagesList;
+                            let path = root.imagePath;
+                            return root.getSlotPath(index);
+                        }
 
                         Rectangle {
                             id: slotCornerMask
@@ -831,7 +955,7 @@ AbstractBackgroundWidget {
                         layer.enabled: root.division !== "1x1" && root.padding > 2
                         layer.effect: OpacityMask {
                             maskSource: slotCornerMask
-                            cached: true
+                            cached: false
                         }
 
                         Rectangle {
@@ -847,15 +971,18 @@ AbstractBackgroundWidget {
                             fillMode: Image.PreserveAspectCrop
                             loopMode: root.loopMode
                             panX: {
-                                let dummy = root.slotCrops;
+                                let rev = root.cropRevision;
+                                let crops = root.slotCrops;
                                 return root.getSlotCrop(slotRoot.index).x;
                             }
                             panY: {
-                                let dummy = root.slotCrops;
+                                let rev = root.cropRevision;
+                                let crops = root.slotCrops;
                                 return root.getSlotCrop(slotRoot.index).y;
                             }
                             zoom: {
-                                let dummy = root.slotCrops;
+                                let rev = root.cropRevision;
+                                let crops = root.slotCrops;
                                 return root.getSlotCrop(slotRoot.index).zoom;
                             }
                             sourceWidth: parent.width
@@ -921,6 +1048,7 @@ AbstractBackgroundWidget {
                             id: slotMouseArea
                             anchors.fill: parent
                             hoverEnabled: true
+                            preventStealing: true
                             acceptedButtons: root.cropModeActive ? (Qt.LeftButton | Qt.RightButton) : Qt.RightButton
                             cursorShape: slotCropDragging ? Qt.ClosedHandCursor : (root.cropModeActive && slotRoot.slotPath !== "" ? Qt.OpenHandCursor : (slotRoot.slotPath !== "" ? Qt.PointingHandCursor : Qt.ArrowCursor))
 
@@ -941,6 +1069,7 @@ AbstractBackgroundWidget {
                                     let zoomDelta = wheel.angleDelta.y > 0 ? 0.1 : -0.1;
                                     let newZoom = Math.max(1.0, Math.min(3.0, currentCrop.zoom + zoomDelta));
                                     root.setSlotCrop(slotRoot.index, currentCrop.x, currentCrop.y, newZoom);
+                                    wheel.accepted = true;
                                 }
                             }
 
@@ -962,14 +1091,10 @@ AbstractBackgroundWidget {
                                     let dy = mouse.y - startMouseY;
                                     let ox = slotImage.overflowX;
                                     let oy = slotImage.overflowY;
-                                    let newPx = startPanX;
-                                    let newPy = startPanY;
-                                    if (ox > 1) {
-                                        newPx = Math.max(0.0, Math.min(1.0, startPanX - dx / ox));
-                                    }
-                                    if (oy > 1) {
-                                        newPy = Math.max(0.0, Math.min(1.0, startPanY - dy / oy));
-                                    }
+                                    let sensX = ox > 0 ? ox : 100;
+                                    let sensY = oy > 0 ? oy : 100;
+                                    let newPx = ox > 0 ? Math.max(0.0, Math.min(1.0, startPanX - dx / sensX)) : 0.5;
+                                    let newPy = oy > 0 ? Math.max(0.0, Math.min(1.0, startPanY - dy / sensY)) : 0.5;
                                     let currentCrop = root.getSlotCrop(slotRoot.index);
                                     root.setSlotCrop(slotRoot.index, newPx, newPy, currentCrop.zoom);
                                 }
@@ -1025,7 +1150,7 @@ AbstractBackgroundWidget {
                     if (root.instanceConfig) {
                         root.instanceConfig.size = root.widgetSize;
                     }
-                    savePositionTimer.restart();
+                    root.saveAllInstancePositions();
                 } else {
                     Config.options.background.widgets.customImage.size = root.widgetSize;
                 }
@@ -1039,11 +1164,15 @@ AbstractBackgroundWidget {
         anchors {
             horizontalCenter: contentItem.horizontalCenter
             bottom: contentItem.verticalCenter
-            bottomMargin: Math.round((root.widgetSize * 1.4142) / 2 + 6)
+            bottomMargin: {
+                let rad = Math.abs(root.widgetRotation * Math.PI / 180);
+                let factor = (Math.abs(Math.sin(rad)) + Math.abs(Math.cos(rad))) / 2;
+                return Math.round(root.widgetSize * factor + 4);
+            }
         }
-        height: 36
+        height: 32
         width: controlButtonsRow.implicitWidth + 16
-        z: 100
+        z: 99999
         visible: (root.controlBarVisible || controlBarHoverArea.containsMouse || root.showSettingsPopup || root.selected || root.cropModeActive) && !Config.options.background.widgetsLocked && !root.dragging
 
             MouseArea {
@@ -1170,7 +1299,7 @@ AbstractBackgroundWidget {
         visible: root.cropModeActive && !Config.options.background.widgetsLocked
         width: cropHintRow.implicitWidth + 16
         height: 22
-        z: 101
+        z: 99999
 
         Rectangle {
             anchors.fill: parent
@@ -1201,20 +1330,24 @@ AbstractBackgroundWidget {
         id: quickSettingsPopupLoader
         active: root.showSettingsPopup
         visible: active
-        z: 200
+        z: 99999
         anchors {
             horizontalCenter: contentItem.horizontalCenter
             top: contentItem.verticalCenter
-            topMargin: Math.round((root.widgetSize * 1.4142) / 2 + 8)
+            topMargin: {
+                let rad = Math.abs(root.widgetRotation * Math.PI / 180);
+                let factor = (Math.abs(Math.sin(rad)) + Math.abs(Math.cos(rad))) / 2;
+                return Math.round(root.widgetSize * factor + 6);
+            }
         }
-        width: 290
+        width: 260
         height: item ? item.implicitHeight : 0
 
         sourceComponent: Component {
             Item {
                 id: quickSettingsPopup
-                implicitWidth: 290
-                implicitHeight: settingsCardCol.implicitHeight + 20
+                implicitWidth: 260
+                implicitHeight: settingsCardCol.implicitHeight + 14
                 width: implicitWidth
                 height: implicitHeight
 
@@ -1242,9 +1375,9 @@ AbstractBackgroundWidget {
             id: settingsCardCol
             anchors {
                 fill: parent
-                margins: 10
+                margins: 8
             }
-            spacing: 8
+            spacing: 6
 
             // Header
             RowLayout {
