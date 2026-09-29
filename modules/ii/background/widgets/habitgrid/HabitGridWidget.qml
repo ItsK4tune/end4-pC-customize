@@ -300,31 +300,36 @@ AbstractBackgroundWidget {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
-                        border.width: 1
-                        border.color: root.widgetBorderColor
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "checklist"
-                            iconSize: 18
-                            color: Appearance.colors.colPrimary
-                        }
-                    }
-
-                    ColumnLayout {
-                        spacing: 0
+                    RowLayout {
+                        spacing: 6
                         StyledText {
-                            text: Translation.tr("Habit Grid")
+                            text: `${root.completedTodayCount}/${root.habits.length} ${Translation.tr("done")}`
                             font.pixelSize: Appearance.font.pixelSize.normal
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Bold
                             color: Appearance.colors.colOnPrimaryContainer
                         }
-                        StyledText {
-                            text: `${root.completedTodayCount}/${root.habits.length} done (${Math.round(root.completionRatio * 100)}%)`
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colOnPrimaryContainer
+                        Rectangle {
+                            implicitWidth: pctText.implicitWidth + 8
+                            implicitHeight: 18
+                            radius: 9
+                            color: root.completionRatio >= 1.0 
+                                ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                                : ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7)
+                            border.width: 1
+                            border.color: root.completionRatio >= 1.0 
+                                ? Appearance.colors.colPrimary 
+                                : root.widgetBorderColor
+
+                            StyledText {
+                                id: pctText
+                                anchors.centerIn: parent
+                                text: `${Math.round(root.completionRatio * 100)}%`
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: Font.DemiBold
+                                color: root.completionRatio >= 1.0 
+                                    ? Appearance.colors.colPrimary 
+                                    : Appearance.colors.colOnPrimaryContainer
+                            }
                         }
                     }
 
@@ -366,12 +371,6 @@ AbstractBackgroundWidget {
                     RowLayout {
                         anchors { fill: parent; margins: 4; leftMargin: 8; rightMargin: 6 }
                         spacing: 6
-
-                        MaterialSymbol {
-                            text: "add_task"
-                            iconSize: 16
-                            color: Appearance.colors.colPrimary
-                        }
 
                         TextField {
                             id: newHabitInput

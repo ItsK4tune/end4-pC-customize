@@ -193,32 +193,29 @@ AbstractBackgroundWidget {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
-                        border.width: 1
-                        border.color: root.widgetBorderColor
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "psychology"
-                            iconSize: 18
-                            color: Appearance.colors.colPrimary
-                        }
-                    }
-
-                    ColumnLayout {
-                        spacing: 0
+                    RowLayout {
+                        spacing: 6
                         StyledText {
-                            text: Translation.tr("Focus Flow")
+                            text: root.currentMode === "focus" 
+                                ? Translation.tr("Focus") 
+                                : (root.currentMode === "short_break" ? Translation.tr("Short Break") : Translation.tr("Long Break"))
                             font.pixelSize: Appearance.font.pixelSize.normal
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Bold
                             color: Appearance.colors.colOnPrimaryContainer
                         }
-                        StyledText {
-                            text: root.currentMode.replace("_", " ").toUpperCase()
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            font.weight: Font.DemiBold
-                            color: Appearance.colors.colPrimary
+                        Rectangle {
+                            implicitWidth: cycleText1.implicitWidth + 8
+                            implicitHeight: 18
+                            radius: 9
+                            color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                            StyledText {
+                                id: cycleText1
+                                anchors.centerIn: parent
+                                text: `#${root.completedCycles + 1}`
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: Font.DemiBold
+                                color: Appearance.colors.colPrimary
+                            }
                         }
                     }
 
@@ -310,24 +307,30 @@ AbstractBackgroundWidget {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
-                        border.width: 1
-                        border.color: root.widgetBorderColor
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "psychology"
-                            iconSize: 18
-                            color: Appearance.colors.colPrimary
+                    RowLayout {
+                        spacing: 6
+                        StyledText {
+                            text: root.currentMode === "focus" 
+                                ? Translation.tr("Focus Session") 
+                                : (root.currentMode === "short_break" ? Translation.tr("Short Break") : Translation.tr("Long Break"))
+                            font.pixelSize: Appearance.font.pixelSize.normal
+                            font.weight: Font.Bold
+                            color: Appearance.colors.colOnPrimaryContainer
                         }
-                    }
-
-                    StyledText {
-                        text: Translation.tr("Focus Flow")
-                        font.pixelSize: Appearance.font.pixelSize.normal
-                        font.weight: Font.DemiBold
-                        color: Appearance.colors.colOnPrimaryContainer
+                        Rectangle {
+                            implicitWidth: cycleText2.implicitWidth + 8
+                            implicitHeight: 18
+                            radius: 9
+                            color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                            StyledText {
+                                id: cycleText2
+                                anchors.centerIn: parent
+                                text: `#${root.completedCycles + 1}`
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: Font.DemiBold
+                                color: Appearance.colors.colPrimary
+                            }
+                        }
                     }
 
                     Item { Layout.fillWidth: true }

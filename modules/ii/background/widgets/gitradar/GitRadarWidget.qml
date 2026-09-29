@@ -132,31 +132,18 @@ AbstractBackgroundWidget {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
-                        border.width: 1
-                        border.color: root.widgetBorderColor
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "terminal"
-                            iconSize: 18
-                            color: Appearance.colors.colPrimary
-                        }
-                    }
-
-                    ColumnLayout {
-                        spacing: 0
+                    RowLayout {
+                        spacing: 5
                         StyledText {
-                            text: Translation.tr("Git Radar")
+                            text: `${root.radarData.total_commits ?? 0}`
                             font.pixelSize: Appearance.font.pixelSize.normal
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Bold
                             color: Appearance.colors.colOnPrimaryContainer
                         }
                         StyledText {
-                            text: `${root.radarData.total_commits ?? 0} commits · ${root.radarData.streak ?? 0}d streak`
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colOnPrimaryContainer
+                            text: Translation.tr("commits")
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.35)
                         }
                     }
 
@@ -274,31 +261,24 @@ AbstractBackgroundWidget {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
-                        border.width: 1
-                        border.color: root.widgetBorderColor
-                        MaterialSymbol {
-                            anchors.centerIn: parent
-                            text: "terminal"
-                            iconSize: 18
-                            color: Appearance.colors.colPrimary
-                        }
-                    }
-
-                    ColumnLayout {
-                        spacing: 0
+                    RowLayout {
+                        spacing: 6
                         StyledText {
-                            text: Translation.tr("Git Radar")
+                            text: `${root.radarData.total_commits ?? 0}`
                             font.pixelSize: Appearance.font.pixelSize.normal
-                            font.weight: Font.DemiBold
+                            font.weight: Font.Bold
                             color: Appearance.colors.colOnPrimaryContainer
                         }
                         StyledText {
-                            text: `${root.radarData.total_commits ?? 0} commits · ${root.radarData.repo_count ?? 0} repos`
+                            text: Translation.tr("commits")
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.35)
+                            font.weight: Font.DemiBold
+                        }
+                        StyledText {
+                            text: `· ${root.radarData.repo_count ?? 0} ${root.radarData.repo_count === 1 ? Translation.tr("repo") : Translation.tr("repos")}`
                             font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: Appearance.colors.colOnPrimaryContainer
+                            color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.45)
                         }
                     }
 
