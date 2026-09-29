@@ -126,7 +126,12 @@ MouseArea {
     }
 
     onActiveFocusChanged: {
-        if (!root.activeFocus) GlobalStates.desktopWidgetKeyboardFocus = false
+        if (!root.activeFocus) {
+            const focusedItem = root.Window.window ? root.Window.window.activeFocusItem : null
+            if (!focusedItem || focusedItem === root) {
+                GlobalStates.desktopWidgetKeyboardFocus = false
+            }
+        }
     }
 
     onPositionChanged: (mouse) => {

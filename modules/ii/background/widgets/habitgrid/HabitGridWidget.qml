@@ -28,6 +28,7 @@ AbstractBackgroundWidget {
 
     implicitWidth: widgetWidth
     implicitHeight: widgetHeight
+    draggable: placementStrategy === "free" && !Config.options.background.widgetsLocked && !root.isAddingHabit
 
     Behavior on widgetWidth {
         NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
@@ -372,37 +373,27 @@ AbstractBackgroundWidget {
                             color: Appearance.colors.colPrimary
                         }
 
-                        Item {
+                        TextField {
+                            id: newHabitInput
                             Layout.fillWidth: true
                             Layout.fillHeight: true
-
-                            TextInput {
-                                id: newHabitInput
-                                anchors.fill: parent
-                                verticalAlignment: TextInput.AlignVCenter
-                                color: Appearance.colors.colOnPrimaryContainer
-                                font.pixelSize: Appearance.font.pixelSize.small
-                                selectByMouse: true
-                                clip: true
-                                text: root.newHabitTitle
-                                onTextChanged: root.newHabitTitle = text
-                                onAccepted: root.submitNewHabit()
-                                Keys.onReturnPressed: root.submitNewHabit()
-                                Keys.onEnterPressed: root.submitNewHabit()
-                                Keys.onEscapePressed: {
-                                    root.newHabitTitle = "";
-                                    root.isAddingHabit = false;
-                                }
-                            }
-
-                            StyledText {
-                                anchors.fill: parent
-                                verticalAlignment: Text.AlignVCenter
-                                text: Translation.tr("Habit name (press Enter)...")
-                                font.pixelSize: Appearance.font.pixelSize.small
-                                color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.45)
-                                visible: newHabitInput.text.length === 0
-                                enabled: false
+                            verticalAlignment: TextInput.AlignVCenter
+                            color: Appearance.colors.colOnPrimaryContainer
+                            font.pixelSize: Appearance.font.pixelSize.small
+                            selectByMouse: true
+                            clip: true
+                            focus: true
+                            placeholderText: Translation.tr("Habit name (press Enter)...")
+                            placeholderTextColor: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.45)
+                            background: null
+                            text: root.newHabitTitle
+                            onTextChanged: root.newHabitTitle = text
+                            onAccepted: root.submitNewHabit()
+                            Keys.onReturnPressed: root.submitNewHabit()
+                            Keys.onEnterPressed: root.submitNewHabit()
+                            Keys.onEscapePressed: {
+                                root.newHabitTitle = "";
+                                root.isAddingHabit = false;
                             }
                         }
 

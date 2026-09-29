@@ -192,6 +192,7 @@ AbstractBackgroundWidget {
 
                 // Active Repo in 1x2 mode
                 Rectangle {
+                    id: topRepoBox
                     Layout.fillWidth: true
                     Layout.fillHeight: true
                     radius: Appearance.rounding.small
@@ -217,13 +218,13 @@ AbstractBackgroundWidget {
                             RowLayout {
                                 spacing: 6
                                 StyledText {
-                                    text: topRepo ? (topRepo.name ?? "repo") : "No repos detected"
+                                    text: topRepoBox.topRepo ? (topRepoBox.topRepo.name ?? "repo") : "No repos detected"
                                     font.pixelSize: Appearance.font.pixelSize.small
                                     font.weight: Font.DemiBold
                                     color: Appearance.colors.colOnPrimaryContainer
                                 }
                                 Rectangle {
-                                    visible: topRepo !== null
+                                    visible: topRepoBox.topRepo !== null
                                     implicitWidth: branchCompactText.implicitWidth + 8
                                     implicitHeight: 18
                                     radius: 9
@@ -231,7 +232,7 @@ AbstractBackgroundWidget {
                                     StyledText {
                                         id: branchCompactText
                                         anchors.centerIn: parent
-                                        text: topRepo ? (topRepo.branch ?? "main") : ""
+                                        text: topRepoBox.topRepo ? (topRepoBox.topRepo.branch ?? "main") : ""
                                         font.pixelSize: Appearance.font.pixelSize.smaller
                                         color: Appearance.colors.colPrimary
                                     }
@@ -239,7 +240,7 @@ AbstractBackgroundWidget {
                             }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: topRepo ? (topRepo.last_commit ?? "") : "Start hacking to populate git activity"
+                                text: topRepoBox.topRepo ? (topRepoBox.topRepo.last_commit ?? "") : "Start hacking to populate git activity"
                                 elide: Text.ElideRight
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 color: Appearance.colors.colOnPrimaryContainer
@@ -251,10 +252,10 @@ AbstractBackgroundWidget {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            if (topRepo?.path) {
+                            if (topRepoBox.topRepo?.path) {
                                 Quickshell.execDetached([
                                     "bash", "-c", 
-                                    `cd "${topRepo.path}" && (foot || kitty || alacritty || xterm || xdg-open "${topRepo.path}")`
+                                    `cd "${topRepoBox.topRepo.path}" && (foot || kitty || alacritty || xterm || xdg-open "${topRepoBox.topRepo.path}")`
                                 ]);
                             }
                         }
