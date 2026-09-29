@@ -15,11 +15,41 @@ def find_git_repos():
         os.path.join(home, "workspace"),
         os.path.join(home, "dev"),
         os.path.join(home, "code"),
+        os.path.join(home, "src"),
         os.path.join(home, "git"),
-        os.path.join(home, "Documents")
+        os.path.join(home, "repos"),
+        os.path.join(home, "github"),
+        os.path.join(home, "gitlab"),
+        os.path.join(home, "Documents"),
+        os.path.join(home, "Desktop")
     ]
     repos = []
     seen = set()
+
+    # Also scan ~/.config subdirectories 1-2 levels deep
+    config_dir = os.path.join(home, ".config")
+    if os.path.isdir(config_dir):
+        try:
+            for c_entry in os.listdir(config_dir):
+                c_sub = os.path.join(config_dir, c_entry)
+                if os.path.isdir(os.path.join(c_sub, ".git")):
+                    real = os.path.realpath(c_sub)
+                    if real not in seen:
+                        repos.append(real)
+                        seen.add(real)
+                elif os.path.isdir(c_sub):
+                    try:
+                        for c_sub2 in os.listdir(c_sub):
+                            c_subsub = os.path.join(c_sub, c_sub2)
+                            if os.path.isdir(os.path.join(c_subsub, ".git")):
+                                real = os.path.realpath(c_subsub)
+                                if real not in seen:
+                                    repos.append(real)
+                                    seen.add(real)
+                    except Exception:
+                        pass
+        except Exception:
+            pass
 
     for base in search_dirs:
         if not os.path.isdir(base):

@@ -54,6 +54,25 @@ AbstractBackgroundWidget {
     property bool isAddingHabit: false
     property string newHabitTitle: ""
 
+    onIsAddingHabitChanged: {
+        GlobalStates.desktopWidgetKeyboardFocus = root.isAddingHabit;
+        if (root.isAddingHabit) {
+            Qt.callLater(() => {
+                newHabitInput.forceActiveFocus();
+            });
+        }
+    }
+
+    Component.onDestruction: {
+        if (root.isAddingHabit) {
+            GlobalStates.desktopWidgetKeyboardFocus = false;
+        }
+    }
+
+    readonly property real fixedRightBlockWidth: 56
+    readonly property real colWidth: root.sizeMode === "2x3" ? 20 : 16
+    readonly property real colSpacing: root.sizeMode === "2x3" ? 5 : 3
+
     readonly property string todayDateStr: {
         const now = new Date();
         const y = now.getFullYear();
@@ -130,11 +149,21 @@ AbstractBackgroundWidget {
         saveHabits();
     }
 
+    function submitNewHabit() {
+        const inputField = (typeof newHabitInput !== "undefined" && newHabitInput) ? newHabitInput : null;
+        const title = (inputField ? inputField.text : root.newHabitTitle).trim();
+        if (title.length > 0) {
+            root.addHabit(title);
+        }
+        root.newHabitTitle = "";
+        root.isAddingHabit = false;
+    }
+
     function addHabit(title) {
         if (!title || title.trim().length === 0) return;
         let list = habits.slice();
-        const icons = ["water_drop", "menu_book", "fitness_center", "terminal", "self_improvement", "bedtime", "psychology"];
-        const colors = ["#29b6f6", "#ab47bc", "#66bb6a", "#ffa726", "#ec407a", "#5c6bc0", "#26a69a"];
+        const icons = ["water_drop", "menu_book", "fitness_center", "terminal", "self_improvement", "bedtime", "psychology", "directions_run", "laptop_chromebook", "brush"];
+        const colors = ["#29b6f6", "#ab47bc", "#66bb6a", "#ffa726", "#ec407a", "#5c6bc0", "#26a69a", "#e91e63", "#00bcd4", "#ff5722"];
         const idx = list.length % icons.length;
 
         list.push({
@@ -327,42 +356,75 @@ AbstractBackgroundWidget {
                 Rectangle {
                     visible: root.isAddingHabit && root.sizeMode !== "1x2"
                     Layout.fillWidth: true
-                    implicitHeight: 32
+                    implicitHeight: 34
                     radius: Appearance.rounding.small
                     color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                     border.width: 1
                     border.color: Appearance.colors.colPrimary
 
                     RowLayout {
-                        anchors { fill: parent; margins: 4 }
-                        spacing: 4
+                        anchors { fill: parent; margins: 4; leftMargin: 8; rightMargin: 6 }
+                        spacing: 6
 
-                        TextInput {
-                            id: newHabitInput
-                            Layout.fillWidth: true
-                            color: Appearance.colors.colOnPrimaryContainer
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            selectByMouse: true
-                            clip: true
-                            text: root.newHabitTitle
-                            onTextChanged: root.newHabitTitle = text
-                            onAccepted: root.addHabit(text)
-                            Component.onCompleted: forceActiveFocus()
+                        MaterialSymbol {
+                            text: "add_task"
+                            iconSize: 16
+                            color: Appearance.colors.colPrimary
                         }
 
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+
+                            TextInput {
+                                id: newHabitInput
+                                anchors.fill: parent
+                                verticalAlignment: TextInput.AlignVCenter
+                                color: Appearance.colors.colOnPrimaryContainer
+                                font.pixelSize: Appearance.font.pixelSize.small
+                                selectByMouse: true
+                                clip: true
+                                text: root.newHabitTitle
+                                onTextChanged: root.newHabitTitle = text
+                                onAccepted: root.submitNewHabit()
+                                Keys.onReturnPressed: root.submitNewHabit()
+                                Keys.onEnterPressed: root.submitNewHabit()
+                                Keys.onEscapePressed: {
+                                    root.newHabitTitle = "";
+                                    root.isAddingHabit = false;
+                                }
+                            }
+
+                            StyledText {
+                                anchors.fill: parent
+                                verticalAlignment: Text.AlignVCenter
+                                text: Translation.tr("Habit name (press Enter)...")
+                                font.pixelSize: Appearance.font.pixelSize.small
+                                color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.45)
+                                visible: newHabitInput.text.length === 0
+                                enabled: false
+                            }
+                        }
+
+                        // Add / Submit button
                         Rectangle {
-                            implicitWidth: 24; implicitHeight: 24; radius: 12
-                            color: Appearance.colors.colPrimary
+                            implicitWidth: 26; implicitHeight: 26; radius: 13
+                            color: addBtnMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.2) : Appearance.colors.colPrimary
+                            border.width: 1
+                            border.color: Qt.rgba(1, 1, 1, 0.2)
+
                             MaterialSymbol {
                                 anchors.centerIn: parent
                                 text: "check"
-                                iconSize: 14
+                                iconSize: 15
                                 color: Appearance.colors.colOnPrimary
                             }
                             MouseArea {
+                                id: addBtnMouse
                                 anchors.fill: parent
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: root.addHabit(newHabitInput.text)
+                                onClicked: root.submitNewHabit()
                             }
                         }
                     }
@@ -446,22 +508,23 @@ AbstractBackgroundWidget {
                 RowLayout {
                     visible: root.sizeMode !== "1x2"
                     Layout.fillWidth: true
-                    spacing: 4
+                    Layout.rightMargin: 16
+                    spacing: 0
 
                     Item { Layout.fillWidth: true }
 
                     Row {
-                        spacing: root.sizeMode === "2x3" ? 6 : 4
+                        spacing: root.colSpacing
                         Repeater {
                             model: root.weekDays
                             delegate: Item {
                                 required property var modelData
-                                width: root.sizeMode === "2x3" ? 22 : 18
+                                width: root.colWidth
                                 implicitHeight: 16
                                 StyledText {
                                     anchors.centerIn: parent
                                     text: parent.modelData.label
-                                    font.pixelSize: Appearance.font.pixelSize.smaller
+                                    font.pixelSize: Appearance.font.pixelSize.smallest
                                     font.weight: parent.modelData.isToday ? Font.Bold : Font.Normal
                                     color: parent.modelData.isToday ? Appearance.colors.colPrimary : Appearance.colors.colOnPrimaryContainer
                                 }
@@ -469,8 +532,8 @@ AbstractBackgroundWidget {
                         }
                     }
 
-                    // Space reservation for streak & delete
-                    Item { width: 56; height: 16 }
+                    // Space reservation matching row delegate's right block
+                    Item { width: root.fixedRightBlockWidth; height: 16 }
                 }
 
                 // Habit List Rows (2x2 and 2x3 Modes)
@@ -502,8 +565,12 @@ AbstractBackgroundWidget {
                         }
 
                         RowLayout {
-                            anchors { fill: parent; margins: 3; leftMargin: 8; rightMargin: 6 }
-                            spacing: 4
+                            anchors.fill: parent
+                            anchors.leftMargin: 8
+                            anchors.rightMargin: 0
+                            anchors.topMargin: 3
+                            anchors.bottomMargin: 3
+                            spacing: 0
 
                             // Icon & Title
                             RowLayout {
@@ -528,13 +595,13 @@ AbstractBackgroundWidget {
 
                             // 7 Check-in Dots for the 7 days (Fixed Row with generous hitboxes)
                             Row {
-                                spacing: root.sizeMode === "2x3" ? 6 : 4
+                                spacing: root.colSpacing
                                 Repeater {
                                     model: root.weekDays
                                     delegate: Item {
                                         id: dotItem
                                         required property var modelData
-                                        width: root.sizeMode === "2x3" ? 22 : 18
+                                        width: root.colWidth
                                         height: 28
 
                                         readonly property bool isDone: (habitRow.modelData?.history && habitRow.modelData.history[dotItem.modelData.dateStr]) === true
@@ -542,7 +609,7 @@ AbstractBackgroundWidget {
                                         Rectangle {
                                             id: checkCircle
                                             anchors.centerIn: parent
-                                            width: dotItem.modelData.isToday ? 16 : 13
+                                            width: dotItem.modelData.isToday ? 15 : 12
                                             height: width
                                             radius: width / 2
                                             color: dotItem.isDone
@@ -559,13 +626,13 @@ AbstractBackgroundWidget {
                                             MaterialSymbol {
                                                 anchors.centerIn: parent
                                                 text: "check"
-                                                iconSize: dotItem.modelData.isToday ? 11 : 9
+                                                iconSize: dotItem.modelData.isToday ? 10 : 8
                                                 color: "#ffffff"
                                                 visible: dotItem.isDone
                                             }
                                         }
 
-                                        // Clickable hitbox filling the entire 18-22px column
+                                        // Clickable hitbox filling the entire column
                                         MouseArea {
                                             anchors.fill: parent
                                             cursorShape: Qt.PointingHandCursor
@@ -585,48 +652,54 @@ AbstractBackgroundWidget {
                                 }
                             }
 
-                            // Streak Counter & Independent Delete Target
-                            RowLayout {
-                                spacing: 2
+                            // Streak Counter & Independent Delete Target in exact fixed-width container
+                            Item {
+                                width: root.fixedRightBlockWidth
+                                height: parent.height
 
-                                // Streak Badge (Always visible)
                                 RowLayout {
-                                    spacing: 1
-                                    MaterialSymbol {
-                                        text: "local_fire_department"
-                                        iconSize: 13
-                                        color: "#ff7043"
-                                    }
-                                    StyledText {
-                                        text: `${habitRow.modelData?.streak ?? 0}`
-                                        font.pixelSize: Appearance.font.pixelSize.smaller
-                                        font.weight: Font.Bold
-                                        color: "#ff7043"
-                                    }
-                                }
+                                    anchors.centerIn: parent
+                                    spacing: 2
 
-                                // Delete Button: Generous 28x28 Hitbox with Smooth Fade
-                                Rectangle {
-                                    width: 26; height: 26; radius: 13
-                                    color: delMouse.containsMouse ? Qt.rgba(1, 0.2, 0.2, 0.25) : "transparent"
-                                    opacity: rowHover.hovered ? 1.0 : 0.25
-                                    Behavior on opacity {
-                                        NumberAnimation { duration: 150 }
+                                    // Streak Badge
+                                    RowLayout {
+                                        spacing: 1
+                                        MaterialSymbol {
+                                            text: "local_fire_department"
+                                            iconSize: 12
+                                            color: "#ff7043"
+                                        }
+                                        StyledText {
+                                            text: `${habitRow.modelData?.streak ?? 0}`
+                                            font.pixelSize: Appearance.font.pixelSize.smallest
+                                            font.weight: Font.Bold
+                                            color: "#ff7043"
+                                        }
                                     }
 
-                                    MaterialSymbol {
-                                        anchors.centerIn: parent
-                                        text: "delete"
-                                        iconSize: 15
-                                        color: delMouse.containsMouse ? "#ef5350" : Appearance.colors.colOnPrimaryContainer
-                                    }
+                                    // Delete Button: Generous Hitbox with Smooth Fade
+                                    Rectangle {
+                                        width: 22; height: 22; radius: 11
+                                        color: delMouse.containsMouse ? Qt.rgba(1, 0.2, 0.2, 0.25) : "transparent"
+                                        opacity: rowHover.hovered ? 1.0 : 0.35
+                                        Behavior on opacity {
+                                            NumberAnimation { duration: 150 }
+                                        }
 
-                                    MouseArea {
-                                        id: delMouse
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.deleteHabit(habitRow.index)
+                                        MaterialSymbol {
+                                            anchors.centerIn: parent
+                                            text: "delete"
+                                            iconSize: 13
+                                            color: delMouse.containsMouse ? "#ef5350" : Appearance.colors.colOnPrimaryContainer
+                                        }
+
+                                        MouseArea {
+                                            id: delMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: root.deleteHabit(habitRow.index)
+                                        }
                                     }
                                 }
                             }

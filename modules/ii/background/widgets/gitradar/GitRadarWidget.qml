@@ -80,9 +80,9 @@ AbstractBackgroundWidget {
         id: radarProcess
         command: ["python3", `${Directories.scriptPath}/git/git-radar.py`]
         stdout: StdioCollector {
-            onDataChanged: {
+            onStreamFinished: {
                 try {
-                    const parsed = JSON.parse(value.trim());
+                    const parsed = JSON.parse(text.trim());
                     if (parsed && typeof parsed === "object") {
                         root.radarData = parsed;
                     }
@@ -343,9 +343,14 @@ AbstractBackgroundWidget {
                             text: "refresh"
                             iconSize: 17
                             color: Appearance.colors.colOnPrimaryContainer
-                            rotation: root.isRefreshing ? 360 : 0
-                            Behavior on rotation {
-                                NumberAnimation { duration: 600; easing.type: Easing.InOutQuad }
+                            rotation: 0
+                            
+                            RotationAnimation on rotation {
+                                running: root.isRefreshing
+                                loops: Animation.Infinite
+                                from: 0
+                                to: 360
+                                duration: 800
                             }
                         }
                         MouseArea {
@@ -449,6 +454,34 @@ AbstractBackgroundWidget {
                     Layout.rightMargin: 16
                     Layout.bottomMargin: 8
                     spacing: 5
+
+                    // Empty state fallback when no repos found or still scanning
+                    Rectangle {
+                        visible: !root.radarData.repos || root.radarData.repos.length === 0
+                        Layout.fillWidth: true
+                        implicitHeight: 38
+                        radius: Appearance.rounding.small
+                        color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
+                        border.width: 1
+                        border.color: root.widgetBorderColor
+
+                        RowLayout {
+                            anchors.centerIn: parent
+                            spacing: 8
+                            MaterialSymbol {
+                                text: root.isRefreshing ? "sync" : "info"
+                                iconSize: 16
+                                color: Appearance.colors.colPrimary
+                            }
+                            StyledText {
+                                text: root.isRefreshing 
+                                    ? Translation.tr("Scanning for git repos...")
+                                    : Translation.tr("No git repos detected in ~/Projects or ~/.config")
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                color: Appearance.colors.colOnPrimaryContainer
+                            }
+                        }
+                    }
 
                     Repeater {
                         model: (root.radarData.repos ?? []).slice(0, root.sizeMode === "2x3" ? 3 : 2)
