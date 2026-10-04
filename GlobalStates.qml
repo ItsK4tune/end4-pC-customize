@@ -24,6 +24,8 @@ Singleton {
     property bool overlayOpen: false
     property bool overviewOpen: false
     property bool regionSelectorOpen: false
+    property bool restOpen: false
+    property bool restWarningOpen: false
     property bool searchOpen: false
     property bool screenLocked: false
     property bool screenLockContainsCharacters: false
@@ -138,6 +140,32 @@ Singleton {
         description: "Toggles centered wallpaper"
         onPressed: {
             Config.options.background.centeredWallpaper = !Config.options.background.centeredWallpaper
+        }
+    }
+
+    IpcHandler {
+        target: "rest"
+        function start(minutes: int): void {
+            RestService.startRest(minutes > 0 ? minutes * 60 : -1, "ipc")
+        }
+        function toggle(): void {
+            if (GlobalStates.restOpen) {
+                RestService.emergencyUnlock()
+            } else {
+                RestService.startRest(-1, "ipc")
+            }
+        }
+    }
+
+    CompositorGlobalShortcut {
+        name: "restToggle"
+        description: "Starts or stops ergonomic rest break"
+        onPressed: {
+            if (GlobalStates.restOpen) {
+                RestService.emergencyUnlock()
+            } else {
+                RestService.startRest(-1, "shortcut")
+            }
         }
     }
 }

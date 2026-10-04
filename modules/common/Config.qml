@@ -532,6 +532,7 @@ Singleton {
                         property int focusDuration: 25
                         property int shortBreakDuration: 5
                         property int longBreakDuration: 15
+                        property bool enforceRest: true
                     }
 
                     property JsonObject habitGrid: JsonObject {
@@ -875,7 +876,7 @@ Singleton {
                 property bool bottomGroup: true
                 property bool mediaPlayer: false
                 property string bannerImage: ""
-                property bool keepRightSidebarLoaded: true
+                property bool keepRightSidebarLoaded: false
                 property JsonObject translator: JsonObject {
                     property bool enable: false
                     property int delay: 300 // Delay before sending request. Reduces (potential) rate limits and lag.
@@ -1010,6 +1011,27 @@ Singleton {
                     property list<string> networkNameKeywords: ["airport", "cafe", "college", "company", "eduroam", "free", "guest", "public", "school", "university"]
                     property list<string> fileKeywords: ["anime", "booru", "ecchi", "hentai", "yande.re", "konachan", "breast", "nipples", "pussy", "nsfw", "spoiler", "girl"]
                     property list<string> linkKeywords: ["hentai", "porn", "sukebei", "hitomi.la", "rule34", "gelbooru", "fanbox", "dlsite"]
+                }
+            }
+
+            property JsonObject rest: JsonObject {
+                property bool enable: true
+                property JsonObject triggers: JsonObject {
+                    property bool continuousWork: true
+                    property int workMinutes: 50
+                    property bool pomodoroSync: true
+                    property int warnSecondsBefore: 30
+                }
+                property JsonObject visual: JsonObject {
+                    property string mode: "zen" // "zen", "minimalDim"
+                    property real dimOpacity: 0.94
+                    property bool pauseMusic: true
+                    property bool playAmbientSound: true
+                    property string soundType: "rain"
+                }
+                property JsonObject unlock: JsonObject {
+                    property int restMinutes: 5
+                    property int emergencyHoldSeconds: 3
                 }
             }
         }

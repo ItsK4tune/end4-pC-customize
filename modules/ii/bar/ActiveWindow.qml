@@ -36,8 +36,58 @@ Item {
 
 
 
+    readonly property bool isMaterial: Config.options.bar.cornerStyle === 3
+    property real maxBottomHeight: root.isMaterial ? 16 : 18
+    property int maxTitleFontSize: 13
+    property int minTitleFontSize: 7
+    property int titleFontSize: root.maxTitleFontSize
+
+    readonly property string displayTitleText: {
+        if (root.focusingThisMonitor && root.activeWindow?.activated && root.biggestWindow) {
+            return root.activeWindow?.title ?? "";
+        }
+        return root.biggestWindow?.title ?? `${Translation.tr("Workspace")} ${WM.activeWorkspaceForMonitor(monitor?.name)?.id ?? 1}`;
+    }
+
+    readonly property string displayAppText: {
+        if (root.focusingThisMonitor && root.activeWindow?.activated && root.biggestWindow) {
+            return root.activeWindow?.appId ?? "";
+        }
+        return root.biggestWindow?.class ?? Translation.tr("Desktop");
+    }
+
+    Text {
+        id: measurer
+        visible: false
+        font.family: Appearance.font.family.main
+        font.hintingPreference: Font.PreferDefaultHinting
+        renderType: Text.NativeRendering
+    }
+
+    function updateTitleFontSize() {
+        const textToMeasure = root.displayTitleText;
+        if (!textToMeasure || textToMeasure.length === 0) {
+            root.titleFontSize = root.maxTitleFontSize;
+            return;
+        }
+
+        measurer.text = textToMeasure;
+        for (let sz = root.maxTitleFontSize; sz >= root.minTitleFontSize; sz--) {
+            measurer.font.pixelSize = sz;
+            if (measurer.contentHeight <= root.maxBottomHeight) {
+                root.titleFontSize = sz;
+                return;
+            }
+        }
+        root.titleFontSize = root.minTitleFontSize;
+    }
+
+    onDisplayTitleTextChanged: updateTitleFontSize()
+    onMaxBottomHeightChanged: updateTitleFontSize()
+    Component.onCompleted: updateTitleFontSize()
+
     implicitWidth:  vertical ? Appearance.sizes.verticalBarWidth : Math.min(colLayout.implicitWidth + 12, 280)
-    implicitHeight: vertical ? iconItem.implicitHeight : Appearance.sizes.barHeight
+    implicitHeight: vertical ? iconItem.implicitHeight : (root.isMaterial ? 32 : Appearance.sizes.barHeight)
 
     // Vertical
     Item {
@@ -63,25 +113,30 @@ Item {
         anchors.left: parent.left
         anchors.right: parent.right
         anchors.leftMargin: 6
-        spacing: -4
+        anchors.rightMargin: 6
+        spacing: 0
+        clip: true
 
         StyledText {
             Layout.fillWidth: true
-            font.pixelSize: Appearance.font.pixelSize.smaller
+            Layout.maximumHeight: 12
+            verticalAlignment: Text.AlignVCenter
+            clip: true
+            font.pixelSize: Appearance.font.pixelSize.smallest
             color: Appearance.colors.colSubtext
             elide: Text.ElideRight
-            text: root.focusingThisMonitor && root.activeWindow?.activated && root.biggestWindow ?
-                root.activeWindow?.appId :
-                (root.biggestWindow?.class) ?? Translation.tr("Desktop")
+            text: root.displayAppText
         }
         StyledText {
             Layout.fillWidth: true
-            font.pixelSize: Appearance.font.pixelSize.small
+            Layout.maximumHeight: root.maxBottomHeight
+            Layout.preferredHeight: Math.min(contentHeight, root.maxBottomHeight)
+            verticalAlignment: Text.AlignVCenter
+            clip: true
+            font.pixelSize: root.titleFontSize
             color: Appearance.colors.colOnLayer0
             elide: Text.ElideRight
-            text: root.focusingThisMonitor && root.activeWindow?.activated && root.biggestWindow ?
-                root.activeWindow?.title :
-                (root.biggestWindow?.title) ?? `${Translation.tr("Workspace")} ${WM.activeWorkspaceForMonitor(monitor?.name)?.id ?? 1}`
+            text: root.displayTitleText
         }
     }
 }

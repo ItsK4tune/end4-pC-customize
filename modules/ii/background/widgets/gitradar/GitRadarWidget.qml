@@ -16,33 +16,50 @@ AbstractBackgroundWidget {
     configEntryName: "gitRadar"
     hoverEnabled: true
 
-    readonly property real snapWidth1: 320
-    readonly property real snapWidth2: 420
-    readonly property real cardHeight1: 120
-    readonly property real cardHeight2: 252
+    readonly property real singleWidth: 132
+    readonly property real cardSpacing: 12
+    readonly property real cardHeight: 120
+    readonly property real doubleHeight: root.cardHeight * 2 + root.cardSpacing // 252
 
-    property string sizeMode: root.configEntry?.sizeMode ?? "2x2"
+    readonly property real snapWidth1: root.singleWidth // 132
+    readonly property real snapWidth2: root.singleWidth * 2 + root.cardSpacing // 276
+    readonly property real snapWidth3: root.singleWidth * 3 + root.cardSpacing * 2 // 420
+    readonly property real snapWidth4: root.singleWidth * 4 + root.cardSpacing * 3 // 564
 
-    property real widgetWidth: root.sizeMode === "2x3" ? snapWidth2 : snapWidth1
-    property real widgetHeight: root.sizeMode === "1x2" ? cardHeight1 : cardHeight2
+    property string sizeMode: (root.configEntry && root.configEntry.sizeMode) ? root.configEntry.sizeMode : "2x2"
+
+    property real widgetWidth: {
+        switch (root.sizeMode) {
+            case "1x1": return root.snapWidth1
+            case "1x2": return root.snapWidth2
+            case "2x1": return root.snapWidth2
+            case "2x2": return root.snapWidth2
+            case "2x3": return root.snapWidth3
+            case "4x2": return root.snapWidth4
+            default:    return root.snapWidth3
+        }
+    }
+    property real widgetHeight: root.isCompact ? root.cardHeight : root.doubleHeight
+
+    readonly property bool isCompact: root.sizeMode === "1x2" || root.sizeMode === "2x1"
+    readonly property bool isWide: root.sizeMode === "4x2" || root.sizeMode === "2x3"
 
     implicitWidth: widgetWidth
     implicitHeight: widgetHeight
 
     Behavior on widgetWidth {
-        NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+        animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
     }
     Behavior on widgetHeight {
-        NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+        animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
     }
 
     function modeForDrag(dx, dy, startWidth) {
-        const mid = (snapWidth1 + snapWidth2) / 2;
-        const newWidth = startWidth + dx;
-        if (newWidth >= mid) return "2x3";
         if (dy < -40) return "1x2";
-        if (dy > 40) return "2x2";
-        return root.sizeMode;
+        const w = startWidth + dx;
+        if (w > (snapWidth3 + snapWidth4) / 2) return "4x2";
+        if (w > (snapWidth2 + snapWidth3) / 2) return "2x3";
+        return "2x2";
     }
 
     readonly property color widgetBorderColor: Appearance.m3colors.darkmode 
@@ -87,7 +104,7 @@ AbstractBackgroundWidget {
                         root.radarData = parsed;
                     }
                 } catch (e) {
-                    // JSON parsing incomplete or corrupt
+                    // JSON parsing incomplete
                 }
             }
         }
@@ -98,8 +115,9 @@ AbstractBackgroundWidget {
         id: cardWrapper
         anchors.fill: parent
 
-        StyledDropShadow { 
+        StyledRectangularShadow { 
             target: contentRect 
+            z: -2
             visible: Config.options.background.widgets.shadow
         }
 
@@ -107,9 +125,10 @@ AbstractBackgroundWidget {
             id: contentRect
             anchors.fill: parent
             color: Appearance.colors.colPrimaryContainer
-            radius: Appearance.rounding?.verylarge ?? 30
+            radius: Appearance.rounding.verylarge
             border.width: 1
             border.color: root.widgetBorderColor
+            clip: true
 
             FastBlurred {
                 anchors.fill: parent
@@ -122,10 +141,10 @@ AbstractBackgroundWidget {
                 visible: Config.options.background.widgets.blurWidgets 
             }
 
-            // Compact 1x2 Mode Layout
+            // Compact 1x2 / 2x1 Mode Layout (276 x 120)
             ColumnLayout {
-                visible: root.sizeMode === "1x2"
-                anchors { fill: parent; margins: 14 }
+                visible: root.isCompact
+                anchors { fill: parent; margins: 12 }
                 spacing: 6
 
                 RowLayout {
@@ -133,17 +152,20 @@ AbstractBackgroundWidget {
                     spacing: 8
 
                     RowLayout {
-                        spacing: 5
+                        spacing: 4
+                        Layout.alignment: Qt.AlignVCenter
                         StyledText {
-                            text: `${root.radarData.total_commits ?? 0}`
-                            font.pixelSize: Appearance.font.pixelSize.normal
+                            text: `${root.radarData.total_commits || 0}`
+                            font.pixelSize: 22
                             font.weight: Font.Bold
                             color: Appearance.colors.colOnPrimaryContainer
                         }
                         StyledText {
                             text: Translation.tr("commits")
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.35)
+                            font.pixelSize: Appearance.font.pixelSize.smaller
+                            color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.4)
+                            Layout.alignment: Qt.AlignBottom
+                            Layout.bottomMargin: 2
                         }
                     }
 
@@ -151,12 +173,12 @@ AbstractBackgroundWidget {
 
                     // Streak Badge
                     Rectangle {
-                        implicitWidth: streakCompactRow.implicitWidth + 12
+                        implicitWidth: streakCompactRow.implicitWidth + 10
                         implicitHeight: 22
-                        radius: Appearance.rounding.full
-                        color: Qt.rgba(1, 0.45, 0.1, 0.22)
+                        radius: 11
+                        color: Qt.rgba(1, 0.45, 0.1, 0.18)
                         border.width: 1
-                        border.color: Qt.rgba(1, 0.5, 0.1, 0.4)
+                        border.color: Qt.rgba(1, 0.5, 0.1, 0.35)
 
                         RowLayout {
                             id: streakCompactRow
@@ -164,15 +186,40 @@ AbstractBackgroundWidget {
                             spacing: 3
                             MaterialSymbol {
                                 text: "local_fire_department"
-                                iconSize: 14
+                                iconSize: 13
                                 color: "#ff7043"
                             }
                             StyledText {
-                                text: `${root.radarData.streak ?? 0}d`
+                                text: `${root.radarData.streak || 0}d`
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 font.weight: Font.Bold
                                 color: "#ff7043"
                             }
+                        }
+                    }
+
+                    // Refresh Button
+                    Rectangle {
+                        width: 24; height: 24; radius: 12
+                        color: refresh1x2Mouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7) : "transparent"
+                        MaterialSymbol {
+                            anchors.centerIn: parent
+                            text: "refresh"
+                            iconSize: 15
+                            color: Appearance.colors.colOnPrimaryContainer
+                            rotation: 0
+                            RotationAnimation on rotation {
+                                running: root.isRefreshing
+                                loops: Animation.Infinite
+                                from: 0; to: 360; duration: 800
+                            }
+                        }
+                        MouseArea {
+                            id: refresh1x2Mouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.refresh()
                         }
                     }
                 }
@@ -190,36 +237,30 @@ AbstractBackgroundWidget {
                     readonly property var topRepo: (root.radarData.repos && root.radarData.repos.length > 0) ? root.radarData.repos[0] : null
 
                     RowLayout {
-                        anchors { fill: parent; margins: 8 }
+                        anchors { fill: parent; margins: 6; leftMargin: 8; rightMargin: 8 }
                         spacing: 8
-
-                        MaterialSymbol {
-                            text: "fork_right"
-                            iconSize: 18
-                            color: Appearance.colors.colPrimary
-                        }
 
                         ColumnLayout {
                             Layout.fillWidth: true
-                            spacing: 2
+                            spacing: 1
                             RowLayout {
                                 spacing: 6
                                 StyledText {
-                                    text: topRepoBox.topRepo ? (topRepoBox.topRepo.name ?? "repo") : "No repos detected"
-                                    font.pixelSize: Appearance.font.pixelSize.small
+                                    text: topRepoBox.topRepo ? (topRepoBox.topRepo.name || "repo") : Translation.tr("No git repos detected")
+                                    font.pixelSize: Appearance.font.pixelSize.smaller
                                     font.weight: Font.DemiBold
                                     color: Appearance.colors.colOnPrimaryContainer
                                 }
                                 Rectangle {
                                     visible: topRepoBox.topRepo !== null
-                                    implicitWidth: branchCompactText.implicitWidth + 8
-                                    implicitHeight: 18
-                                    radius: 9
+                                    implicitWidth: branchCompactText.implicitWidth + 6
+                                    implicitHeight: 16
+                                    radius: 8
                                     color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
                                     StyledText {
                                         id: branchCompactText
                                         anchors.centerIn: parent
-                                        text: topRepoBox.topRepo ? (topRepoBox.topRepo.branch ?? "main") : ""
+                                        text: topRepoBox.topRepo ? (topRepoBox.topRepo.branch || "main") : ""
                                         font.pixelSize: Appearance.font.pixelSize.smaller
                                         color: Appearance.colors.colPrimary
                                     }
@@ -227,10 +268,10 @@ AbstractBackgroundWidget {
                             }
                             StyledText {
                                 Layout.fillWidth: true
-                                text: topRepoBox.topRepo ? (topRepoBox.topRepo.last_commit ?? "") : "Start hacking to populate git activity"
+                                text: topRepoBox.topRepo ? (topRepoBox.topRepo.last_commit || "") : Translation.tr("Scanning git repositories...")
                                 elide: Text.ElideRight
                                 font.pixelSize: Appearance.font.pixelSize.smaller
-                                color: Appearance.colors.colOnPrimaryContainer
+                                color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.35)
                             }
                         }
                     }
@@ -239,7 +280,7 @@ AbstractBackgroundWidget {
                         anchors.fill: parent
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            if (topRepoBox.topRepo?.path) {
+                            if (topRepoBox.topRepo && topRepoBox.topRepo.path) {
                                 Quickshell.execDetached([
                                     "bash", "-c", 
                                     `cd "${topRepoBox.topRepo.path}" && (foot || kitty || alacritty || xterm || xdg-open "${topRepoBox.topRepo.path}")`
@@ -250,35 +291,44 @@ AbstractBackgroundWidget {
                 }
             }
 
-            // Standard 2x2 and 2x3 Modes Layout
+            // Standard 2x2, 2x3 and 4x2 Modes Layout (Abstract & Zero Overflow)
             ColumnLayout {
-                visible: root.sizeMode !== "1x2"
+                visible: !root.isCompact
                 anchors { fill: parent; margins: 14 }
                 spacing: 8
 
-                // Header
+                // Abstract Header Row (Metrics only - no icon, no title)
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
 
                     RowLayout {
                         spacing: 6
+                        Layout.alignment: Qt.AlignVCenter
+
                         StyledText {
-                            text: `${root.radarData.total_commits ?? 0}`
-                            font.pixelSize: Appearance.font.pixelSize.normal
+                            text: `${root.radarData.total_commits || 0}`
+                            font.pixelSize: 26
                             font.weight: Font.Bold
                             color: Appearance.colors.colOnPrimaryContainer
                         }
-                        StyledText {
-                            text: Translation.tr("commits")
-                            font.pixelSize: Appearance.font.pixelSize.small
-                            color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.35)
-                            font.weight: Font.DemiBold
-                        }
-                        StyledText {
-                            text: `· ${root.radarData.repo_count ?? 0} ${root.radarData.repo_count === 1 ? Translation.tr("repo") : Translation.tr("repos")}`
-                            font.pixelSize: Appearance.font.pixelSize.smaller
-                            color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.45)
+
+                        ColumnLayout {
+                            spacing: -2
+                            Layout.alignment: Qt.AlignVCenter
+
+                            StyledText {
+                                text: Translation.tr("commits")
+                                font.pixelSize: Appearance.font.pixelSize.smaller
+                                font.weight: Font.DemiBold
+                                color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.3)
+                            }
+
+                            StyledText {
+                                text: `${root.radarData.repo_count || 0} ${root.radarData.repo_count === 1 ? Translation.tr("repo") : Translation.tr("repos")}`
+                                font.pixelSize: 10
+                                color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.5)
+                            }
                         }
                     }
 
@@ -286,12 +336,12 @@ AbstractBackgroundWidget {
 
                     // Streak Pill
                     Rectangle {
-                        implicitWidth: streakRow.implicitWidth + 12
-                        implicitHeight: 24
-                        radius: Appearance.rounding.full
-                        color: Qt.rgba(1, 0.45, 0.1, 0.22)
+                        implicitWidth: streakRow.implicitWidth + 10
+                        implicitHeight: 22
+                        radius: 11
+                        color: Qt.rgba(1, 0.45, 0.1, 0.18)
                         border.width: 1
-                        border.color: Qt.rgba(1, 0.5, 0.1, 0.4)
+                        border.color: Qt.rgba(1, 0.5, 0.1, 0.35)
 
                         RowLayout {
                             id: streakRow
@@ -299,11 +349,11 @@ AbstractBackgroundWidget {
                             spacing: 3
                             MaterialSymbol {
                                 text: "local_fire_department"
-                                iconSize: 14
+                                iconSize: 13
                                 color: "#ff7043"
                             }
                             StyledText {
-                                text: `${root.radarData.streak ?? 0}d`
+                                text: `${root.radarData.streak || 0}d streak`
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 font.weight: Font.Bold
                                 color: "#ff7043"
@@ -315,23 +365,16 @@ AbstractBackgroundWidget {
                     Rectangle {
                         width: 26; height: 26; radius: 13
                         color: refreshMouse.containsMouse ? ColorUtils.transparentize(Appearance.colors.colLayer0, 0.7) : "transparent"
-                        border.width: 1
-                        border.color: refreshMouse.containsMouse ? root.widgetBorderColor : "transparent"
-
                         MaterialSymbol {
-                            id: refreshIcon
                             anchors.centerIn: parent
                             text: "refresh"
-                            iconSize: 17
+                            iconSize: 16
                             color: Appearance.colors.colOnPrimaryContainer
                             rotation: 0
-                            
                             RotationAnimation on rotation {
                                 running: root.isRefreshing
                                 loops: Animation.Infinite
-                                from: 0
-                                to: 360
-                                duration: 800
+                                from: 0; to: 360; duration: 800
                             }
                         }
                         MouseArea {
@@ -344,11 +387,11 @@ AbstractBackgroundWidget {
                     }
                 }
 
-                // Heatmap Matrix
+                // Heatmap Matrix Container (Clean, Abstract Git Contribution Matrix)
                 Rectangle {
                     Layout.fillWidth: true
-                    implicitHeight: 88
-                    radius: Appearance.rounding.normal
+                    implicitHeight: 74
+                    radius: Appearance.rounding.small
                     color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                     border.width: 1
                     border.color: root.widgetBorderColor
@@ -357,14 +400,13 @@ AbstractBackgroundWidget {
                         anchors.fill: parent
                         anchors.margins: 6
 
-                        // Grid: 10 or 14 columns (weeks) x 7 rows (days)
                         Row {
                             id: heatmapRow
                             anchors.centerIn: parent
-                            spacing: root.sizeMode === "2x3" ? 4 : 3
+                            spacing: root.isWide ? 4 : 3
 
                             Repeater {
-                                model: root.sizeMode === "2x3" ? 14 : 10
+                                model: root.sizeMode === "4x2" ? 20 : (root.sizeMode === "2x3" ? 15 : 10)
                                 delegate: Column {
                                     id: weekCol
                                     required property int index
@@ -375,8 +417,8 @@ AbstractBackgroundWidget {
                                         delegate: Rectangle {
                                             id: cellRect
                                             required property int index
-                                            width: root.sizeMode === "2x3" ? 12 : 11
-                                            height: 8
+                                            width: root.sizeMode === "4x2" ? 13 : (root.sizeMode === "2x3" ? 12 : 10)
+                                            height: 7
                                             radius: 2
 
                                             readonly property int dayIdx: (weekCol.index * 7) + cellRect.index
@@ -384,7 +426,7 @@ AbstractBackgroundWidget {
                                                 ? root.radarData.heatmap[dayIdx]
                                                 : null
 
-                                            readonly property int level: dayData?.level ?? 0
+                                            readonly property int level: dayData ? (dayData.level || 0) : 0
 
                                             color: {
                                                 switch(level) {
@@ -405,10 +447,10 @@ AbstractBackgroundWidget {
                                                 hoverEnabled: true
                                                 onEntered: {
                                                     if (dayData) {
-                                                        const pt = cellRect.mapToItem(contentRect, 0, -26);
+                                                        const pt = cellRect.mapToItem(contentRect, 0, -24);
                                                         root.hoveredTooltipText = `${dayData.date}: ${dayData.count} commits`;
                                                         root.hoveredTooltipX = Math.max(8, Math.min(pt.x - 30, contentRect.width - 150));
-                                                        root.hoveredTooltipY = pt.y;
+                                                        root.hoveredTooltipY = Math.max(8, pt.y);
                                                     }
                                                 }
                                                 onExited: root.hoveredTooltipText = ""
@@ -421,26 +463,18 @@ AbstractBackgroundWidget {
                     }
                 }
 
-                // Active Repos List Title
-                StyledText {
-                    text: Translation.tr("Active Repositories")
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    font.weight: Font.DemiBold
-                    color: Appearance.colors.colOnPrimaryContainer
-                    Layout.topMargin: 1
-                }
-
-                ColumnLayout {
+                // Active Repositories Section:
+                // In wide modes (4x2 / 2x3): Repos are displayed SIDE-BY-SIDE (RowLayout) to prevent vertical overflow!
+                // In 2x2 mode: 1 prominent repo card is displayed cleanly.
+                RowLayout {
                     Layout.fillWidth: true
-                    Layout.rightMargin: 16
-                    Layout.bottomMargin: 8
-                    spacing: 5
+                    spacing: 8
 
-                    // Empty state fallback when no repos found or still scanning
+                    // Empty state fallback when no repos found
                     Rectangle {
                         visible: !root.radarData.repos || root.radarData.repos.length === 0
                         Layout.fillWidth: true
-                        implicitHeight: 38
+                        implicitHeight: 52
                         radius: Appearance.rounding.small
                         color: ColorUtils.transparentize(Appearance.colors.colLayer0, 0.78)
                         border.width: 1
@@ -448,16 +482,16 @@ AbstractBackgroundWidget {
 
                         RowLayout {
                             anchors.centerIn: parent
-                            spacing: 8
+                            spacing: 6
                             MaterialSymbol {
                                 text: root.isRefreshing ? "sync" : "info"
-                                iconSize: 16
+                                iconSize: 15
                                 color: Appearance.colors.colPrimary
                             }
                             StyledText {
                                 text: root.isRefreshing 
-                                    ? Translation.tr("Scanning for git repos...")
-                                    : Translation.tr("No git repos detected in ~/Projects or ~/.config")
+                                    ? Translation.tr("Scanning git repositories...")
+                                    : Translation.tr("No git repos detected")
                                 font.pixelSize: Appearance.font.pixelSize.smaller
                                 color: Appearance.colors.colOnPrimaryContainer
                             }
@@ -465,12 +499,12 @@ AbstractBackgroundWidget {
                     }
 
                     Repeater {
-                        model: (root.radarData.repos ?? []).slice(0, root.sizeMode === "2x3" ? 3 : 2)
+                        model: (root.radarData.repos ? root.radarData.repos : []).slice(0, root.isWide ? 2 : 1)
                         delegate: Rectangle {
                             id: repoCard
                             required property var modelData
                             Layout.fillWidth: true
-                            implicitHeight: 40
+                            implicitHeight: 54
                             radius: Appearance.rounding.small
                             color: repoMouse.containsMouse 
                                 ? ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
@@ -478,81 +512,69 @@ AbstractBackgroundWidget {
                             border.width: 1
                             border.color: repoMouse.containsMouse ? Appearance.colors.colPrimary : root.widgetBorderColor
 
-                            RowLayout {
+                            ColumnLayout {
                                 anchors { fill: parent; margins: 6; leftMargin: 8; rightMargin: 8 }
-                                spacing: 8
+                                spacing: 2
 
-                                MaterialSymbol {
-                                    text: "fork_right"
-                                    iconSize: 18
-                                    color: Appearance.colors.colPrimary
-                                }
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 1
-                                    RowLayout {
-                                        spacing: 6
-                                        StyledText {
-                                            text: repoCard.modelData.name ?? "repo"
-                                            font.pixelSize: Appearance.font.pixelSize.small
-                                            font.weight: Font.DemiBold
-                                            color: Appearance.colors.colOnPrimaryContainer
-                                        }
-                                        Rectangle {
-                                            implicitWidth: branchText.implicitWidth + 8
-                                            implicitHeight: 18
-                                            radius: 9
-                                            color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
-                                            StyledText {
-                                                id: branchText
-                                                anchors.centerIn: parent
-                                                text: repoCard.modelData.branch ?? "main"
-                                                font.pixelSize: Appearance.font.pixelSize.smaller
-                                                color: Appearance.colors.colPrimary
-                                            }
-                                        }
-                                    }
-                                    StyledText {
-                                        Layout.fillWidth: true
-                                        text: repoCard.modelData.last_commit ?? "No commits"
-                                        elide: Text.ElideRight
-                                        font.pixelSize: Appearance.font.pixelSize.smaller
-                                        color: Appearance.colors.colOnPrimaryContainer
-                                    }
-                                }
-
-                                // Sync & Modified Badges
                                 RowLayout {
-                                    spacing: 4
-                                    // Ahead
+                                    Layout.fillWidth: true
+                                    spacing: 6
+
+                                    StyledText {
+                                        text: repoCard.modelData.name || "repo"
+                                        font.pixelSize: Appearance.font.pixelSize.smaller
+                                        font.weight: Font.DemiBold
+                                        color: Appearance.colors.colOnPrimaryContainer
+                                        elide: Text.ElideRight
+                                        Layout.fillWidth: true
+                                    }
+
                                     Rectangle {
-                                        visible: (repoCard.modelData.ahead ?? 0) > 0
-                                        implicitWidth: aheadText.implicitWidth + 8
-                                        implicitHeight: 18; radius: 9
+                                        implicitWidth: branchText.implicitWidth + 6
+                                        implicitHeight: 15
+                                        radius: 7.5
+                                        color: ColorUtils.transparentize(Appearance.colors.colPrimary, 0.75)
+                                        StyledText {
+                                            id: branchText
+                                            anchors.centerIn: parent
+                                            text: repoCard.modelData.branch || "main"
+                                            font.pixelSize: 10
+                                            color: Appearance.colors.colPrimary
+                                        }
+                                    }
+
+                                    // Ahead / Modified Indicators
+                                    Rectangle {
+                                        visible: (repoCard.modelData.ahead || 0) > 0
+                                        implicitWidth: aheadText.implicitWidth + 6
+                                        implicitHeight: 15
+                                        radius: 7.5
                                         color: Qt.rgba(0.2, 0.7, 0.9, 0.25)
                                         StyledText {
                                             id: aheadText
                                             anchors.centerIn: parent
                                             text: `↑${repoCard.modelData.ahead}`
-                                            font.pixelSize: Appearance.font.pixelSize.smaller
+                                            font.pixelSize: 9
                                             color: "#4dd0e1"
                                         }
                                     }
-                                    // Modified
-                                    Rectangle {
-                                        visible: (repoCard.modelData.modified ?? 0) > 0 || (repoCard.modelData.untracked ?? 0) > 0
-                                        implicitWidth: modText.implicitWidth + 8
-                                        implicitHeight: 18; radius: 9
-                                        color: Qt.rgba(1.0, 0.7, 0.1, 0.25)
-                                        StyledText {
-                                            id: modText
-                                            anchors.centerIn: parent
-                                            text: `● ${(repoCard.modelData.modified ?? 0) + (repoCard.modelData.untracked ?? 0)}`
-                                            font.pixelSize: Appearance.font.pixelSize.smaller
-                                            color: "#ffb74d"
-                                        }
-                                    }
+                                }
+
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    text: repoCard.modelData.last_commit || ""
+                                    elide: Text.ElideRight
+                                    font.pixelSize: 10
+                                    color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.35)
+                                }
+
+                                StyledText {
+                                    Layout.fillWidth: true
+                                    visible: (repoCard.modelData.last_time || "").length > 0
+                                    text: repoCard.modelData.last_time || ""
+                                    elide: Text.ElideRight
+                                    font.pixelSize: 9
+                                    color: ColorUtils.transparentize(Appearance.colors.colOnPrimaryContainer, 0.55)
                                 }
                             }
 
@@ -575,25 +597,26 @@ AbstractBackgroundWidget {
                 }
             }
 
-            // Floating Tooltip
+            // Hover tooltip
             Rectangle {
-                visible: root.hoveredTooltipText !== ""
+                visible: root.hoveredTooltipText.length > 0
                 x: root.hoveredTooltipX
                 y: root.hoveredTooltipY
-                implicitWidth: tipText.implicitWidth + 14
-                implicitHeight: tipText.implicitHeight + 8
-                radius: 6
-                color: Appearance.colors.colLayer2
+                z: 10
+                implicitWidth: tipText.implicitWidth + 12
+                implicitHeight: 22
+                radius: 11
+                color: Appearance.colors.colSurfaceContainerHigh
                 border.width: 1
-                border.color: root.widgetBorderColor
-                z: 9999
+                border.color: Appearance.colors.colPrimary
 
                 StyledText {
                     id: tipText
                     anchors.centerIn: parent
                     text: root.hoveredTooltipText
-                    font.pixelSize: Appearance.font.pixelSize.smaller
-                    color: Appearance.colors.colOnLayer2
+                    font.pixelSize: 11
+                    font.weight: Font.DemiBold
+                    color: Appearance.colors.colOnSurface
                 }
             }
         }

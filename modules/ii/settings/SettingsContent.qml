@@ -327,7 +327,7 @@ Item {
                             required property var index
                             source: modelData.component
 
-                            active: Config.ready && (root.currentPage === index || item !== null)
+                            active: Config.ready && (root.currentPage === index)
 
                             anchors.fill: parent
 

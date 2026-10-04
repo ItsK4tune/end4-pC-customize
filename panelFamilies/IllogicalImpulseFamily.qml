@@ -29,6 +29,7 @@ import qs.modules.ii.desktopMenu
 import qs.modules.ii.dropover
 import qs.modules.ii.frame
 import qs.modules.ii.background.widgets.particles
+import qs.modules.ii.rest
 
 Scope {
     PanelLoader { extraCondition: !Config.options.bar.vertical; component: Bar {} }
@@ -44,6 +45,7 @@ Scope {
     PanelLoader { component: Overview {} }
     PanelLoader { component: Polkit {} }
     PanelLoader { component: RegionSelector {} }
+    PanelLoader { extraCondition: Config.options.rest.enable ?? false; component: RestOverlay {} }
     PanelLoader { component: ScreenCorners {} }
     PanelLoader { component: ScreenTranslator {} }
     PanelLoader { component: SessionScreen {} }

@@ -167,6 +167,11 @@ Singleton {
                     property int start: 0
                 }
             }
+
+            property JsonObject rest: JsonObject {
+                property int completedToday: 0
+                property string lastDate: ""
+            }
         }
     }
 }

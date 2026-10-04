@@ -71,7 +71,7 @@ ContentPage {
 
                 Timer {
                     interval: Config.options.time.secondPrecision ? 1000 : 15000
-                    running: true
+                    running: previewCard.visible
                     repeat: true
                     triggeredOnStart: true
                     onTriggered: previewCard.now = new Date()
@@ -509,6 +509,123 @@ ContentPage {
                             translationProc.running = false;
                             translationProc.running = true;
                         }
+                    }
+                }
+            }
+        }
+
+        ContentSection {
+            icon: "spa"
+            shape: MaterialShape.Shape.Cookie12Sided
+            title: Translation.tr("Rest & Ergonomics")
+
+            GroupedList {
+                ConfigSwitch {
+                    buttonIcon: "self_improvement"
+                    text: Translation.tr("Enable rest reminders & break overlay")
+                    checked: Config.options.rest.enable
+                    onCheckedChanged: {
+                        Config.options.rest.enable = checked;
+                    }
+                }
+
+                ConfigRow {
+                    uniform: true
+                    ConfigSpinBox {
+                        icon: "timer"
+                        text: Translation.tr("Work interval (mins)")
+                        value: Config.options.rest.triggers.workMinutes
+                        from: 5
+                        to: 180
+                        stepSize: 5
+                        onValueChanged: {
+                            Config.options.rest.triggers.workMinutes = value;
+                        }
+                    }
+
+                    ConfigSpinBox {
+                        icon: "bedtime"
+                        text: Translation.tr("Rest duration (mins)")
+                        value: Config.options.rest.unlock.restMinutes
+                        from: 1
+                        to: 60
+                        stepSize: 1
+                        onValueChanged: {
+                            Config.options.rest.unlock.restMinutes = value;
+                        }
+                    }
+                }
+
+                ConfigRow {
+                    uniform: true
+                    ConfigSpinBox {
+                        icon: "notification_important"
+                        text: Translation.tr("Pre-break warning (s)")
+                        value: Config.options.rest.triggers.warnSecondsBefore
+                        from: 10
+                        to: 60
+                        stepSize: 5
+                        onValueChanged: {
+                            Config.options.rest.triggers.warnSecondsBefore = value;
+                        }
+                    }
+
+                    ConfigSpinBox {
+                        icon: "emergency"
+                        text: Translation.tr("Emergency hold time (s)")
+                        value: Config.options.rest.unlock.emergencyHoldSeconds
+                        from: 1
+                        to: 10
+                        stepSize: 1
+                        onValueChanged: {
+                            Config.options.rest.unlock.emergencyHoldSeconds = value;
+                        }
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "spa"
+                    text: Translation.tr("Sync with Focus Session (auto rest on break)")
+                    enabled: Config.options.rest.enable
+                    checked: Config.options.rest.triggers.pomodoroSync && (Config.options.background.widgets.focusFlow?.enforceRest ?? true)
+                    onCheckedChanged: {
+                        Config.options.rest.triggers.pomodoroSync = checked;
+                        if (Config.options.background.widgets.focusFlow) {
+                            Config.options.background.widgets.focusFlow.enforceRest = checked;
+                        }
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "music_off"
+                    text: Translation.tr("Pause media players while resting")
+                    checked: Config.options.rest.visual.pauseMusic
+                    onCheckedChanged: {
+                        Config.options.rest.visual.pauseMusic = checked;
+                    }
+                }
+
+                ConfigSwitch {
+                    buttonIcon: "graphic_eq"
+                    text: Translation.tr("Play ambient sound during rest")
+                    checked: Config.options.rest.visual.playAmbientSound
+                    onCheckedChanged: {
+                        Config.options.rest.visual.playAmbientSound = checked;
+                    }
+                }
+
+                ConfigComboBox {
+                    buttonIcon: "water_drop"
+                    text: Translation.tr("Ambient soundscape")
+                    currentValue: Config.options.rest.visual.soundType
+                    model: [
+                        { displayName: Translation.tr("Rain"), value: "rain" },
+                        { displayName: Translation.tr("Ocean Waves"), value: "waves" },
+                        { displayName: Translation.tr("Forest Brook"), value: "brook" },
+                        { displayName: Translation.tr("Cozy Fireplace"), value: "fireplace" }
+                    ]
+                    onSelected: newValue => {
+                        Config.options.rest.visual.soundType = newValue;
                     }
                 }
             }

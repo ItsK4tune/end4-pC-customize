@@ -600,7 +600,11 @@ ContentPage {
                     icon: "looks_3"
                     currentValue: JSON.stringify(Config.options.bar.workspaces.numberMap)
                     onSelected: newValue => {
-                        Config.options.bar.workspaces.numberMap = JSON.parse(newValue)
+                        try {
+                            Config.options.bar.workspaces.numberMap = JSON.parse(newValue)
+                        } catch (e) {
+                            console.warn("[BarConfig] Invalid numberMap JSON:", e)
+                        }
                     }
                     options: [
                         { displayName: Translation.tr("Normal"),    icon: "timer_10",        value: '[]' },

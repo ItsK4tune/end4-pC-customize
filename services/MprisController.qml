@@ -209,15 +209,16 @@ Singleton {
 		this.trackedPlayer = targetPlayer;
 	}
 
+	function pauseAll(): void {
+		for (const player of Mpris.players.values) {
+			if (player.canPause) player.pause();
+		}
+	}
+
 	IpcHandler {
 		target: "mpris"
 
-		function pauseAll(): void {
-			for (const player of Mpris.players.values) {
-				if (player.canPause) player.pause();
-			}
-		}
-
+		function pauseAll(): void { root.pauseAll(); }
 		function playPause(): void { root.togglePlaying(); }
 		function previous(): void { root.previous(); }
 		function next(): void { root.next(); }

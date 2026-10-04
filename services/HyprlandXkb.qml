@@ -80,10 +80,19 @@ Singleton {
         stdout: StdioCollector {
             id: devicesCollector
             onStreamFinished: {
-                const parsedOutput = JSON.parse(devicesCollector.text);
-                const hyprlandKeyboard = parsedOutput["keyboards"].find(kb => kb.main === true);
-                root.layoutCodes = hyprlandKeyboard["layout"].split(",");
-                root.currentLayoutName = hyprlandKeyboard["active_keymap"];
+                try {
+                    const parsedOutput = JSON.parse(devicesCollector.text);
+                    if (!parsedOutput || !Array.isArray(parsedOutput["keyboards"])) return;
+                    const hyprlandKeyboard = parsedOutput["keyboards"].find(kb => kb.main === true)
+                        || parsedOutput["keyboards"].find(kb => kb.layout && kb.layout.length > 0)
+                        || parsedOutput["keyboards"][0];
+                    if (hyprlandKeyboard && hyprlandKeyboard["layout"]) {
+                        root.layoutCodes = hyprlandKeyboard["layout"].split(",");
+                        root.currentLayoutName = hyprlandKeyboard["active_keymap"] || "";
+                    }
+                } catch (e) {
+                    console.warn("[HyprlandXkb] Failed to parse devices json:", e);
+                }
             }
         }
     }

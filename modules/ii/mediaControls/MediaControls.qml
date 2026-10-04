@@ -99,7 +99,14 @@ Scope {
         command: ["cava", "-p", `${FileUtils.trimFileProtocol(Directories.scriptPath)}/cava/raw_output_config.txt`]
         stdout: SplitParser {
             onRead: data => {
-                let points = data.split(";").map(p => parseFloat(p.trim())).filter(p => !isNaN(p));
+                const parts = data.split(";");
+                const points = [];
+                for (let i = 0; i < parts.length; ++i) {
+                    const p = parts[i];
+                    if (p.length === 0) continue;
+                    const val = Number(p);
+                    if (!isNaN(val)) points.push(val);
+                }
                 GlobalStates.visualizerPoints = points;
             }
         }

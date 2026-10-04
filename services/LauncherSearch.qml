@@ -25,7 +25,7 @@ Singleton {
     }
     
     property var settingsKeywordsCache: ({
-        "General": "Time Weather Battery Audio Sounds Language Work safety",
+        "General": "Time Weather Battery Audio Sounds Language Rest Ergonomics Break Eye care Work safety",
         "Bar": "Screens Show bar on Bar layout Positioning & Styles Dynamic Island Media Notifications Tray Divider Utility buttons Workspaces Resources Media Tooltips",
         "Desktop": "Wallpaper Centered wallpaper Clock Digital clock settings Cookie clock settings Pixel Clock Settings Quote Custom Image Visualizer Ambient Particles Text Font Colors Widgets Show widgets on Canvas",
         "Interface": "Transparency Settings Panel Left Sidebar Right Sidebar Quick toggles Sliders Hot Corners Top Bottom Overview Default Settings Dock Buttons & Media Lock screen Security Style: General Style: Blurred Overlay Floating Image Crosshair Region selector (screen snipping/Google Lens) Hint target regions Google Lens Rectangular selection Circle selection On-screen display Wallpaper selector Fonts Color generation",
