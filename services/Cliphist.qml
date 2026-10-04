@@ -40,9 +40,10 @@ Singleton {
                 key: "name"
             }).map(r => r.obj.entry);
         }
-        if (root.pinnedEntries.length === 0) return base;
-        const matchingPins = root.pinnedEntries.filter(p => base.includes(p));
-        const nonPins = base.filter(e => !root.pinnedEntries.includes(e));
+        const pins = (Config.options.search.clipboardPins ?? []);
+        if (pins.length === 0) return base;
+        const matchingPins = base.filter(p => root.isPinned(p));
+        const nonPins = base.filter(e => !root.isPinned(e));
         return [...matchingPins, ...nonPins];
     }
 
@@ -60,18 +61,32 @@ Singleton {
         return "text";
     }
 
-    property var pinnedEntries: []
+    function entryId(entry) {
+        return entry.split("\t")[0]
+    }
+
+    function entryText(entry) {
+        return entry.replace(/^\s*\S+\s+/, "")
+    }
+
+    function pinIndex(entry) {
+        const pins = Config.options.search.clipboardPins ?? []
+        const id = root.entryId(entry)
+        const text = root.entryText(entry)
+        const image = root.entryIsImage(entry)
+        return pins.findIndex(pin => pin.id === id || (!image && pin.text !== "" && pin.text === text))
+    }
 
     function isPinned(entry) {
-        return pinnedEntries.includes(entry);
+        return root.pinIndex(entry) !== -1
     }
 
     function togglePin(entry) {
-        if (isPinned(entry)) {
-            pinnedEntries = pinnedEntries.filter(e => e !== entry);
-        } else {
-            pinnedEntries = [entry, ...pinnedEntries];
-        }
+        const pins = (Config.options.search.clipboardPins ?? []).slice()
+        const index = root.pinIndex(entry)
+        if (index !== -1) pins.splice(index, 1)
+        else pins.push({ id: root.entryId(entry), text: root.entryIsImage(entry) ? "" : root.entryText(entry) })
+        Config.options.search.clipboardPins = pins
     }
 
     function refresh() {

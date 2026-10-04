@@ -364,6 +364,31 @@ Variants {
                 }
             }
 
+            /* Multiple wallpapers */
+            Loader {
+                id: collageLoader
+                anchors.fill: parent
+                active: Collage.enabled
+                sourceComponent: MultipleWalls {
+                    screen: bgRoot.screen
+                    transitionDone: !bgRoot.transitionPending && bgRoot.transitionProgress >= 1.0
+                }
+            }
+
+            /* Wallpaper Drop Area */
+            WallpaperDropArea {
+                anchors.fill: parent
+            }
+
+            /* Multiple wallpapers drop targets (below widgets so their drop areas win =) */
+            Loader {
+                anchors.fill: parent
+                active: Collage.enabled && !Config.options.background.widgetsLocked && !GlobalStates.screenLocked && !!collageLoader.item
+                sourceComponent: MultipleWallsDrop {
+                    collage: collageLoader.item
+                }
+            }
+
             /* Centered Wallpaper */
             CenteredWallpaper {
                 id: centeredWallpaper
@@ -371,11 +396,6 @@ Variants {
                 screen: bgRoot.screen
                 wallpaperPath: bgRoot.wallpaperPath
                 wallpaperIsVideo: bgRoot.wallpaperIsVideo
-            }
-
-            /* Wallpaper Drop Area */
-            WallpaperDropArea {
-                anchors.fill: parent
             }
 
             /* Widgets Loader */
@@ -412,8 +432,17 @@ Variants {
                 WidgetsLoader {
                     anchors.fill: parent
                     screen: bgRoot.screen
-                    wallpaperItem: wallpaper
+                    wallpaperItem: Collage.enabled && collageLoader.item ? collageLoader.item : wallpaper
                     wallpaperSafetyTriggered: bgRoot.wallpaperSafetyTriggered
+                }
+            }
+
+            /* Multiple wallpapers editor */
+            Loader {
+                anchors.fill: parent
+                active: Collage.enabled && !Config.options.background.widgetsLocked && !GlobalStates.screenLocked && !!collageLoader.item
+                sourceComponent: MultipleWallsEditor {
+                    collage: collageLoader.item
                 }
             }
 

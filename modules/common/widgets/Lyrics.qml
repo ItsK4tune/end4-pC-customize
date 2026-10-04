@@ -16,6 +16,9 @@ Item {
     property color indicatorColor: Appearance.colors.colPrimaryContainer
     property color indicatorShapeColor: Appearance.colors.colOnPrimaryContainer
     property int textAlignment: Text.AlignHCenter
+    property real fontScale: 1.0
+    property bool animateTransitions: false
+    property real lineSpacing: 6
 
     property bool isDetached: false
     property bool showControls: true

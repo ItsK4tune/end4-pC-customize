@@ -24,27 +24,16 @@ Singleton {
         }
     }
     
-    property var settingsKeywordsCache: ({
-        "General": "Time Weather Battery Audio Sounds Language Rest Ergonomics Break Eye care Work safety",
-        "Bar": "Screens Show bar on Bar layout Positioning & Styles Dynamic Island Media Notifications Tray Divider Utility buttons Workspaces Resources Media Tooltips",
-        "Desktop": "Wallpaper Centered wallpaper Clock Digital clock settings Cookie clock settings Pixel Clock Settings Quote Custom Image Visualizer Ambient Particles Text Font Colors Widgets Show widgets on Canvas",
-        "Interface": "Transparency Settings Panel Left Sidebar Right Sidebar Quick toggles Sliders Hot Corners Top Bottom Overview Default Settings Dock Buttons & Media Lock screen Security Style: General Style: Blurred Overlay Floating Image Crosshair Region selector (screen snipping/Google Lens) Hint target regions Google Lens Rectangular selection Circle selection On-screen display Wallpaper selector Fonts Color generation",
-        "Services": "AI Networking Music Recognition Save paths Search Prefixes Web search System updates (Arch only)",
-        "Hyprland": "Displays HDR & Color Management Layout Input Keyboard Touchpad Idle Visual & Aesthetics Border Color Management Autostart Apps Animations",
-        "About": "System Info Version Update",
-        "Quick": "Wallpaper & Colors"
-    })
-
-    property var settingsIndex: [
-        { page: "General",   path: "GeneralConfig.qml" },
-        { page: "Bar",       path: "BarConfig.qml" },
-        { page: "Desktop",   path: "BackgroundConfig.qml" },
-        { page: "Interface", path: "InterfaceConfig.qml" },
-        { page: "Services",  path: "ServicesConfig.qml" },
-        { page: "Hyprland",  path: "HyprlandConfig.qml" },
-        { page: "About",     path: "About.qml" },
-        { page: "Quick",     path: "QuickConfig.qml" },
-    ]
+    // https://specifications.freedesktop.org/menu/latest/category-registry.html
+    property list<string> mainRegisteredCategories: ["AudioVideo", "Development", "Education", "Game", "Graphics", "Network", "Office", "Science", "Settings", "System", "Utility"]
+    property list<string> appCategories: DesktopEntries.applications.values.reduce((acc, entry) => {
+        for (const category of entry.categories) {
+            if (!acc.includes(category) && mainRegisteredCategories.includes(category)) {
+                acc.push(category);
+            }
+        }
+        return acc;
+    }, []).sort()
 
     // Load user action scripts from ~/.config/illogical-impulse/actions/
     // Uses FolderListModel to auto-reload when scripts are added/removed
@@ -222,33 +211,6 @@ Singleton {
         }
     }
 
-    function createResult(props) {
-        return resultComp.createObject(root, props);
-    }
-
-    property var _previousResults: []
-    onResultsChanged: {
-        Qt.callLater(() => {
-            const old = root._previousResults;
-            const current = root.results ? [...root.results] : [];
-            root._previousResults = current;
-            if (old && old.length > 0) {
-                const currentSet = new Set(current);
-                for (let i = 0; i < old.length; ++i) {
-                    const item = old[i];
-                    if (item && !currentSet.has(item) && typeof item.destroy === "function") {
-                        if (item.actions && Array.isArray(item.actions)) {
-                            for (let a of item.actions) {
-                                if (a && typeof a.destroy === "function") a.destroy();
-                            }
-                        }
-                        item.destroy();
-                    }
-                }
-            }
-        });
-    }
-
     property list<var> results: {
         // Search results are handled here
         ////////////////// Skip? //////////////////
@@ -259,36 +221,32 @@ Singleton {
         if (root.query.startsWith(Config.options.search.prefix.clipboard)) {
             // Clipboard
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.clipboard);
-            return Cliphist.fuzzyQuery(searchString).map((entry, index, array) => {
+            const clipboardResults = Cliphist.fuzzyQuery(searchString).map((entry, index, array) => {
                 const mightBlurImage = Cliphist.entryIsImage(entry) && root.clipboardWorkSafetyActive;
                 let shouldBlurImage = mightBlurImage;
                 if (mightBlurImage) {
                     shouldBlurImage = shouldBlurImage && (root.containsUnsafeLink(array[index - 1]) || root.containsUnsafeLink(array[index + 1]));
                 }
                 const type = `#${entry.match(/^\s*(\S+)/)?.[1] || ""}`;
-                return createResult({
+                const pinned = Cliphist.isPinned(entry);
+                return resultComp.createObject(null, {
                     rawValue: entry,
                     name: StringUtils.cleanCliphistEntry(entry),
                     verb: "",
                     type: type,
+                    clipboard: true,
+                    pinned: pinned,
                     execute: () => {
                         Cliphist.copy(entry);
                     },
-                    actions: [createResult({
-                            name: Cliphist.isPinned(entry) ? Translation.tr("Unpin") : Translation.tr("Pin"),
-                            iconName: Cliphist.isPinned(entry) ? "keep_off" : "push_pin",
+                    actions: [resultComp.createObject(null, {
+                            name: pinned ? Translation.tr("Unpin") : Translation.tr("Pin"),
+                            iconName: pinned ? "keep_off" : "keep",
                             iconType: LauncherSearchResult.IconType.Material,
                             execute: () => {
                                 Cliphist.togglePin(entry);
                             }
-                        }), createResult({
-                            name: Translation.tr("Copy"),
-                            iconName: "content_copy",
-                            iconType: LauncherSearchResult.IconType.Material,
-                            execute: () => {
-                                Cliphist.copy(entry);
-                            }
-                        }), createResult({
+                        }), resultComp.createObject(null, {
                             name: Translation.tr("Delete"),
                             iconName: "delete",
                             iconType: LauncherSearchResult.IconType.Material,
@@ -299,12 +257,13 @@ Singleton {
                     blurImage: shouldBlurImage
                 });
             }).filter(Boolean);
+            return [...clipboardResults.filter(result => result.pinned), ...clipboardResults.filter(result => !result.pinned)];
         } else if (root.query.startsWith(Config.options.search.prefix.emojis)) {
             // Emojis
             const searchString = StringUtils.cleanPrefix(root.query, Config.options.search.prefix.emojis);
             return Emojis.fuzzyQuery(searchString).map(entry => {
                 const emoji = entry.match(/^\s*(\S+)/)?.[1] || "";
-                return createResult({
+                return resultComp.createObject(null, {
                     rawValue: entry,
                     name: entry.replace(/^\s*\S+\s+/, ""),
                     iconName: emoji,
@@ -327,22 +286,15 @@ Singleton {
                 return result;
             })(HyprlandKeybinds.keybinds);
 
-            const seen = new Set();
             return flatBinds.filter(bind => {
                 if (!bind.comment) return false;
-                const modsStr = (bind.mods ?? []).join(" + ");
-                const keyStr  = modsStr.length > 0 ? (bind.key ? `${modsStr} + ${bind.key}` : modsStr) : bind.key;
-                if (!keyStr || keyStr.trim() === "") return false;
-                const uid = keyStr + ":" + bind.comment;
-                if (seen.has(uid)) return false;
-                seen.add(uid);
                 if (searchString.length === 0) return true;
                 return bind.comment.toLowerCase().includes(searchString.toLowerCase())
-                    || keyStr.toLowerCase().includes(searchString.toLowerCase());
+                    || bind.key.toLowerCase().includes(searchString.toLowerCase());
             }).map(bind => {
-                const modsStr = (bind.mods ?? []).join(" + ");
-                const keyStr  = modsStr.length > 0 ? (bind.key ? `${modsStr} + ${bind.key}` : modsStr) : bind.key;
-                return createResult({
+                const modsStr = bind.mods.join(" + ");
+                const keyStr  = modsStr.length > 0 ? `${modsStr} + ${bind.key}` : bind.key;
+                return resultComp.createObject(null, {
                     name: bind.comment,
                     iconName: "keyboard",
                     iconType: LauncherSearchResult.IconType.Material,
@@ -350,24 +302,8 @@ Singleton {
                     type: Translation.tr("Keybind"),
                     comment: keyStr,
                     execute: () => {
-                        GlobalStates.overviewOpen = false;
-                        if (bind.dispatcher && bind.dispatcher !== "comment" && bind.dispatcher !== "function") {
-                            const cmd = bind.params ? `${bind.dispatcher}(${bind.params})` : `${bind.dispatcher}()`;
-                            Hyprland.dispatch(cmd);
-                        } else {
-                            Quickshell.clipboardText = keyStr;
-                            Quickshell.execDetached(["notify-send", "Keybind", "Copied: " + keyStr + " (" + bind.comment + ")", "-a", "Shell", "-i", "input-keyboard"]);
-                        }
-                    },
-                    actions: [createResult({
-                        name: Translation.tr("Copy shortcut"),
-                        iconName: "content_copy",
-                        iconType: LauncherSearchResult.IconType.Material,
-                        execute: () => {
-                            Quickshell.clipboardText = keyStr;
-                            Quickshell.execDetached(["notify-send", "Keybind", "Copied shortcut: " + keyStr, "-a", "Shell", "-i", "input-keyboard"]);
-                        }
-                    })]
+                        Quickshell.clipboardText = keyStr;
+                    }
                 });
             }).filter(Boolean);
         } else if (root.query.startsWith(Config.options.search.prefix.symbols)) {
@@ -377,7 +313,7 @@ Singleton {
                 const tabIdx = entry.indexOf("\t");
                 const symName = tabIdx >= 0 ? entry.slice(0, tabIdx) : entry;
                 const symTags = tabIdx >= 0 ? entry.slice(tabIdx + 1) : "";
-                return createResult({
+                return resultComp.createObject(null, {
                     rawValue: entry,
                     name: symName,
                     iconName: symName,
@@ -394,7 +330,7 @@ Singleton {
 
         ////////////////// Init ///////////////////
         nonAppResultsTimer.restart();
-        const mathResultObject = createResult({
+        const mathResultObject = resultComp.createObject(null, {
             name: root.mathResult,
             verb: Translation.tr("Copy"),
             type: Translation.tr("Math result"),
@@ -406,7 +342,7 @@ Singleton {
             }
         });
         const appResultObjects = AppSearch.fuzzyQuery(StringUtils.cleanPrefix(root.query, Config.options.search.prefix.app)).map(entry => {
-            return createResult({
+            return resultComp.createObject(null, {
                 type: Translation.tr("App"),
                 id: entry.id,
                 name: entry.name,
@@ -426,7 +362,7 @@ Singleton {
                 genericName: entry.genericName,
                 keywords: entry.keywords,
                 actions: entry.actions.map(action => {
-                    return createResult({
+                    return resultComp.createObject(null, {
                         name: action.name,
                         iconName: action.icon,
                         iconType: LauncherSearchResult.IconType.System,
@@ -442,33 +378,24 @@ Singleton {
             });
         });
         ////////////////// Settings search //////////////////
-        const settingsQuery = root.query.toLowerCase().trim();
-
-        const settingsResults = root.settingsIndex.reduce((acc, page) => {
-            const dynamicKeywords = (root.settingsKeywordsCache[page.page] || "").toLowerCase();
-            const query = root.query.toLowerCase().trim();
-            if (query === "") return acc;
-
-            if (page.page.toLowerCase().includes(query) || dynamicKeywords.includes(query)) {
-                acc.push(createResult({
-                    name: page.page,
-                    comment: dynamicKeywords.includes(query) ? "Section: " + query : "Settings for " + page.page,
-                    verb: Translation.tr("Go"),
-                    type: Translation.tr("Settings"),
-                    iconName: "settings",
-                    iconType: LauncherSearchResult.IconType.Material,
-                    execute: () => {
-                        GlobalStates.settingsOpen = true;
-                        Qt.callLater(() => {
-                            GlobalStates.settingsPage = page.page + ":" + query;
-                        });
-                        root.query = "";
-                    }
-                }));
-            }
-            return acc;
-        }, []);
-        const commandResultObject = createResult({
+        const settingsEntries = Config.options.settings.style === "dashboard" ? [] : SettingsSearchIndex.search(root.query, 8);
+        const settingsResults = settingsEntries.map(entry => {
+            const breadcrumb = entry.kind === "page" ? Translation.tr("Settings") : [entry.pageName, entry.kind === "option" ? entry.section : "", entry.kind === "option" ? entry.subsection : ""].filter(part => part).join(" › ");
+            return resultComp.createObject(null, {
+                control: entry.kind === "option" ? SettingsQuickControls.find(entry.pageId, entry.rawSection, entry.rawSubsection, entry.rawLabel) : null,
+                name: entry.label,
+                comment: breadcrumb,
+                verb: Translation.tr("Go"),
+                type: [Translation.tr("Settings"), entry.pageName, entry.kind === "option" ? entry.section : "", entry.kind === "option" ? entry.subsection : ""].filter(part => part).join(" • "),
+                iconName: entry.icon,
+                iconType: LauncherSearchResult.IconType.Material,
+                execute: () => {
+                    root.query = "";
+                    GlobalStates.openSettingsAt(entry.pageId, entry.kind === "page" ? "" : entry.label, entry.section, entry.subsection);
+                }
+            });
+        });
+        const commandResultObject = resultComp.createObject(null, {
             name: StringUtils.cleanPrefix(root.query, Config.options.search.prefix.shellCommand).replace("file://", ""),
             verb: Translation.tr("Run"),
             type: Translation.tr("Command"),
@@ -484,7 +411,7 @@ Singleton {
                 Quickshell.execDetached(["bash", "-c", root.query.startsWith('sudo') ? `${Config.options.apps.terminal} fish -C '${cleanedCommand}'` : cleanedCommand]);
             }
         });
-        const webSearchResultObject = createResult({
+        const webSearchResultObject = resultComp.createObject(null, {
             name: StringUtils.cleanPrefix(root.query, Config.options.search.prefix.webSearch),
             verb: Translation.tr("Search"),
             type: Translation.tr("Web search"),
@@ -502,7 +429,7 @@ Singleton {
         const launcherActionObjects = root.allActions.map(action => {
             const actionString = `${Config.options.search.prefix.action}${action.action}`;
             if (actionString.startsWith(root.query) || root.query.startsWith(actionString)) {
-                return createResult({
+                return resultComp.createObject(null, {
                     name: root.query.startsWith(actionString) ? root.query : actionString,
                     verb: Translation.tr("Run"),
                     type: Translation.tr("Action"),

@@ -33,6 +33,8 @@ Singleton {
 
     property real cpuTemp: 0
 
+    property int diskTick: 0
+    property int consumers: 0
     property real diskTotal: 1
     property real diskUsed: 0
     property real diskFree: 0
@@ -131,7 +133,7 @@ Singleton {
     Timer {
         triggeredOnStart: true
         interval: Config.options?.resources?.updateInterval ?? 3000
-        running: true
+        running: root.consumers > 0
         repeat: true
         onTriggered: {
             fileMeminfo.reload()
@@ -148,13 +150,11 @@ Singleton {
                 tempProcFallback.running = true
             }
 
-            if (root.diskUpdateCounter <= 0) {
+            if (root.diskTick % 10 === 0) {
                 diskProc.running = false
                 diskProc.running = true
-                root.diskUpdateCounter = 10
-            } else {
-                root.diskUpdateCounter--
             }
+            root.diskTick++
 
             const textMeminfo = fileMeminfo.text()
             memoryTotal = Number(textMeminfo.match(/MemTotal: *(\d+)/)?.[1] ?? 1)

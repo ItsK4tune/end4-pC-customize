@@ -141,7 +141,6 @@ AbstractBackgroundWidget {
     Behavior on widgetHeight {
         animation: Appearance.animation.elementResize.numberAnimation.createObject(this)
     }
-
     component AvatarImage: Image {
         source: SystemInfo.effectiveAvatar
         sourceSize.width: width * 2
@@ -254,7 +253,6 @@ AbstractBackgroundWidget {
             }
         }
     }
-
     Rectangle {
         id: card
         implicitWidth: root.widgetWidth
@@ -290,23 +288,10 @@ AbstractBackgroundWidget {
         // 1x2
         Component {
             id: oneByTwoContent
-            Rectangle {
+            WidgetCard {
                 anchors.fill: parent
-                radius: Appearance.rounding?.verylarge ?? 30
-                color: Appearance.colors.colPrimaryContainer
-                border.width: 1
-                border.color: root.widgetBorderColor
-
-                FastBlurred {
-                    anchors.fill: parent
-                    blurSource: root.wallpaperItem
-                    cardRadius: card.radius
-                    tint: Appearance.colors.colLayer1
-                    tintOpacity: 0.55
-                    trackX: root.x  
-                    trackY: root.y
-                    visible: Config.options.background.widgets.blurWidgets 
-                }
+                widget: root
+                shadowed: false
 
                 RowLayout {
                     anchors { fill: parent; margins: 10 }
@@ -750,25 +735,12 @@ AbstractBackgroundWidget {
                 implicitWidth: root.snapWidth4
                 implicitHeight: root.snapHeight3
 
-                Rectangle {
+                WidgetCard {
                     id: cardBg
                     anchors.fill: parent
-                    radius: Appearance.rounding?.verylarge ?? 30
-                    color: Appearance.colors.colPrimaryContainer
-                    border.width: 1
-                    border.color: root.widgetBorderColor
+                    widget: root
+                    shadowed: false
                     clip: true
-
-                    FastBlurred {
-                        anchors.fill: parent
-                        blurSource: root.wallpaperItem
-                        cardRadius: cardBg.radius
-                        tint: Appearance.colors.colLayer1
-                        tintOpacity: 0.55
-                        trackX: root.x
-                        trackY: root.y
-                        visible: Config.options.background.widgets.blurWidgets
-                    }
 
                     Item {
                         id: heroWrap
@@ -843,7 +815,6 @@ AbstractBackgroundWidget {
                         }
                     }
 
-                    // Avatar overlapping
                     InteractiveAvatar {
                         id: avatarRect3
                         x: 16

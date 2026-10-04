@@ -43,9 +43,11 @@ Scope {
         GlobalStates.settingsOpen = false;
     }
 
+    Dashboard {}
+
     PanelWindow {
         id: panelWindow
-        visible: root.reallyOpen
+        visible: root.reallyOpen && Config.options.settings.style !== "dashboard"
 
         function hide() {
             GlobalStates.settingsOpen = false;

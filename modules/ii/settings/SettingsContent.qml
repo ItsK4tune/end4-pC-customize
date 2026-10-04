@@ -18,8 +18,36 @@ Item {
     property bool showingProfile: false
     property bool isMinimal: Config.options.settings.style === "minimal"
 
+    function goToTarget(target) {
+        const idx = root.pages.findIndex(p => p.id === target.page);
+        if (idx < 0) return;
+        root.currentPage = idx;
+        root.showingProfile = false;
+        if (!target.label) return;
+
+        const loader = pagesRepeater.itemAt(idx);
+        if (!loader) return;
+        const run = () => loader.item?.goTo(target.label, target.section, target.subsection);
+        if (loader.item) {
+            run();
+        } else {
+            const onceLoaded = () => {
+                loader.loaded.disconnect(onceLoaded);
+                run();
+            };
+            loader.loaded.connect(onceLoaded);
+        }
+    }
+
     Connections {
         target: GlobalStates
+        function onSettingsTargetChanged() {
+            const target = GlobalStates.settingsTarget;
+            if (!target) return;
+            root.goToTarget(target);
+            GlobalStates.settingsTarget = null;
+        }
+
         function onSettingsPageChanged() {
             if (GlobalStates.settingsPage === "") return
             
@@ -77,31 +105,13 @@ Item {
     }
 
     onCurrentPageChanged: {
-        const pageName = root.pages[currentPage]?.name ?? ""
-        if (pageName === Translation.tr("About")) {
+        if (root.pages[currentPage]?.id === "about") {
             if (SystemInfo.cpu === "") SystemInfo.refresh()
             Updates.refresh()
         }
     }
     
-    property var pages: {
-        let list = [
-            { name: Translation.tr("Quick"),      icon: "instant_mix",    component: Qt.resolvedUrl("pages/QuickConfig.qml") },
-            { name: Translation.tr("General"),    icon: "browse",         component: Qt.resolvedUrl("pages/GeneralConfig.qml") },
-            { name: Translation.tr("Bar"),        icon: "toast",          iconRotation: 180, component: Qt.resolvedUrl("pages/BarConfig.qml") },
-            { name: Translation.tr("Desktop"),    icon: "texture",        component: Qt.resolvedUrl("pages/BackgroundConfig.qml") },
-            { name: Translation.tr("Interface"),  icon: "bottom_app_bar", component: Qt.resolvedUrl("pages/InterfaceConfig.qml") },
-            { name: Translation.tr("Services"),   icon: "settings",       component: Qt.resolvedUrl("pages/ServicesConfig.qml") },
-        ]
-        if (WM.compositor === "hyprland") {
-                    list.push({ name: Translation.tr("Hyprland"), icon: "select_window_2", component: Qt.resolvedUrl("pages/HyprlandConfig.qml") })
-                }
-        if (WM.compositor === "niri") {
-                    list.push({ name: Translation.tr("Niri"), icon: "select_window_2", component: Qt.resolvedUrl("pages/NiriConfig.qml") })
-                }
-        list.push({ name: Translation.tr("About"), icon: "info", component: Qt.resolvedUrl("pages/About.qml") })
-        return list
-    }
+    property var pages: SettingsPages.pages
 
     Component.onCompleted: {
         Config.readWriteDelay = 0
@@ -163,41 +173,9 @@ Item {
                             anchors.margins: isMinimal ? 0 : 6
                             spacing: 10
 
-                            Rectangle {
-                                id: avatarRect
-                                width: 44
-                                height: 44
-                                radius: width / 2
-                                color: Appearance.colors.colPrimaryContainer
-
-                                Image {
-                                    id: avatarImage
-                                    anchors.fill: parent
-                                    source: SystemInfo.effectiveAvatar
-                                    sourceSize.width: avatarImage.width * 2
-                                    sourceSize.height: avatarImage.height * 2
-                                    fillMode: Image.PreserveAspectCrop
-                                    layer.enabled: true
-                                    layer.effect: OpacityMask {
-                                        maskSource: Rectangle {
-                                            width: avatarRect.width
-                                            height: avatarRect.height
-                                            radius: avatarRect.radius
-                                        }
-                                    }
-                                    onStatusChanged: {
-                                        if (status === Image.Error)
-                                            visible = false
-                                    }
-                                }
-
-                                MaterialSymbol {
-                                    anchors.centerIn: parent
-                                    text: "account_circle"
-                                    iconSize: 32
-                                    color: Appearance.colors.colOnPrimaryContainer
-                                    visible: avatarImage.status === Image.Error
-                                }
+                            UserAvatar {
+                                width: 48
+                                height: 48
                             }
 
                             ColumnLayout {

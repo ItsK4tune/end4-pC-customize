@@ -14,6 +14,8 @@ import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
+    property color contentColor: Appearance.colors.colOnLayer0
+    property bool contentColorOverridden: false
     property bool vertical: false
     readonly property var monitor: WM.monitorFor(root.QsWindow.window?.screen)
     readonly property Toplevel activeWindow: ToplevelManager.activeToplevel
@@ -29,9 +31,9 @@ Item {
 
     property var mainAppIconSource: {
         if (!root.activeAppClass || root.activeAppClass === "")
-            return Quickshell.iconPath("user-desktop", "image-missing")
-        return Quickshell.iconPath(AppSearch.guessIcon(root.activeAppClass), 
-            Quickshell.iconPath("user-desktop", "image-missing"))     // ← fallback Desktop
+            return SystemAppearance.iconPath("user-desktop", "image-missing")
+        return SystemAppearance.iconPath(AppSearch.guessIcon(root.activeAppClass), 
+            SystemAppearance.iconPath("user-desktop", "image-missing"))     // ← fallback Desktop
     }
 
 
@@ -123,7 +125,7 @@ Item {
             verticalAlignment: Text.AlignVCenter
             clip: true
             font.pixelSize: Appearance.font.pixelSize.smallest
-            color: Appearance.colors.colSubtext
+            color: root.contentColorOverridden ? Qt.alpha(root.contentColor, 0.7) : Appearance.colors.colSubtext
             elide: Text.ElideRight
             text: root.displayAppText
         }
@@ -134,7 +136,7 @@ Item {
             verticalAlignment: Text.AlignVCenter
             clip: true
             font.pixelSize: root.titleFontSize
-            color: Appearance.colors.colOnLayer0
+            color: root.contentColor
             elide: Text.ElideRight
             text: root.displayTitleText
         }

@@ -96,23 +96,27 @@ Singleton {
         if (!isNaN(num)) {
             root.manualOffset = Math.round(num * 10) / 10
             root.saveCurrentOffset()
+            root.resync()
         }
     }
 
     function adjustOffset(delta) {
         root.manualOffset = Math.round((root.manualOffset + delta) * 10) / 10
         root.saveCurrentOffset()
+        root.resync()
     }
 
     function resetOffset() {
         root.manualOffset = 0.0
         root.saveCurrentOffset()
+        root.resync()
     }
 
     function seekToLine(idx) {
         if (idx >= 0 && idx < root.lyricsLines.length && root.activePlayer && (root.activePlayer.canSeek ?? false)) {
             const targetTime = Math.max(0, root.lyricsLines[idx].time - root.manualOffset)
             root.activePlayer.position = targetTime
+            root.resync()
         }
     }
 
@@ -120,29 +124,82 @@ Singleton {
         if (idx >= 0 && idx < root.lyricsLines.length && root.activePlayer) {
             const playerPos = root.activePlayer.position ?? 0
             const lineTime = root.lyricsLines[idx].time
-            // pos = playerPos + manualOffset => manualOffset = lineTime - playerPos
             root.manualOffset = Math.round((lineTime - playerPos) * 10) / 10
             root.saveCurrentOffset()
+            root.resync()
+        }
+    }
+
+    readonly property bool playing: root.activePlayer?.isPlaying ?? false
+    readonly property bool synced: root.status === "ok" && root.lyricsLines.length > 0
+    readonly property real leadSeconds: 0.15
+
+    property real basePosition: 0
+    property real baseTime: Date.now()
+
+    function currentPosition() {
+        return (root.playing ? root.basePosition + (Date.now() - root.baseTime) / 1000 : root.basePosition) + root.manualOffset
+    }
+
+    function resync() {
+        if (!root.activePlayer) return
+        root.activePlayer.positionChanged()
+        readPositionTimer.restart()
+    }
+
+    function indexAt(pos) {
+        const lines = root.lyricsLines
+        let low = 0
+        let high = lines.length - 1
+        let result = -1
+        while (low <= high) {
+            const mid = (low + high) >> 1
+            if (lines[mid].time <= pos) {
+                result = mid
+                low = mid + 1
+            } else {
+                high = mid - 1
+            }
+        }
+        return result
+    }
+
+    function update() {
+        boundaryTimer.stop()
+        if (!root.synced) return
+        const idx = root.indexAt(root.currentPosition() + root.leadSeconds)
+        if (idx !== root.activeIndex) {
+            root.activeIndex = idx
+            root.slots = root.buildSlots(idx)
+        }
+        const next = root.lyricsLines[idx + 1]
+        if (!root.playing || !next) return
+        const delay = (next.time - root.leadSeconds - root.currentPosition()) * 1000
+        boundaryTimer.interval = Math.max(1, Math.ceil(delay))
+        boundaryTimer.start()
+    }
+
+    Timer {
+        id: readPositionTimer
+        interval: 80
+        onTriggered: {
+            root.basePosition = root.activePlayer?.position ?? 0
+            root.baseTime = Date.now()
+            root.update()
         }
     }
 
     Timer {
-        id: syncTimer
-        interval: 150
+        id: boundaryTimer
+        onTriggered: root.update()
+    }
+
+    Timer {
+        id: driftTimer
+        interval: 4000
         repeat: true
-        running: root.status === "ok" && root.lyricsLines.length > 0 && (root.activePlayer?.isPlaying ?? false)
-        onTriggered: {
-            const pos = (root.activePlayer?.position ?? 0) + root.manualOffset
-            let idx = -1
-            for (let i = 0; i < root.lyricsLines.length; i++) {
-                if (root.lyricsLines[i].time <= pos) idx = i
-                else break
-            }
-            if (idx !== root.activeIndex) {
-                root.activeIndex = idx
-                root.slots = root.buildSlots(idx)
-            }
-        }
+        running: root.synced && root.playing
+        onTriggered: root.resync()
     }
 
     property int currentReqId: 0
@@ -182,6 +239,7 @@ Singleton {
         root.activeIndex = -1
         root.slots = root.buildSlots(-1)
         root.status = "ok"
+        root.resync()
     }
 
     Timer {
@@ -240,6 +298,7 @@ Singleton {
         const thisReqId = root.currentReqId
         lyricsProc.reqId = 0
         lyricsProc.running = false
+        boundaryTimer.stop()
         root.lyricsLines = []
         root.activeIndex = -1
         root.slots = ["", "", "", "", "", "", ""]
@@ -287,6 +346,7 @@ Singleton {
         const thisReqId = root.currentReqId
         lyricsProc.reqId = 0
         lyricsProc.running = false
+        boundaryTimer.stop()
         root.lyricsLines = []
         root.activeIndex = -1
         root.slots = ["", "", "", "", "", "", ""]
@@ -334,6 +394,11 @@ Singleton {
         target: MprisController
         function onTrackChanged() { root.queueRestart() }
         function onActivePlayerChanged() { root.queueRestart() }
+    }
+
+    Connections {
+        target: root.activePlayer
+        function onPlaybackStateChanged() { root.resync() }
     }
 
     IpcHandler {
